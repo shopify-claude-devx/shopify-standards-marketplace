@@ -7,14 +7,6 @@ Two plugins for Shopify development with Claude Code.
 **shopify-theme-standards** — 6 skills, 6 commands, 2 agents for theme development
 **shopify-app-standards** — 5 skills, 6 commands, 2 agents for Remix app development
 
-## Setup (One Time)
-
-Push this repo to GitHub, then in Claude Code:
-
-```
-/plugin marketplace add your-username/shopify-standards-marketplace
-```
-
 ## Install in Any Project
 
 For a theme project:
