@@ -1,0 +1,8 @@
+{
+  "name": "shopify-app-standards",
+  "description": "Skills, commands, and agents for Shopify Remix app development. Enforces TypeScript, Remix, Prisma, Shopify API, and Polaris standards through a clarify → plan → build → assess → fix → capture workflow.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Aditya Pasikanti"
+  }
+}

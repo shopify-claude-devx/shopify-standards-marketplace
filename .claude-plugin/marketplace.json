@@ -1,0 +1,22 @@
+{
+  "name": "shopify-standards",
+  "owner": {
+    "name": "Aditya Pasikanti"
+  },
+  "metadata": {
+    "description": "Shopify development standards — skills, commands, and agents for theme and app development",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "shopify-theme-standards",
+      "source": "./shopify-theme-standards",
+      "description": "Liquid, CSS, JS, schema, and section standards for Shopify themes"
+    },
+    {
+      "name": "shopify-app-standards",
+      "source": "./shopify-app-standards",
+      "description": "TypeScript, Remix, Prisma, Shopify API, and Polaris standards for Shopify apps"
+    }
+  ]
+}
