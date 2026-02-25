@@ -1,7 +1,7 @@
 ---
 name: typescript-standards
-description: TypeScript code quality, strict typing, naming, imports, and linting rules for Shopify Remix apps. Use when writing, reviewing, or refactoring any TypeScript code.
-globs: ["**/*.ts", "**/*.tsx"]
+description: TypeScript code quality standards for Shopify Remix apps. MUST be followed when writing, editing, or generating any .ts or .tsx file. Covers strict typing (no any/unknown), naming conventions, import ordering, type-only imports, no empty blocks, no dead code, no console.log, no non-null assertions, no as casts, and the pre-commit quality gate checklist.
+user-invocable: false
 ---
 
 # TypeScript Standards

@@ -15,9 +15,16 @@ If no context about what was built exists, ask the user what files or features t
 ## Pre-Assessment Setup
 
 1. Read `CLAUDE.md` for project overview
-2. Read ALL skill files in `.claude/skills/` — these define the standards to assess against
-3. Read `.claude/project-context.md` if it exists
+2. Read `.claude/project-context.md` if it exists
+3. Read EVERY skill file listed below — these define the standards to assess against:
+   - `typescript-standards` — Strict typing, naming, imports, no any/unknown, no empty blocks, pre-commit quality gate
+   - `remix-patterns` — Loader/action structure, authenticate.admin first, ErrorBoundary, embedded app rules
+   - `shopify-api` — GraphQL only, userErrors checking, pagination, rate limits, webhook handlers
+   - `prisma-standards` — db.server.ts singleton, schema design, query patterns, error handling
+   - `polaris-appbridge` — Page/Card/BlockStack layout, App Bridge Modal/Toast, embedded UI rules
 4. Locate the execution plan from the conversation (if available)
+
+**If you cannot find or read a skill file, STOP and tell the user.**
 
 ## Assessment Process
 

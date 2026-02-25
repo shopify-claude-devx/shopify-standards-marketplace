@@ -1,7 +1,7 @@
 ---
 name: remix-patterns
-description: Remix framework patterns for Shopify embedded apps — loaders, actions, routing, error handling, and Shopify-specific requirements. Use when creating or modifying route files.
-globs: ["app/routes/**/*.tsx", "app/routes/**/*.ts"]
+description: Remix framework patterns for Shopify embedded apps. MUST be followed when writing, editing, or generating any route file in app/routes/. Covers loader/action structure, authenticate.admin first, form validation, ErrorBoundary requirements, embedded app rules (no <a> tags, no window.location, no browser alerts), data flow patterns, and component completeness rules.
+user-invocable: false
 ---
 
 # Remix Patterns for Shopify Apps

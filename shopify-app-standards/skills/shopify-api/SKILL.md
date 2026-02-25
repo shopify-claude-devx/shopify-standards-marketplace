@@ -1,7 +1,7 @@
 ---
 name: shopify-api
-description: Shopify Admin GraphQL API standards — queries, mutations, error handling, pagination, versioning, webhooks, rate limits, and billing. Use when writing any code that calls Shopify APIs.
-globs: ["app/**/*.server.ts", "app/**/*.server.tsx", "app/routes/**/*.ts", "app/routes/**/*.tsx"]
+description: Shopify Admin GraphQL API standards. MUST be followed when writing, editing, or generating any code that calls Shopify APIs via admin.graphql(). Covers GraphQL-only (no REST), API versioning, authentication pattern, query field selection, mutation userErrors checking, cursor-based pagination, rate limits, webhook handlers, and the completeness checklist.
+user-invocable: false
 ---
 
 # Shopify API Standards

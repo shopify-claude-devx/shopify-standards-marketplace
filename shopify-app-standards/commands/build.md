@@ -20,13 +20,21 @@ Look for a confirmed execution plan in the current conversation. If no plan exis
 
 Do NOT proceed without a plan unless the user explicitly overrides this.
 
-### Check 2: Load Project Standards
-Before writing any code:
-1. Read `CLAUDE.md` for project overview
-2. Read ALL skill files in `.claude/skills/` — these are your coding standards
-3. Read `.claude/project-context.md` if it exists
+### Check 2: Load Project Standards — MANDATORY
+Before writing ANY code, you MUST read the following files. This is NOT optional. Do NOT skip this step. Do NOT proceed to writing code until you have read each one:
 
-Every line of code you write must align with these standards.
+1. Read `CLAUDE.md` for project overview
+2. Read `.claude/project-context.md` if it exists
+3. Read EVERY skill file listed below — these are your MANDATORY coding standards:
+   - `typescript-standards` — Strict typing, naming, imports, no any/unknown, no empty blocks, no dead code, pre-commit quality gate
+   - `remix-patterns` — Loader/action structure, authenticate.admin first, ErrorBoundary, embedded app rules, data flow, component completeness
+   - `shopify-api` — GraphQL only, API versioning, userErrors checking, pagination, rate limits, webhook handlers
+   - `prisma-standards` — db.server.ts singleton, schema design, query patterns, N+1 prevention, transactions, error handling
+   - `polaris-appbridge` — Page/Card/BlockStack layout, Text component, Banner feedback, App Bridge Modal/Toast/TitleBar, embedded UI rules
+
+**If you cannot find or read a skill file, STOP and tell the user.** Do not proceed with partial standards.
+
+Every line of code you write must align with these standards. Violations are build failures.
 
 ## Build Process
 

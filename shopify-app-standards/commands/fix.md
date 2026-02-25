@@ -45,7 +45,12 @@ find app/routes -name "*[feature]*"
 grep -A 20 "model ModelName" prisma/schema.prisma
 ```
 
-Read the project skills in `.claude/skills/` to understand what the code SHOULD look like.
+Read the project skill files to understand what the code SHOULD look like:
+- `typescript-standards` — Strict typing, naming, imports, no any/unknown, no empty blocks, pre-commit quality gate
+- `remix-patterns` — Loader/action structure, authenticate.admin first, ErrorBoundary, embedded app rules
+- `shopify-api` — GraphQL only, userErrors checking, pagination, rate limits, webhook handlers
+- `prisma-standards` — db.server.ts singleton, schema design, query patterns, error handling
+- `polaris-appbridge` — Page/Card/BlockStack layout, App Bridge Modal/Toast, embedded UI rules
 
 ## Step 3: Root Cause Analysis
 

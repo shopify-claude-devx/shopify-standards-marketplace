@@ -1,7 +1,7 @@
 ---
 name: polaris-appbridge
-description: Shopify Polaris React components and App Bridge APIs for embedded admin apps — layout patterns, forms, feedback, modals, toasts, resource pickers, navigation. Use when building or modifying UI in Shopify app routes.
-globs: ["app/routes/**/*.tsx", "app/components/**/*.tsx"]
+description: Shopify Polaris components and App Bridge APIs for embedded admin apps. MUST be followed when writing, editing, or generating any UI code, React component, or route component in a Shopify app. Covers Page/Card/BlockStack layout, Text component usage, Banner feedback, Button rules, Form patterns, App Bridge Modal/Toast/TitleBar/NavMenu, and embedded app UI rules (no bare HTML, no custom CSS, no deprecated components).
+user-invocable: false
 ---
 
 # Polaris & App Bridge for Shopify Apps

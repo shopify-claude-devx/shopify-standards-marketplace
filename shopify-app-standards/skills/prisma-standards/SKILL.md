@@ -1,7 +1,7 @@
 ---
 name: prisma-standards
-description: Prisma ORM standards for Shopify Remix apps — schema design, queries, migrations, connection pooling, error handling, and PostgreSQL patterns. Use when writing or modifying Prisma schema, database queries, or migration files.
-globs: ["prisma/**/*.prisma", "app/**/*.server.ts", "app/**/*.server.tsx", "app/db.server.ts"]
+description: Prisma ORM standards for Shopify Remix apps. MUST be followed when writing, editing, or generating any Prisma schema, database query, migration, or .server.ts file that interacts with the database. Covers db.server.ts singleton, schema design (naming, relations, indexes), query patterns (select, N+1 prevention, transactions), error handling (P2002/P2025/P2003), pagination, and the pre-commit checklist.
+user-invocable: false
 ---
 
 # Prisma Standards for Shopify Apps

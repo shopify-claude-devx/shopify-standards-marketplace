@@ -1,6 +1,7 @@
 ---
 name: js-standards
-description: Vanilla JavaScript standards for Shopify theme development. Use when writing, reviewing, or modifying any JavaScript code in the theme.
+description: Vanilla JavaScript standards for Shopify themes. MUST be followed when writing, editing, or generating any .js file or script-related code. Covers defer loading, DOMContentLoaded initialization, Web Components, data attributes for Liquid-to-JS communication, and strict rules — NO inline styles via JS, NO DOM creation via JS, NO price formatting in JS, NO inline scripts.
+user-invocable: false
 ---
 
 # JavaScript Standards

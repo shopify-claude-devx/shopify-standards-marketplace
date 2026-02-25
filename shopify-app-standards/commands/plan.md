@@ -14,13 +14,21 @@ If no Task Spec exists from a previous `/clarify` step, ask the user to run `/cl
 
 ## Process
 
-### Step 1: Read Project Standards
-Before any planning, load the project knowledge:
-1. Read `CLAUDE.md` for project overview
-2. Read ALL skill files in `.claude/skills/` — these contain the coding standards and patterns you MUST follow
-3. Read `.claude/project-context.md` if it exists for project-specific learnings
+### Step 1: Read Project Standards — MANDATORY
+Before any planning, you MUST read the following files. Do NOT skip this step:
 
-This is non-negotiable. Plans that ignore project standards produce directionally wrong code.
+1. Read `CLAUDE.md` for project overview
+2. Read `.claude/project-context.md` if it exists for project-specific learnings
+3. Read EVERY skill file listed below — these define the standards your plan MUST reference:
+   - `typescript-standards` — Strict typing, naming, imports, no any/unknown, no empty blocks, pre-commit quality gate
+   - `remix-patterns` — Loader/action structure, authenticate.admin first, ErrorBoundary, embedded app rules
+   - `shopify-api` — GraphQL only, userErrors checking, pagination, rate limits, webhook handlers
+   - `prisma-standards` — db.server.ts singleton, schema design, query patterns, error handling
+   - `polaris-appbridge` — Page/Card/BlockStack layout, App Bridge Modal/Toast, embedded UI rules
+
+**If you cannot find or read a skill file, STOP and tell the user.**
+
+Plans that ignore project standards produce directionally wrong code. Every TODO in the plan must reference which skill standards apply.
 
 ### Step 2: Research the Codebase
 Use the Task tool to dispatch an **Explore** subagent with this mission:

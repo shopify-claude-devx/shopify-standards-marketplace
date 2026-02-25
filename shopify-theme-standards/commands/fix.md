@@ -39,7 +39,13 @@ grep -rn "[keyword from bug]" app/ sections/ --include="*.ts" --include="*.tsx" 
 grep -rn "functionName" . --include="*.ts" --include="*.tsx"
 ```
 
-Read the project skills in `.claude/skills/` to understand what the code SHOULD look like.
+Read the project skill files to understand what the code SHOULD look like:
+- `liquid-standards` — Liquid variable naming, tag style, render vs include, whitespace control, filters
+- `css-standards` — BEM naming, section scoping, property ordering, responsive breakpoints
+- `section-standards` — Section file structure, wrapper patterns, block rendering via snippets
+- `section-schema-standards` — Schema structure, setting IDs/labels, block conventions, presets
+- `js-standards` — Vanilla JS only, defer loading, no inline styles/DOM creation/price formatting
+- `theme-architecture` — File structure, naming conventions, when to create snippets
 
 ## Step 3: Root Cause Analysis
 

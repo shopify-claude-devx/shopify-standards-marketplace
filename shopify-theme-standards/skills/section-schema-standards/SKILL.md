@@ -1,6 +1,7 @@
 ---
 name: section-schema-standards
-description: Standards for writing Shopify section schemas — naming, setting IDs, labels, blocks, presets, and class conventions. Use when creating or modifying {% schema %} blocks in section files.
+description: Shopify section schema standards. MUST be followed when writing or modifying any {% schema %} block in section files. Covers schema structure order, section class naming, setting IDs (snake_case with context prefix), setting labels (Title Case), setting type selection, block type/name conventions, and preset requirements.
+user-invocable: false
 ---
 
 # Section Schema Standards

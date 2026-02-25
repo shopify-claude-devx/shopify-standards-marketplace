@@ -1,6 +1,7 @@
 ---
 name: css-standards
-description: CSS standards for Shopify theme development. Covers both Tailwind CSS (scratch themes) and pure CSS (Dawn-like themes). Use when writing, reviewing, or modifying any styles, classes, or CSS files.
+description: CSS and styling standards for Shopify themes. MUST be followed when writing, editing, or generating any CSS file, stylesheet, Tailwind classes, or style-related code in .liquid files. Covers BEM naming, section scoping, property ordering, responsive breakpoints, CSS variables, and dynamic schema values.
+user-invocable: false
 ---
 
 # CSS Standards

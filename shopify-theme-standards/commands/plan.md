@@ -14,13 +14,22 @@ If no Task Spec exists from a previous `/clarify` step, ask the user to run `/cl
 
 ## Process
 
-### Step 1: Read Project Standards
-Before any planning, load the project knowledge:
-1. Read `CLAUDE.md` for project overview
-2. Read ALL skill files in `.claude/skills/` — these contain the coding standards and patterns you MUST follow
-3. Read `.claude/project-context.md` if it exists for project-specific learnings
+### Step 1: Read Project Standards — MANDATORY
+Before any planning, you MUST read the following files. Do NOT skip this step:
 
-This is non-negotiable. Plans that ignore project standards produce directionally wrong code.
+1. Read `CLAUDE.md` for project overview
+2. Read `.claude/project-context.md` if it exists for project-specific learnings
+3. Read EVERY skill file listed below — these define the standards your plan MUST reference:
+   - `liquid-standards` — Liquid variable naming, tag style, render vs include, whitespace control, filters
+   - `css-standards` — BEM naming, section scoping, property ordering, responsive breakpoints
+   - `section-standards` — Section file structure, wrapper patterns, block rendering via snippets
+   - `section-schema-standards` — Schema structure, setting IDs/labels, block conventions, presets
+   - `js-standards` — Vanilla JS only, defer loading, no inline styles/DOM creation/price formatting
+   - `theme-architecture` — File structure, naming conventions, when to create snippets
+
+**If you cannot find or read a skill file, STOP and tell the user.**
+
+Plans that ignore project standards produce directionally wrong code. Every TODO in the plan must reference which skill standards apply.
 
 ### Step 2: Research the Codebase
 Use the Task tool to dispatch an **Explore** subagent with this mission:

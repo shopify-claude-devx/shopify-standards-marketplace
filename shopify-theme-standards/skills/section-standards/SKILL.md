@@ -1,6 +1,7 @@
 ---
 name: section-standards
-description: Defines section file structure, wrapper patterns, block rendering, and section architecture for Shopify theme sections. Use when creating, modifying, or reviewing section .liquid files.
+description: Shopify section file structure and block rendering patterns. MUST be followed when creating, editing, or generating any section .liquid file. Covers CSS/HTML/JS/Schema ordering, section wrappers, block rendering via snippets, case/when patterns, and section independence rules.
+user-invocable: false
 ---
 
 # Section Patterns
