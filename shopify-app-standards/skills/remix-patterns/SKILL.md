@@ -1,77 +1,46 @@
 ---
 name: remix-patterns
-description: Remix framework patterns for Shopify embedded apps. MUST be followed when writing, editing, or generating any route file in app/routes/. Covers loader/action structure, authenticate.admin first, form validation, ErrorBoundary requirements, embedded app rules (no <a> tags, no window.location, no browser alerts), data flow patterns, and component completeness rules.
+description: Remix route patterns for Shopify embedded apps — authenticate.admin first, no <a> tags, no window.location, no bare <form>, Shopify boundary exports, action error handling. Use when writing, editing, or reviewing route files in app/routes/, or when the user mentions loaders, actions, forms, or navigation in their Shopify app.
 user-invocable: false
+globs: ["app/routes/**/*.ts", "app/routes/**/*.tsx"]
 ---
 
-# Remix Patterns for Shopify Apps
+# Remix Patterns — Shopify Embedded Apps
 
-## Before Writing Route Code
+**Search docs first.** Remix is migrating to React Router v7 and Shopify packages update often. Search `remix.run/docs` and `shopify.dev/docs/api/shopify-app-remix` before assuming any import path or hook is current.
 
-**Always check official sources first** — Remix is migrating to React Router v7, and Shopify packages update frequently.
+## Iframe Rules — CRITICAL
 
-Search these before writing loaders, actions, or route patterns:
-- `remix.run/docs` — current loader/action API, hooks, data flow
-- `shopify.dev/docs/api/shopify-app-remix` — Shopify's Remix package, authentication, boundaries
-- `github.com/Shopify/shopify-app-template-remix` — current template structure, embedded app rules
-- `polaris.shopify.com` — current component APIs for UI patterns
+These break the embedded app if violated. The iframe loses session:
 
-If you're unsure whether an import path, hook, or pattern is current — search before using it.
+**No `<a>` tags.** Use `<Link>` from `@remix-run/react` or `@shopify/polaris`.
 
-## Route File Export Order
+**No `redirect` from `@remix-run/node`.** Use `redirect` from `authenticate.admin(request)`.
 
-```typescript
-// 1. Imports
-// 2. loader (GET — data fetching)
-// 3. action (POST/PUT/DELETE — mutations)
-// 4. default export (React component)
-// 5. ErrorBoundary
-// 6. headers (if Shopify boundary needed)
-```
+**No lowercase `<form>`.** Use `<Form>` from `@remix-run/react` or `useSubmit`.
 
-## Loaders
+**No `window.location`, `window.alert`, `window.confirm`.** These break the iframe. Use App Bridge or Remix navigation.
 
-- **Always `authenticate.admin(request)` first** — before any other logic
-- **Validate URL params** — `params.id` is always `string | undefined`, check before using
-- **Return serializable data only** — no functions, class instances, or Date objects (use `.toISOString()`)
-- Remix v2 allows plain object returns; `json()` when you need custom status/headers
-- **Every loader must handle failure** — if a DB query or API call can fail, handle it (throw Response with status, or return error state). Never let errors silently disappear
-- **No empty loaders** — if a route has a loader, it must return meaningful data. Don't leave `return null` or `return {}` as placeholder
-- **Type the return** — use `typeof loader` with `useLoaderData` for end-to-end type safety
+## Authentication — Always First
 
-## Actions
+Every loader and action in an app route must call `authenticate.admin(request)` before any other logic. No exceptions.
 
-- **Always `authenticate.admin(request)` first**
-- **Always validate `formData`** — `formData.get()` returns `FormDataEntryValue | null`, narrow to string before using
-- **Always check GraphQL `userErrors`** — never assume a mutation succeeded. Check the array and return errors to the UI
-- **Multiple actions per route** — use hidden `_action` field with `switch` statement
-- Return errors with appropriate status codes (`400` for validation, `422` for mutation errors)
-- **Every action must return on all code paths** — no path should fall through without a return (success, error, or redirect)
-- **Never swallow action errors** — if a try/catch wraps the action body, the catch must return error data to the component or rethrow. Never `catch () {}`
-- **Return validation errors to the component** — don't throw to ErrorBoundary for user input errors. Return `{ errors }` so the form stays mounted with user's data intact
+Webhook routes use `authenticate.webhook(request)` instead.
 
-## Shopify Embedded App Rules — CRITICAL
-
-These three rules break the app if violated. The embedded iframe loses session:
-
-1. **Navigation** — use `<Link>` from `@remix-run/react` or `@shopify/polaris`. NEVER use `<a>` tags.
-2. **Redirects** — use `redirect` from `authenticate.admin(request)`. NEVER use `redirect` from `@remix-run/node`.
-3. **Forms** — use `<Form>` from `@remix-run/react` or `useSubmit`. NEVER use lowercase `<form>`.
-
-## Routing
+## Route Naming
 
 ```
 app/routes/
-├── app.tsx                       → Layout (Polaris + AppBridge + Shopify boundary)
-├── app._index.tsx                → /app (home page)
+├── app.tsx                       → Layout (must export Shopify boundaries)
+├── app._index.tsx                → /app home
 ├── app.products.$id.tsx          → /app/products/:id
-├── auth.$.tsx                    → OAuth splat route
-└── webhooks.app.uninstalled.tsx  → Webhook (action-only, no component)
+├── auth.$.tsx                    → OAuth splat
+└── webhooks.app.uninstalled.tsx  → Webhook (action-only)
 ```
 
-## Layout Route (app.tsx)
+## Layout Route (app.tsx) — Required Exports
 
-The `app.tsx` layout **MUST** export Shopify's boundary handlers. Without them, OAuth redirects fail inside the iframe:
+Without these, OAuth redirects fail inside the iframe:
 
 ```typescript
 import { boundary } from "@shopify/shopify-app-remix/server";
@@ -85,60 +54,32 @@ export const headers: HeadersFunction = (headersArgs) => {
 };
 ```
 
-Child routes can have their own `ErrorBoundary` without affecting this.
+## Action Errors — Return, Don't Throw
 
-## Error Handling
-
-- **Expected errors** (not found, forbidden) → `throw new Response("message", { status: 404 })`
-- **Unexpected errors** (bugs) → `throw new Error("message")`
-- **ErrorBoundary** — use `isRouteErrorResponse(error)` to distinguish between the two
-- Show errors using Polaris `Banner` with `tone="critical"`
-- Errors bubble up to parent routes until an `ErrorBoundary` catches them
-- **Every route that has a loader or action should have an ErrorBoundary** — don't rely solely on the root boundary for all routes
-- **Never leave ErrorBoundary as empty placeholder** — it must render meaningful error UI
-- **Root ErrorBoundary must never throw** — nothing catches errors above root. Keep it simple and safe
-- **Action errors → return data, don't throw** — throwing in an action unmounts the component and loses form state. Return `{ errors }` instead and show inline
-
-## Webhooks
-
-Action-only routes — no loader, no component:
+Throwing in an action unmounts the component and loses form state. Return errors instead:
 
 ```typescript
-export async function action({ request }: ActionFunctionArgs) {
-  const { shop, session, topic } = await authenticate.webhook(request);
-  // handle webhook...
-  return new Response();
-}
+// Wrong — user loses form data
+throw new Error("Invalid input");
+
+// Right — form stays mounted, show inline errors
+return { errors: { name: "Name is required" } };
 ```
 
-## Data Flow
+Use `throw new Response("Not found", { status: 404 })` only for expected HTTP errors (not found, forbidden), not validation.
 
-- **Read**: `loader()` → `useLoaderData<typeof loader>()`
-- **Write**: `<Form method="post">` → `action()` → `useActionData<typeof action>()` → loader auto-revalidates
-- **Non-navigation mutation**: `useFetcher()` — submits without navigating away
-- **Loading states**: `useNavigation().state` — `"idle"`, `"loading"`, `"submitting"`
+## Key Rules
 
-## Common Mistakes
-
-- **Don't `useEffect` for data fetching** — use loaders instead
-- **Don't import `.server.ts` files in components** — they're server-only, will break the client bundle
-- **Don't return non-serializable data from loaders** — data goes over the network as JSON
-- **Don't use `useState` for server data** — use `useLoaderData`, let Remix manage revalidation
-- **Don't leave loading states unhandled** — always check `useNavigation().state` and show loading UI (spinner, disabled button). Never leave the user guessing
-- **Don't leave `useFetcher` results unchecked** — `fetcher.data` can be undefined, error, or success. Handle all three states
-- **Don't forget optimistic UI** — disable submit buttons during `navigation.state === "submitting"` to prevent double-submits
-- **Don't silently ignore GraphQL errors** — `response.data` can exist alongside `userErrors`. Always check `userErrors` array first
-- **Don't leave empty `onClick` or `onSubmit` handlers** — wire them up or remove them
-- **Don't use `console.log` in loaders/actions** — use `console.error` only in catch blocks for real errors. Remove all debug logs before completing
-- **Don't leave TODO comments in route files** — implement the feature or don't create the route
-
-## Component Completeness
-
-- **Every form must show validation errors** — check `actionData?.errors` and display next to relevant fields
-- **Every form must show success feedback** — banner, toast, or redirect after successful mutation
-- **Every loading state must be visible** — button loading, page skeleton, or spinner
-- **Every list must handle empty state** — "No products found" is better than a blank page
-- **Every destructured hook must handle undefined** — `useActionData()` returns `undefined` on first render, always check before accessing properties
+- **Check `userErrors` from every GraphQL mutation** — `response.data` can exist alongside errors. Always check the array first.
+- **Every route with a loader or action needs an ErrorBoundary** — don't rely only on root.
+- **Don't import `.server.ts` files in components** — breaks the client bundle.
+- **Don't use `useState` for server data** — use `useLoaderData`. Let Remix handle revalidation.
+- **Don't use `useEffect` for data fetching** — that's what loaders are for.
+- **Disable submit buttons during `navigation.state === "submitting"`** — prevents double-submits.
+- **Every form shows validation errors** — check `actionData?.errors` and display inline.
+- **Every list handles empty state** — never show a blank page.
 
 ## Reference Files
-Check `references/patterns-learned.md` for project-specific patterns.
+
+- `references/patterns-learned.md` — project-specific route patterns
+- `references/route-checklist.md` — expanded checklist for route file review
