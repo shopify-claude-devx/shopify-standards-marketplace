@@ -1,18 +1,48 @@
 ---
 name: js-standards
-description: Vanilla JavaScript standards for Shopify themes. MUST be followed when writing, editing, or generating any .js file or script-related code. Covers defer loading, DOMContentLoaded initialization, Web Components, data attributes for Liquid-to-JS communication, and strict rules — NO inline styles via JS, NO DOM creation via JS, NO price formatting in JS, NO inline scripts.
+description: Vanilla JavaScript standards for Shopify themes. Follow when writing, editing, or reviewing any .js file or script-related code. Covers modern ES syntax, defer loading, Web Components, data attributes for Liquid-to-JS, and strict rules — NO inline styles via JS, NO DOM creation, NO price formatting in JS, NO inline scripts.
 user-invocable: false
 ---
 
 # JavaScript Standards
 
-## General Approach
-This theme uses vanilla JavaScript only. No frameworks, no jQuery, no build-step JS libraries.
+## Core Rules
+
+This theme uses **vanilla JavaScript only**. No frameworks, no jQuery, no build-step libraries.
+
+### Modern ES Syntax — Always
+
+- **`const` by default. `let` when reassignment is needed. Never `var`.**
+- **Arrow functions as default.** Use function declarations only for Web Component methods and named hoisting.
+- Destructuring for object/array access
+- Template literals over string concatenation
+- Optional chaining (`?.`) and nullish coalescing (`??`) over manual null checks
+- `for...of` over `.forEach()` when no index needed
+
+```javascript
+// ✅ Correct
+const gallery = document.querySelector('.product-gallery');
+const { productId, imagesCount } = gallery.dataset;
+const items = [...document.querySelectorAll('.item')];
+
+const handleClick = (event) => {
+  const { target } = event;
+  target.classList.toggle('is-active');
+};
+
+// ❌ Wrong
+var gallery = document.querySelector('.product-gallery');
+var productId = gallery.getAttribute('data-product-id');
+function handleClick(event) {
+  event.target.classList.toggle('is-active');
+}
+```
 
 ## File Organization
-- Always use separate asset files for scripts (`assets/` directory)
+
+- All JS lives in `assets/` directory as separate files
 - Never create inline `<script>` tags in Liquid files
-- If a script needs values from Liquid, pass them via `data-` attributes on the HTML element and read them in JS:
+- Pass Liquid values to JS via `data-` attributes:
 
 ```liquid
 <div class="product-gallery" data-product-id="{{ product.id }}" data-images-count="{{ product.images.size }}">
@@ -20,30 +50,28 @@ This theme uses vanilla JavaScript only. No frameworks, no jQuery, no build-step
 
 ```javascript
 const gallery = document.querySelector('.product-gallery');
-const productId = gallery.dataset.productId;
-const imagesCount = parseInt(gallery.dataset.imagesCount);
+const { productId, imagesCount } = gallery.dataset;
 ```
 
-## JS Loading
-Always use `defer` on script tags regardless of fold position:
+## Script Loading
+
+Always `defer` regardless of fold position:
 
 ```liquid
-<script src="{{ 'section-name-javascript.js' | asset_url }}" defer></script>
+<script src="{{ 'section-name.js' | asset_url }}" defer></script>
 ```
 
-## Initialization Pattern
-Use `DOMContentLoaded` as the default initialization pattern:
+## Initialization Patterns
+
+**One-off section scripts** — `DOMContentLoaded`:
 
 ```javascript
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
   // Initialize section behavior
 });
 ```
 
-## Web Components — When to Use
-Use Custom Elements only for **reusable interactive components** that appear in multiple places. Examples: `<accordion-element>`, `<cart-drawer>`, `<modal-dialog>`.
-
-Do NOT use Web Components for one-off section scripts. Those use the `DOMContentLoaded` pattern above.
+**Reusable interactive components** (multiple places) — Web Components:
 
 ```javascript
 class AccordionElement extends HTMLElement {
@@ -61,99 +89,44 @@ if (!customElements.get('accordion-element')) {
 }
 ```
 
-## Theme Editor Compatibility
-Rely on Web Components for Theme Editor compatibility — `connectedCallback` and `disconnectedCallback` handle section load/unload automatically.
+Web Components also handle Theme Editor compatibility — `connectedCallback`/`disconnectedCallback` manage section load/unload automatically.
 
-## Event Handling — Selectors
-- Use `id` when targeting a single element on the page
-- Use `classes` when targeting multiple elements
-
-```javascript
-// Single element
-const header = document.getElementById('site-header');
-
-// Multiple elements
-const accordionItems = document.querySelectorAll('.accordion-item');
-accordionItems.forEach(function(item) {
-  item.addEventListener('click', handleAccordionClick);
-});
-```
-
-## Naming
-- Files: `kebab-case.js` (e.g., `product-gallery.js`, `cart-drawer.js`)
-- Variables and functions: `camelCase`
-- Constants: `UPPER_SNAKE_CASE`
-- Classes (Web Components): `PascalCase`
-- Custom element tags: `kebab-case` (HTML spec requirement)
-
----
+Do NOT use Web Components for one-off section scripts.
 
 ## Strict Rules
 
 ### 1. NO Styling via JavaScript
-Never use inline styles via JavaScript. Always toggle CSS classes instead.
+
+Never inline styles. Toggle CSS classes instead:
 
 ```javascript
-// ❌ BAD
-element.style.display = 'block';
-element.style.opacity = '1';
-Object.assign(element.style, { display: 'block', opacity: '1' });
-
-// ✅ GOOD
-element.classList.add('block', 'opacity-100');
-element.classList.remove('hidden', 'opacity-0');
-
-// ✅ ALSO GOOD — state classes
-element.classList.add('is-open');
-element.classList.remove('is-closed');
+// ❌ element.style.display = 'block';
+// ✅ element.classList.add('is-open');
+// ✅ element.classList.remove('is-closed');
 ```
 
-Never use Tailwind classes as query selectors in scripts.
+Never use Tailwind classes as query selectors.
 
-### 2. NO DOM Element Creation via JavaScript
-Never create HTML strings in JavaScript for rendering. Never use `innerHTML` with template strings for complex components. Let Liquid handle all markup.
+### 2. NO DOM Creation via JavaScript
 
-```javascript
-// ❌ BAD
-function renderProductCard(product) {
-    return `
-        <div class="product-card">
-            <img src="${product.image}" />
-            <h3>${product.title}</h3>
-            <p>$${product.price}</p>
-        </div>
-    `;
-}
-container.innerHTML = products.map(renderProductCard).join('');
-```
-
-```liquid
-// ✅ GOOD — Liquid handles markup
-{%- for product in products -%}
-  {% render 'product-card', card_product: product %}
-{%- endfor -%}
-```
+Never build HTML strings in JS. Never use `innerHTML` with templates for components. Liquid handles all markup.
 
 ### 3. NO Price Formatting in JavaScript
-Always use Liquid money filters for price display. Never format prices in JS.
+
+Always use Liquid money filters. Never format prices in JS.
 
 ```javascript
-// ❌ BAD
-const price = `$${(cents / 100).toFixed(2)}`;
+// ❌ const price = `$${(cents / 100).toFixed(2)}`;
 ```
-
 ```liquid
-// ✅ GOOD
-{{ product.price | money }}
+// ✅ {{ product.price | money }}
 ```
 
 ### 4. NO Inline Scripts
-Never create inline `<script>` tags in Liquid files. All JS lives in asset files.
 
----
-
-## Comments
-Don't write excessive unnecessary comments. Only comment when the WHY isn't obvious from the code itself. Clean, readable code is better than commented code.
+All JS lives in asset files. No `<script>` blocks in Liquid.
 
 ## Reference Files
-Check `references/patterns-learned.md` for JS patterns and issues discovered during development.
+
+- `references/js-checklist.md` — per-file validation checklist
+- `references/patterns-learned.md` — project-specific JS patterns discovered during development
