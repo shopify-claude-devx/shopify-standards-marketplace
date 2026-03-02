@@ -18,8 +18,7 @@ If no Task Spec exists from a previous `/clarify` step, ask the user to run `/cl
 Before any planning, you MUST read the following files. Do NOT skip this step:
 
 1. Read `CLAUDE.md` for project overview
-2. Read `.claude/project-context.md` if it exists for project-specific learnings
-3. Read EVERY skill file listed below — these define the standards your plan MUST reference:
+2. Read EVERY skill file listed below — these define the standards your plan MUST reference:
    - `liquid-standards` — Liquid variable naming, tag style, render vs include, whitespace control, filters
    - `css-standards` — BEM naming, section scoping, property ordering, responsive breakpoints
    - `section-standards` — Section file structure, wrapper patterns, block rendering via snippets

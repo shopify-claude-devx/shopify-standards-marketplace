@@ -16,7 +16,7 @@ function DeleteConfirmation({ onDelete }: { onDelete: () => void }) {
         <Text as="p">Are you sure you want to delete this? This cannot be undone.</Text>
       </Box>
       <TitleBar title="Confirm Delete">
-        <button variant="primary" tone="critical" onClick={onDelete}>Delete</button>
+        <button onClick={onDelete}>Delete</button>
         <button onClick={() => shopify.modal.hide("delete-confirm")}>Cancel</button>
       </TitleBar>
     </Modal>
@@ -62,8 +62,8 @@ import { TitleBar } from "@shopify/app-bridge-react";
 
 // In route component:
 <TitleBar title="Products">
-  <button variant="primary" onClick={handleCreate}>Create Product</button>
-  <button variant="breadcrumb" onClick={handleBack}>Back</button>
+  <button onClick={handleCreate}>Create Product</button>
+  <button onClick={handleBack}>Back</button>
 </TitleBar>
 ```
 

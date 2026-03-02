@@ -21,7 +21,6 @@ Break the request into:
 
 ### Step 3: Check Existing Context
 - Read `CLAUDE.md` if it exists for project context
-- Read `.claude/project-context.md` if it exists for project-specific learnings
 - Scan the codebase briefly to understand what already exists that relates to this request
 
 ### Step 4: Ask Clarifying Questions

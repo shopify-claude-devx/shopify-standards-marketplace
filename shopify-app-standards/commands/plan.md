@@ -18,8 +18,7 @@ If no Task Spec exists from a previous `/clarify` step, ask the user to run `/cl
 Before any planning, you MUST read the following files. Do NOT skip this step:
 
 1. Read `CLAUDE.md` for project overview
-2. Read `.claude/project-context.md` if it exists for project-specific learnings
-3. Read EVERY skill file listed below — these define the standards your plan MUST reference:
+2. Read EVERY skill file listed below — these define the standards your plan MUST reference:
    - `typescript-standards` — Strict typing, naming, imports, no any/unknown, no empty blocks, pre-commit quality gate
    - `remix-patterns` — Loader/action structure, authenticate.admin first, ErrorBoundary, embedded app rules
    - `shopify-api` — GraphQL only, userErrors checking, pagination, rate limits, webhook handlers

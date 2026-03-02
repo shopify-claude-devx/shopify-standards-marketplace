@@ -24,8 +24,7 @@ Do NOT proceed without a plan unless the user explicitly overrides this.
 Before writing ANY code, you MUST read the following files. This is NOT optional. Do NOT skip this step. Do NOT proceed to writing code until you have read each one:
 
 1. Read `CLAUDE.md` for project overview
-2. Read `.claude/project-context.md` if it exists
-3. Read EVERY skill file listed below — these are your MANDATORY coding standards:
+2. Read EVERY skill file listed below — these are your MANDATORY coding standards:
    - `typescript-standards` — Strict typing, naming, imports, no any/unknown, no empty blocks, no dead code, pre-commit quality gate
    - `remix-patterns` — Loader/action structure, authenticate.admin first, ErrorBoundary, embedded app rules, data flow, component completeness
    - `shopify-api` — GraphQL only, API versioning, userErrors checking, pagination, rate limits, webhook handlers
@@ -170,4 +169,4 @@ Run `/assess` to validate the output and review code quality.
 - Build incrementally — complete one TODO fully before starting the next
 
 
-**After the build summary, automatically run `/assess` on the files you just built.**
+**Once complete, suggest the user run `/assess` to validate the output and review code quality.**

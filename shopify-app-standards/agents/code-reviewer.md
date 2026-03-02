@@ -21,30 +21,29 @@ You review each file against the project standards and report findings.
 
 ### 1. Standards Compliance
 Does the code follow the project's skill standards? Check against every relevant skill:
-- Liquid standards — template patterns, filter usage, variable naming
-- Section patterns — section/block structure, schema organization
-- Schema conventions — setting types, naming, defaults, grouping
-- CSS standards — Tailwind usage, custom properties, responsive approach
-- JS standards — vanilla JS patterns, event handling, DOM manipulation
-- Theme architecture — file placement, naming conventions, folder structure
+- TypeScript standards — strict typing, no any/unknown, no as casts, no empty blocks, no console.log
+- Remix patterns — authenticate.admin first, ErrorBoundary, no `<a>` tags, no window.location, action error handling
+- Shopify API — GraphQL only, userErrors checking, rate limits, API versioning
+- Prisma standards — db.server.ts singleton, findMany limits, null handling, error codes
+- Polaris/App Bridge — no bare HTML, no custom CSS, App Bridge Modal not Polaris Modal, Text component for all text
 
 ### 2. Readability
 - Can another developer understand this code in under 2 minutes?
-- Are Liquid variables and captures named clearly?
+- Are types and interfaces named clearly?
 - Is complex logic broken into readable steps or commented?
-- Are schema settings labeled clearly for merchants?
+- Are components structured logically?
 
 ### 3. Maintainability
 - Can this be modified without breaking other things?
-- Are there hard-coded values that should be settings or variables?
+- Are there hard-coded values that should be constants or configuration?
 - Is there duplicated logic that should be extracted?
-- Are Liquid snippets used where appropriate for shared code?
+- Are server utilities properly separated from client code?
 
 ### 4. Reusability
-- Is this section/snippet flexible enough for different contexts?
-- Are block types designed for merchant flexibility?
-- Could any part of this be a reusable snippet?
-- Are schema settings granular enough without being overwhelming?
+- Are there patterns that could be extracted into shared utilities?
+- Are components flexible enough for different contexts?
+- Could any server logic be shared across routes?
+- Are types exported and reusable?
 
 ## Severity Levels
 

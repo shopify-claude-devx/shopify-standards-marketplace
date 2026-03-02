@@ -24,8 +24,7 @@ Do NOT proceed without a plan unless the user explicitly overrides this.
 Before writing ANY code, you MUST read the following files. This is NOT optional. Do NOT skip this step. Do NOT proceed to writing code until you have read each one:
 
 1. Read `CLAUDE.md` for project overview
-2. Read `.claude/project-context.md` if it exists
-3. Read EVERY skill file listed below — these are your MANDATORY coding standards:
+2. Read EVERY skill file listed below — these are your MANDATORY coding standards:
    - `liquid-standards` — Liquid variable naming, tag style, render vs include, whitespace control, filters, null checks
    - `css-standards` — BEM naming, section scoping, property ordering, responsive breakpoints, CSS variables
    - `section-standards` — Section file structure (CSS → HTML → JS → Schema), wrapper class, block rendering via snippets

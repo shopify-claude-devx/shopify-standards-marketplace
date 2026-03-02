@@ -25,21 +25,23 @@ Is every stated requirement implemented? Go through them one by one.
 ### 2. Functional Completeness
 Does the implementation actually work for its intended purpose? Look for:
 - Missing conditional paths (what if a value is empty? null? unexpected type?)
-- Edge cases in Liquid (empty collections, missing metafields, no product images)
-- Missing responsive considerations in templates
-- Merchant-facing settings that don't actually affect the output
+- Edge cases in loaders (no data, unauthorized, network failure)
+- Missing form validation and error display
+- Empty states for lists and tables
+- Loading states during submissions
 
 ### 3. Integration
-Will this work within the existing theme?
-- Are new sections registered where needed?
-- Are new templates accessible?
-- Do new settings conflict with existing ones?
-- Are assets referenced correctly?
+Will this work within the existing app?
+- Are new routes properly named and accessible?
+- Do new components integrate with existing layout?
+- Are Prisma schema changes migrated?
+- Are new API calls authenticated?
 
 ### 4. Shopify-Specific Validation
-- Does this work in the Theme Editor preview?
-- Are section limits and block limits appropriate?
-- Will this work with Online Store 2.0 requirements?
+- Does this work inside the embedded app iframe?
+- Are GraphQL mutations checking userErrors?
+- Are webhook handlers returning 200 within 5 seconds?
+- Is authenticate.admin called before any logic?
 
 ## How You Report
 

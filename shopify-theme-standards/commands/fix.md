@@ -127,6 +127,9 @@ npx tsc --noEmit
 **Skill that should have prevented this:** [skill name → which rule]
 ```
 
+## After Fix
+Once the fix is verified, run `/assess` again to ensure no new issues were introduced.
+
 ## Rules
 - Never guess. If you're not sure about the cause, read more code before diagnosing
 - Never fix code during diagnosis. Step 4 is a hard stop

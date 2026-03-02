@@ -2,6 +2,7 @@
 name: section-standards
 description: Shopify section file structure and block rendering patterns. MUST be followed when creating, editing, or generating any section .liquid file. Covers CSS/HTML/JS/Schema ordering, section wrappers, block rendering via snippets, case/when patterns, and section independence rules.
 user-invocable: false
+globs: ["sections/**/*.liquid"]
 ---
 
 # Section Patterns
@@ -29,7 +30,7 @@ Every section file follows this order from top to bottom:
 </div>
 
 {%- comment -%} 3. JS {%- endcomment -%}
-<script src="{{ 'hero-banner.js' | asset_url }}" defer="defer"></script>
+<script src="{{ 'hero-banner.js' | asset_url }}" defer></script>
 
 {%- comment -%} 4. Schema {%- endcomment -%}
 {% schema %}

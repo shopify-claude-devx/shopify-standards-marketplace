@@ -48,13 +48,12 @@ A Shopify or tooling limitation/behavior that isn't obvious.
 ### Step 3: Categorize and Write
 For each learning, determine where it belongs:
 
-- Liquid code patterns → `.claude/skills/liquid-standards/references/patterns-learned.md`
-- Section/block patterns → `.claude/skills/section-standards/references/patterns-learned.md`
-- Schema conventions → `.claude/skills/section-schema-standards/references/patterns-learned.md`
-- CSS/Tailwind patterns → `.claude/skills/css-standards/references/patterns-learned.md`
-- JS patterns → `.claude/skills/js-standards/references/patterns-learned.md`
-- Theme file structure → `.claude/skills/theme-architecture/references/patterns-learned.md`
-- General project context → `.claude/project-context.md`
+- Liquid code patterns → `skills/liquid-standards/references/patterns-learned.md`
+- Section/block patterns → `skills/section-standards/references/patterns-learned.md`
+- Schema conventions → `skills/section-schema-standards/references/patterns-learned.md`
+- CSS/Tailwind patterns → `skills/css-standards/references/patterns-learned.md`
+- JS patterns → `skills/js-standards/references/patterns-learned.md`
+- Theme file structure → `skills/theme-architecture/references/patterns-learned.md`
 
 **If the target skill directory doesn't exist yet:**
 - Create the skill directory with a SKILL.md and references/patterns-learned.md
@@ -62,7 +61,6 @@ For each learning, determine where it belongs:
 
 **If a learning doesn't fit any existing skill:**
 - If substantial enough to be its own category, create a new skill directory
-- If a one-off, add to `.claude/project-context.md`
 
 ### Step 4: Write the Learning
 Before writing, read the existing content of the target file to:
