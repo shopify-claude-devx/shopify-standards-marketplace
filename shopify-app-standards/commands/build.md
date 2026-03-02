@@ -21,7 +21,7 @@ Look for a confirmed execution plan in the current conversation. If no plan exis
 Do NOT proceed without a plan unless the user explicitly overrides this.
 
 ### Check 2: Load Project Standards — MANDATORY
-Before writing ANY code, you MUST read the following files. This is NOT optional. Do NOT skip this step. Do NOT proceed to writing code until you have read each one:
+Before writing ANY code, you MUST re-read the following files — even if you read them during `/plan`. Planning discussion may have pushed details out of focus. You need these rules fresh before writing code. Do NOT skip this step:
 
 1. Read `CLAUDE.md` for project overview
 2. Read EVERY skill file listed below — these are your MANDATORY coding standards:

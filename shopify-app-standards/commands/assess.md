@@ -14,8 +14,8 @@ If no context about what was built exists, ask the user what files or features t
 
 ## Pre-Assessment Setup
 
-1. Read `CLAUDE.md` for project overview
-2. Read EVERY skill file listed below — these define the standards to assess against:
+1. Read `CLAUDE.md` if it exists for project overview
+2. Re-read EVERY skill file listed below — even if loaded during `/plan` or `/build`. You need the full standards fresh to assess against:
    - `typescript-standards` — Strict typing, naming, imports, no any/unknown, no empty blocks, pre-commit quality gate
    - `remix-patterns` — Loader/action structure, authenticate.admin first, ErrorBoundary, embedded app rules
    - `shopify-api` — GraphQL only, userErrors checking, pagination, rate limits, webhook handlers

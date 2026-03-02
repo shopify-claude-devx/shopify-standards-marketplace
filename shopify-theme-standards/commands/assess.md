@@ -14,8 +14,8 @@ If no context about what was built exists, ask the user what files or features t
 
 ## Pre-Assessment Setup
 
-1. Read `CLAUDE.md` for project overview
-2. Read EVERY skill file listed below — these define the standards to assess against:
+1. Read `CLAUDE.md` if it exists for project overview
+2. Re-read EVERY skill file listed below — even if loaded during `/plan` or `/build`. You need the full standards fresh to assess against:
    - `liquid-standards` — Liquid variable naming, tag style, render vs include, whitespace control, filters
    - `css-standards` — BEM naming, section scoping, property ordering, responsive breakpoints
    - `section-standards` — Section file structure, wrapper patterns, block rendering via snippets
