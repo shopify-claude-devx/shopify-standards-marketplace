@@ -1,6 +1,6 @@
 ---
 description: Re-run PageSpeed Insights after optimization and compare before/after scores. Use after /optimize to validate improvements.
-allowed-tools: Read, Bash, Glob, Grep
+allowed-tools: Read, Glob, Grep, mcp__psi__psi_audit_full, mcp__psi__psi_compare
 ---
 
 # Verify — Before/After Comparison
@@ -10,7 +10,7 @@ You are entering the Verify phase. Your job is to re-run PageSpeed Insights on t
 ## Input
 What to verify: `$ARGUMENTS`
 
-If no URL is provided, look for the URL from the previous `/audit` step in the conversation or in `.claude/performance/audit-mobile.json`.
+If no URL is provided, look for the URL from the previous `/audit` step in the conversation.
 
 ## Process
 
@@ -23,85 +23,61 @@ Ask the user:
 
 Wait for confirmation before proceeding.
 
-### Step 2: Read Baseline Data
-Read the original audit data:
-```bash
-cat .claude/performance/audit-mobile.json | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-lr = data['lighthouseResult']
-score = lr['categories']['performance']['score'] * 100
-lcp = lr['audits']['largest-contentful-paint']['displayValue']
-cls = lr['audits']['cumulative-layout-shift']['displayValue']
-tbt = lr['audits']['total-blocking-time']['displayValue']
-fcp = lr['audits']['first-contentful-paint']['displayValue']
-si = lr['audits']['speed-index']['displayValue']
-print(f'Mobile - Score: {score}, LCP: {lcp}, CLS: {cls}, TBT: {tbt}, FCP: {fcp}, SI: {si}')
-"
-```
+### Step 2: Run New Audit
+Call `psi_audit_full` with the same URL that was originally audited. This fetches fresh mobile + desktop reports and saves them to `.claude/performance/`.
 
-Do the same for desktop.
+The MCP server automatically saves each audit with a timestamp, so both the old (before) and new (after) audits coexist in storage.
 
-### Step 3: Run New Audit
-Fetch fresh PSI data for both mobile and desktop (same process as `/audit`):
+### Step 3: Compare Results
+Call `psi_compare` for **both** strategies:
 
-```bash
-curl -s "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$URL', safe=''))")&strategy=mobile&category=performance" -o /tmp/psi-mobile-after.json
-```
+1. `psi_compare` with `url` and `strategy: "mobile"` — compares the two most recent mobile audits
+2. `psi_compare` with `url` and `strategy: "desktop"` — compares the two most recent desktop audits
 
-```bash
-curl -s "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$URL', safe=''))")&strategy=desktop&category=performance" -o /tmp/psi-desktop-after.json
-```
+The tool returns:
+- Score delta (before → after)
+- Core Web Vitals delta for each metric (with improved/regressed/same status)
+- Audits that were fixed (previously failing, now passing)
+- Audits that regressed (new failures)
+- Audits still failing
 
-### Step 4: Parse New Results
-Extract the same metrics from the new data.
-
-### Step 5: Save Post-Optimization Data
-```bash
-cp /tmp/psi-mobile-after.json .claude/performance/verify-mobile.json
-cp /tmp/psi-desktop-after.json .claude/performance/verify-desktop.json
-```
-
-### Step 6: Present Comparison
+### Step 4: Present Combined Comparison
+Combine the mobile and desktop comparisons into a single view:
 
 ```
 ## Verification Results
 
 **URL:** [the URL tested]
-**Tested:** [timestamp]
 
 ### Score Comparison
-| Metric | Mobile Before | Mobile After | Change | Desktop Before | Desktop After | Change |
-|--------|---------------|--------------|--------|----------------|---------------|--------|
-| Performance | [X] | [X] | [+/-X] | [X] | [X] | [+/-X] |
+| | Mobile | Desktop |
+|--|--------|---------|
+| Before | [X]/100 | [X]/100 |
+| After | [X]/100 | [X]/100 |
+| Change | [+/-X] | [+/-X] |
 
-### Core Web Vitals Comparison
-| Metric | Mobile Before | Mobile After | Change | Desktop Before | Desktop After | Change | Target |
-|--------|---------------|--------------|--------|----------------|---------------|--------|--------|
-| LCP | [X]s | [X]s | [+/-] | [X]s | [X]s | [+/-] | < 2.5s |
-| CLS | [X] | [X] | [+/-] | [X] | [X] | [+/-] | < 0.1 |
-| TBT | [X]ms | [X]ms | [+/-] | [X]ms | [X]ms | [+/-] | < 200ms |
-| FCP | [X]s | [X]s | [+/-] | [X]s | [X]s | [+/-] | < 1.8s |
-| SI | [X]s | [X]s | [+/-] | [X]s | [X]s | [+/-] | < 3.4s |
+### Core Web Vitals
+[Include the detailed tables from both psi_compare results]
 
 ### Audits Fixed
-- [audit name] — was [before], now [after] ✅
+[Combined list from both strategies]
 
 ### Audits Still Failing
-- [audit name] — [current value] — [reason: Category B/C or needs more work]
+[Combined list]
+
+### Regressions
+[Any new failures, or "None"]
 
 ### Summary
-[2-3 sentences: What improved, what's still an issue, and whether the optimization was successful]
+[2-3 sentences: What improved, what's still an issue, whether the optimization was successful]
 ```
 
-### Step 7: Recommend Next Steps
+### Step 5: Recommend Next Steps
 
-Based on the results:
-
-**If significant improvement:**
+**If significant improvement (score +10 or more):**
 > Optimization successful. Run `/report` to generate a client-facing report with before/after comparisons.
 
-**If minimal improvement:**
+**If minimal improvement (score +1 to +9):**
 > Results are modest. This could be due to:
 > - Third-party scripts dominating the performance budget (Category B issues)
 > - PageSpeed variability (scores can fluctuate 5-10 points between runs)
@@ -112,19 +88,19 @@ Based on the results:
 **If scores went down:**
 > Scores decreased. Possible causes:
 > - The preview URL doesn't reflect the latest changes
-> - A fix introduced a regression (check: did CSS async loading break above-fold rendering?)
+> - A fix introduced a regression (check the "Audits Regressed" section)
 > - PageSpeed test variability
 >
-> Recommend re-running the test, or investigating specific regressions.
+> Recommend re-running the test or investigating specific regressions.
 
 ## Important Notes
 - PageSpeed scores can vary 5-10 points between runs. A single test is not definitive.
-- If scores look unexpected, suggest running the test 2-3 times and averaging.
-- Focus on Core Web Vitals improvements (LCP, CLS, TBT) more than the overall score — the score is derived from these metrics.
+- If scores look unexpected, suggest running `/verify` again and averaging.
+- Focus on Core Web Vitals improvements (LCP, CLS, TBT) more than the overall score.
 
 ## Rules
 - Always confirm the preview is updated before testing
-- Always compare against the baseline from `/audit` — never from memory
+- Always use `psi_compare` to compute deltas — never compare from memory
 - Present both mobile and desktop
 - Be honest about variability — don't oversell small changes
-- Save post-optimization data for the `/report` command
+- If `psi_compare` returns an error about needing 2 audits, the before-audit may be missing — tell the user to check `.claude/performance/`
