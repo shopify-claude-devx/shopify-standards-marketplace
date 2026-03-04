@@ -122,13 +122,106 @@ document.querySelectorAll('[data-deferred-init]').forEach(el => {
 ### Identify Impact
 Third-party scripts (apps, analytics, chat widgets) are the #1 cause of poor TBT on Shopify stores. The `/diagnose` command flags these for the client report.
 
-### What We Can Do
-- Add `async` to third-party scripts that don't need DOM access
-- Defer third-party initialization to `requestIdleCallback`
-- Use facade patterns for heavy embeds (e.g., YouTube lite embed)
+### What We Can Do in Theme Code
+
+**1. Defer/async:**
+```liquid
+{%- comment -%} Add defer to any third-party script {%- endcomment -%}
+<script src="https://app.example.com/widget.js" defer></script>
+```
+
+**2. Conditional loading (page-type specific):**
+```liquid
+{%- comment -%} Reviews widget only on product pages {%- endcomment -%}
+{%- if template == 'product' -%}
+  <script src="https://app.example.com/reviews.js" defer></script>
+{%- endif -%}
+```
+
+**3. Lazy load with IntersectionObserver:**
+```liquid
+{%- comment -%} Load script only when its section scrolls into view {%- endcomment -%}
+<div id="reviews-container" data-lazy-script="https://app.example.com/reviews.js">
+  <div class="reviews-placeholder" style="min-height: 200px;">
+    Loading reviews...
+  </div>
+</div>
+<script defer>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const script = document.createElement('script');
+        script.src = entry.target.dataset.lazyScript;
+        document.head.appendChild(script);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { rootMargin: '200px' });
+  document.querySelectorAll('[data-lazy-script]').forEach(el => observer.observe(el));
+</script>
+```
+
+**4. Facade pattern for heavy embeds:**
+
+YouTube facade — loads a static thumbnail, real iframe only on click:
+```liquid
+<div class="video-facade" data-video-id="{{ section.settings.video_id }}">
+  <img
+    src="https://img.youtube.com/vi/{{ section.settings.video_id }}/hqdefault.jpg"
+    alt="{{ section.settings.video_title }}"
+    loading="lazy"
+    width="640"
+    height="360"
+  >
+  <button class="video-facade__play" aria-label="Play video {{ section.settings.video_title }}">
+    <svg width="68" height="48" viewBox="0 0 68 48" aria-hidden="true">
+      <path d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55C3.97 2.33 2.27 4.81 1.48 7.74.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42-6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z" fill="red"/>
+      <path d="M45 24L27 14v20" fill="white"/>
+    </svg>
+  </button>
+</div>
+```
+```javascript
+// In section JS file (deferred)
+document.querySelectorAll('.video-facade').forEach(facade => {
+  facade.addEventListener('click', () => {
+    const videoId = facade.dataset.videoId;
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+    iframe.width = 640;
+    iframe.height = 360;
+    iframe.allow = 'autoplay; encrypted-media';
+    iframe.allowFullscreen = true;
+    facade.replaceWith(iframe);
+  }, { once: true });
+});
+```
+
+Google Maps facade — static image until click:
+```liquid
+<div class="map-facade" data-map-embed="{{ section.settings.map_embed_url }}">
+  <img
+    src="https://maps.googleapis.com/maps/api/staticmap?center={{ section.settings.map_address | url_encode }}&zoom=14&size=640x360&key={{ section.settings.google_maps_key }}"
+    alt="Map showing {{ section.settings.map_address }}"
+    loading="lazy"
+    width="640"
+    height="360"
+  >
+  <button class="map-facade__interact" aria-label="Load interactive map">
+    View interactive map
+  </button>
+</div>
+```
+
+**5. Preconnect for scripts that must load:**
+```liquid
+{%- comment -%} In <head> — reduces connection time for critical third-party domains {%- endcomment -%}
+<link rel="preconnect" href="https://app.example.com" crossorigin>
+<link rel="dns-prefetch" href="https://app.example.com">
+```
 
 ### What Requires Client Action
-- Removing unused apps
+- Removing unused apps entirely
 - Contacting app vendors for lighter script options
 - Choosing between app functionality and performance score
 

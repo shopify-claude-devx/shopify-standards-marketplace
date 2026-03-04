@@ -11,9 +11,29 @@ CSS is render-blocking by default. Every stylesheet delays First Contentful Pain
 
 ## Critical vs Non-Critical CSS
 
+### What Is Critical CSS?
+Critical CSS is the minimum CSS needed to render the above-fold content — what the user sees before scrolling. Everything else is non-critical and should load async.
+
+**Critical CSS typically includes:**
+- Layout framework (grid/flex containers for the visible page structure)
+- Header/navigation styles (always visible on load)
+- Hero/banner section styles (first visible content block)
+- Typography for visible text (body font, heading sizes)
+- Base resets and variables used above the fold
+
+**Non-critical CSS includes:**
+- Footer styles (below fold)
+- Product grid styles (usually below hero)
+- Testimonials, FAQs, blog sections
+- Modal/popup styles (not visible on load)
+- Cart drawer styles (hidden until opened)
+
 ### Above-Fold CSS — Preload
 CSS needed to render the visible viewport on load must be preloaded:
 ```liquid
+{%- comment -%} Critical: header, hero, base layout {%- endcomment -%}
+{{ 'base-stylesheet.css' | asset_url | stylesheet_tag: preload: true }}
+{{ 'header-stylesheet.css' | asset_url | stylesheet_tag: preload: true }}
 {{ 'hero-banner-stylesheet.css' | asset_url | stylesheet_tag: preload: true }}
 ```
 
@@ -21,6 +41,8 @@ Or with the `css.liquid` snippet pattern:
 ```liquid
 {% render 'css', filename: 'hero-banner-stylesheet.css', loading: 'preload' %}
 ```
+
+**Rule of thumb:** If the section is visible without scrolling on mobile, its CSS is critical.
 
 ### Below-Fold CSS — Async Load
 CSS for sections below the fold should not block rendering:

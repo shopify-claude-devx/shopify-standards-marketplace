@@ -1,11 +1,19 @@
 ---
-description: Re-run PageSpeed Insights after optimization and compare before/after scores. Use after /optimize to validate improvements.
-allowed-tools: Read, Glob, Grep, mcp__psi__analyze_page_speed, mcp__psi__get_performance_summary
+description: Re-run PageSpeed Insights after optimization across all 4 categories (Performance, Accessibility, Best Practices, SEO). Compare before/after. Triggers next optimization round if targets not met.
+allowed-tools: Read, Glob, Grep, mcp__psi__get_full_audit
 ---
 
-# Verify — Before/After Comparison
+# Verify — Before/After Comparison (All Categories)
 
-You are entering the Verify phase. Your job is to re-run PageSpeed Insights on the same URL and compare the results against the pre-optimization baseline. Present a clear before/after comparison.
+You are entering the Verify phase. Your job is to re-run PageSpeed Insights on the same URL, compare against the baseline across ALL 4 categories, and determine whether targets are met.
+
+## Targets
+| Category | Mobile | Desktop |
+|----------|--------|---------|
+| Performance | 70+ | 85+ |
+| Best Practices | 90+ | 90+ |
+| Accessibility | 90+ | 90+ |
+| SEO | 90+ | 90+ |
 
 ## Input
 What to verify: `$ARGUMENTS`
@@ -14,105 +22,127 @@ If no URL is provided, look for the URL from the previous `/audit` step in the c
 
 ## Process
 
-### Step 1: Confirm the Page is Updated
-Ask the user:
+### Step 1: Confirm Changes Are Live
+Tell the user:
 
-> Before re-testing, confirm that the optimized theme is deployed to the preview URL. PageSpeed Insights tests the live URL — local changes won't be reflected.
+> Running verification. Make sure your latest changes have been pushed — PSI tests the live/preview URL, not local code.
 >
-> Is the preview URL ready to test?
+> **Preview URL note:** If testing a preview theme, use the full URL with `?preview_theme_id=XXXX`. Password-protected storefronts will fail — the store password must be removed for PSI to access the page.
 
-Wait for confirmation before proceeding.
+Proceed immediately — do not wait for confirmation (code auto-pushes).
 
 ### Step 2: Note the Before Scores
-Look back in the conversation for the scores from the `/audit` step. Record:
-- Mobile score, LCP, CLS, TBT, FCP, SI
-- Desktop score, LCP, CLS, TBT, FCP, SI
-- List of failed audits
+Look back in the conversation for ALL category scores from the `/audit` step:
+- Performance: Mobile [X], Desktop [X]
+- Best Practices: Mobile [X], Desktop [X]
+- Accessibility: Mobile [X], Desktop [X]
+- SEO: Mobile [X], Desktop [X]
+- Core Web Vitals: LCP, CLS, TBT, FCP, SI
 
-If no previous audit data exists in the conversation, tell the user:
-> No baseline scores found. I'll run a fresh audit, but I won't be able to show a before/after comparison. Consider running `/audit` first next time.
+If no previous audit data exists, tell the user and proceed without comparison.
 
 ### Step 3: Run New Audit
-Call `analyze_page_speed` twice with the same URL:
+Call `get_full_audit` twice (all 4 categories by default):
 
-1. `analyze_page_speed` with `url` and `strategy: "mobile"`
-2. `analyze_page_speed` with `url` and `strategy: "desktop"`
+1. `get_full_audit` with `url` and `strategy: "mobile"`
+2. `get_full_audit` with `url` and `strategy: "desktop"`
 
-### Step 4: Present Before/After Comparison
-Combine the before (from conversation) and after (from new audit) into a comparison:
+### Step 4: Present Full Comparison
 
 ```
-## Verification Results
+## Verification Results — Round [X]
 
 **URL:** [the URL tested]
 
-### Score Comparison
-| | Mobile | Desktop |
-|--|--------|---------|
-| Before | [X]/100 | [X]/100 |
-| After | [X]/100 | [X]/100 |
-| Change | [+/-X] | [+/-X] |
+### Score Comparison — All Categories
+| Category | Mobile Before | Mobile After | Change | Target | Met? | Desktop Before | Desktop After | Change | Target | Met? |
+|----------|-------------|-------------|--------|--------|------|---------------|--------------|--------|--------|------|
+| Performance | [X] | [X] | [+/-] | 70+ | [Y/N] | [X] | [X] | [+/-] | 85+ | [Y/N] |
+| Best Practices | [X] | [X] | [+/-] | 90+ | [Y/N] | [X] | [X] | [+/-] | 90+ | [Y/N] |
+| Accessibility | [X] | [X] | [+/-] | 90+ | [Y/N] | [X] | [X] | [+/-] | 90+ | [Y/N] |
+| SEO | [X] | [X] | [+/-] | 90+ | [Y/N] | [X] | [X] | [+/-] | 90+ | [Y/N] |
 
 ### Core Web Vitals
-| Metric | Before (M) | After (M) | Change | Before (D) | After (D) | Change |
-|--------|------------|-----------|--------|------------|-----------|--------|
-| LCP | [X]s | [X]s | [+/-] | [X]s | [X]s | [+/-] |
-| CLS | [X] | [X] | [+/-] | [X] | [X] | [+/-] |
-| TBT | [X]ms | [X]ms | [+/-] | [X]ms | [X]ms | [+/-] |
-| FCP | [X]s | [X]s | [+/-] | [X]s | [X]s | [+/-] |
-| SI | [X]s | [X]s | [+/-] | [X]s | [X]s | [+/-] |
+| Metric | Before (M) | After (M) | Change | Before (D) | After (D) | Change | Target |
+|--------|------------|-----------|--------|------------|-----------|--------|--------|
+| LCP | [X]s | [X]s | [+/-] | [X]s | [X]s | [+/-] | < 2.5s |
+| CLS | [X] | [X] | [+/-] | [X] | [X] | [+/-] | < 0.1 |
+| TBT | [X]ms | [X]ms | [+/-] | [X]ms | [X]ms | [+/-] | < 200ms |
+| FCP | [X]s | [X]s | [+/-] | [X]s | [X]s | [+/-] | < 1.8s |
+| SI | [X]s | [X]s | [+/-] | [X]s | [X]s | [+/-] | < 3.4s |
 
 ### Audits Fixed
-[Audits that were failing before but pass now]
+[List all audits that were failing before and pass now — across all categories]
 
 ### Audits Still Failing
-[Audits that still fail]
+[List all audits that still fail — across all categories]
 
 ### Regressions
 [Any new failures, or "None"]
 
 ### Target Assessment
-| | Mobile | Desktop |
-|--|--------|---------|
-| Target | 70+ | 85+ |
-| Achieved | [Yes/No] | [Yes/No] |
-
-### Summary
-[2-3 sentences: What improved, what's still an issue, whether targets were met]
+**[X] of 8 targets met.**
+- Performance Mobile: [Met/Not met — gap of X]
+- Performance Desktop: [Met/Not met — gap of X]
+- Best Practices Mobile: [Met/Not met]
+- Best Practices Desktop: [Met/Not met]
+- Accessibility Mobile: [Met/Not met]
+- Accessibility Desktop: [Met/Not met]
+- SEO Mobile: [Met/Not met]
+- SEO Desktop: [Met/Not met]
 ```
 
-### Step 5: Recommend Next Steps
+### Step 5: Determine Next Action
 
-**If targets met (Mobile 70+ and Desktop 85+):**
-> Targets achieved! Run `/report` to generate a client-facing report with before/after comparisons.
+**If ALL 8 targets met:**
+> All targets achieved! Run `/report` to generate a client-facing report.
 
-**If significant improvement (score +10 or more) but targets not met:**
-> Good progress but targets not yet met (Mobile 70+ / Desktop 85+). Review remaining Category A items from `/diagnose` or consider another `/optimize` pass.
-
-**If minimal improvement (score +1 to +9):**
-> Results are modest. This could be due to:
-> - Third-party scripts dominating the performance budget (Category B issues)
-> - PageSpeed variability (scores can fluctuate 5-10 points between runs)
-> - Changes not yet reflected on the preview URL
+**If some targets NOT met AND this is round 1-4:**
+> [X] of 8 targets not yet met. Starting optimization round [X+1].
 >
-> Consider running `/verify` again to confirm, or review the Category B items from `/diagnose`.
-
-**If scores went down:**
-> Scores decreased. Possible causes:
-> - The preview URL doesn't reflect the latest changes
-> - A fix introduced a regression (check the "Regressions" section)
-> - PageSpeed test variability
+> Unmet targets:
+> [list with current scores and gaps]
 >
-> Recommend re-running the test or investigating specific regressions.
+> I'll re-diagnose the remaining failures and apply additional fixes.
+
+Then immediately proceed:
+1. Call the PSI tools to get updated failing audits for the unmet categories
+2. Map new failures to codebase fixes
+3. Execute the next round of fixes (same process as `/optimize`)
+4. Run `/verify` again after fixes are applied
+
+**If round 5 AND targets still not met:**
+> After 5 optimization rounds, the following targets are still not met:
+> [list unmet targets]
+>
+> This is likely due to:
+> - Third-party apps/scripts (Category B) — these need client action
+> - PSI score variability (5-10 points between runs)
+> - Shopify platform limitations (Category C)
+>
+> Options:
+> 1. Continue optimizing (diminishing returns likely)
+> 2. Run `/report` with current results and flag unmet targets
+> 3. Review Category B items — removing problematic third-party apps may be the biggest remaining lever
+
+**If scores went DOWN:**
+> Scores decreased in [categories]. Possible causes:
+> - Preview URL doesn't reflect latest changes
+> - A fix introduced a regression (check "Regressions" above)
+> - PSI test variability
+>
+> Recommend re-running `/verify` before rolling back changes. PSI scores can vary 5-10 points between runs.
 
 ## Important Notes
 - PageSpeed scores can vary 5-10 points between runs. A single test is not definitive.
-- If scores look unexpected, suggest running `/verify` again and averaging.
-- Focus on Core Web Vitals improvements (LCP, CLS, TBT) more than the overall score.
+- If scores look unexpected, suggest running `/verify` again.
+- Focus on Core Web Vitals improvements (LCP, CLS, TBT) more than the overall Performance score.
+- Best Practices, Accessibility, and SEO are usually easier to hit 90+ than Performance.
 
 ## Rules
-- Always confirm the preview is updated before testing
-- Compare using the before scores from the `/audit` step in conversation
-- Present both mobile and desktop
+- Do NOT block on deployment confirmation — code auto-pushes. Just remind the user and proceed.
+- Always check ALL 4 categories, not just Performance
+- Compare against the original baseline from `/audit`, not the previous round
+- Mark each target as met or not met — be explicit
+- If targets are not met and round < 5, DO NOT suggest stopping — continue iterating
 - Be honest about variability — don't oversell small changes
-- Mark each metric as "improved", "same", or "regressed" for clarity
