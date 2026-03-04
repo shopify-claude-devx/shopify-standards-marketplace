@@ -45,35 +45,39 @@ Something about THIS project's codebase that affects future work.
 **5. Platform Gotcha**
 A Shopify or tooling limitation/behavior that isn't obvious.
 
-### Step 3: Categorize and Write
-For each learning, determine where it belongs:
+### Step 3: Write to Project Directory
+All learnings go to a single file in the user's project: `.claude/patterns-learned.md`
 
-- Liquid code patterns → `skills/liquid-standards/references/patterns-learned.md`
-- Section/block patterns → `skills/section-standards/references/patterns-learned.md`
-- Schema conventions → `skills/section-schema-standards/references/patterns-learned.md`
-- CSS/Tailwind patterns → `skills/css-standards/references/patterns-learned.md`
-- JS patterns → `skills/js-standards/references/patterns-learned.md`
-- Theme file structure → `skills/theme-architecture/references/patterns-learned.md`
-- Figma translation patterns → `skills/figma-to-code/references/patterns-learned.md`
+This file lives in the project directory (not inside the plugin), so learnings persist across plugin updates and are specific to this project.
 
-**If the target skill directory doesn't exist yet:**
-- Create the skill directory with a SKILL.md and references/patterns-learned.md
-- Add the learning to the new file
-
-**If a learning doesn't fit any existing skill:**
-- If substantial enough to be its own category, create a new skill directory
-
-### Step 4: Write the Learning
-Before writing, read the existing content of the target file to:
+**Before writing**, read the existing file (if it exists) to:
 - Avoid duplicates
-- Merge with existing related patterns if appropriate
+- Merge with existing related patterns
 - Maintain consistent formatting
 
+**If the file doesn't exist**, create it with a header:
+```markdown
+# Patterns Learned
+
+Project-specific learnings captured from development work.
+```
+
+Tag each entry with a category so learnings are searchable:
+- Liquid code patterns → **Category: Liquid**
+- Section/block patterns → **Category: Sections**
+- Schema conventions → **Category: Schema**
+- CSS patterns → **Category: CSS**
+- JS patterns → **Category: JavaScript**
+- Theme file structure → **Category: Architecture**
+- Figma translation patterns → **Category: Figma**
+
+### Step 4: Write the Learning
 Format for each entry:
 
 ```markdown
 ### [Brief Title]
 **Type:** [Pattern | Mistake & Fix | Convention | Codebase Context | Platform Gotcha]
+**Category:** [Liquid | Sections | Schema | CSS | JavaScript | Architecture | Figma]
 **Date:** [Today's date]
 
 [2-4 sentences explaining the learning. Include WHAT, WHY, and an example if helpful.]

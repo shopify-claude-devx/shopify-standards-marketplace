@@ -31,6 +31,8 @@ Before any planning, you MUST read the following files. Do NOT skip this step:
 
 **If you cannot find or read a skill file, STOP and tell the user.**
 
+3. Read `.claude/patterns-learned.md` if it exists — it contains project-specific learnings from previous tasks that may inform your plan.
+
 Plans that ignore project standards produce directionally wrong code. Every TODO in the plan must reference which skill standards apply.
 
 ### Step 2: Research the Codebase

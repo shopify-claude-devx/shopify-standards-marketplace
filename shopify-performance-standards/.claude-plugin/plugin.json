@@ -1,0 +1,8 @@
+{
+  "name": "shopify-performance-standards",
+  "description": "Skills, commands, and agents for Shopify theme performance optimization. Fetches PageSpeed Insights data, diagnoses issues, executes fixes against performance standards, verifies improvements, and generates client-facing reports.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Aditya Pasikanti"
+  }
+}

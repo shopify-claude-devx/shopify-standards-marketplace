@@ -45,33 +45,37 @@ Something about THIS project's codebase that affects future work.
 **5. Platform Gotcha**
 A Shopify or tooling limitation/behavior that isn't obvious.
 
-### Step 3: Categorize and Write
-For each learning, determine where it belongs:
+### Step 3: Write to Project Directory
+All learnings go to a single file in the user's project: `.claude/patterns-learned.md`
 
-- TypeScript patterns → `skills/typescript-standards/references/patterns-learned.md`
-- Remix route patterns → `skills/remix-patterns/references/patterns-learned.md`
-- Shopify API patterns → `skills/shopify-api/references/patterns-learned.md`
-- Prisma/database patterns → `skills/prisma-standards/references/patterns-learned.md`
-- Polaris/App Bridge UI patterns → `skills/polaris-appbridge/references/patterns-learned.md`
+This file lives in the project directory (not inside the plugin), so learnings persist across plugin updates and are specific to this project.
 
-**If the target skill directory doesn't exist yet:**
-- Create the skill directory with a SKILL.md and references/patterns-learned.md
-- Add the learning to the new file
-
-**If a learning doesn't fit any existing skill:**
-- If substantial enough to be its own category, create a new skill directory
-
-### Step 4: Write the Learning
-Before writing, read the existing content of the target file to:
+**Before writing**, read the existing file (if it exists) to:
 - Avoid duplicates
-- Merge with existing related patterns if appropriate
+- Merge with existing related patterns
 - Maintain consistent formatting
 
+**If the file doesn't exist**, create it with a header:
+```markdown
+# Patterns Learned
+
+Project-specific learnings captured from development work.
+```
+
+Tag each entry with a category so learnings are searchable:
+- TypeScript patterns → **Category: TypeScript**
+- Remix route patterns → **Category: Remix**
+- Shopify API patterns → **Category: Shopify API**
+- Prisma/database patterns → **Category: Prisma**
+- Polaris/App Bridge UI patterns → **Category: Polaris**
+
+### Step 4: Write the Learning
 Format for each entry:
 
 ```markdown
 ### [Brief Title]
 **Type:** [Pattern | Mistake & Fix | Convention | Codebase Context | Platform Gotcha]
+**Category:** [TypeScript | Remix | Shopify API | Prisma | Polaris]
 **Date:** [Today's date]
 
 [2-4 sentences explaining the learning. Include WHAT, WHY, and an example if helpful.]
