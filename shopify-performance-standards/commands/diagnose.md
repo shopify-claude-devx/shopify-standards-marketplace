@@ -1,6 +1,6 @@
 ---
 description: Map PageSpeed Insights audit results to specific Shopify theme fixes. Separates what we can fix from what requires client action. Use after /audit.
-allowed-tools: Read, Grep, Glob, mcp__psi__psi_opportunities
+allowed-tools: Read, Grep, Glob, mcp__psi__get_recommendations, mcp__psi__get_third_party_impact, mcp__psi__get_image_optimization_details, mcp__psi__get_render_blocking_details
 ---
 
 # Diagnose — Performance Issue Mapping
@@ -27,16 +27,15 @@ Also read `.claude/patterns-learned.md` if it exists — it contains project-spe
 
 **If you cannot find or read a skill file, STOP and tell the user.**
 
-### Step 2: Get Opportunities Data
-Call `psi_opportunities` for both mobile and desktop to get the detailed failed audits with specific flagged resources.
+### Step 2: Get Detailed Opportunities Data
+Call these tools for **both mobile and desktop**:
 
-The tool returns:
-- All failed audits sorted by severity (worst first)
-- Audit IDs (needed for mapping to skill standards)
-- Specific flagged resources (URLs, DOM elements, wasted bytes/ms)
-- Third-party script breakdown
+1. `get_recommendations` with `url` and `strategy` — prioritized optimization suggestions
+2. `get_third_party_impact` with `url` and `strategy` — third-party script breakdown with blocking time and transfer size
+3. `get_image_optimization_details` with `url` and `strategy` — image-specific issues (unsized, unoptimized, offscreen)
+4. `get_render_blocking_details` with `url` and `strategy` — render-blocking CSS/JS resources
 
-If no stored audit exists, the tool will fetch a fresh one.
+These tools provide more detail than the general audit, including specific flagged resources, wasted bytes/ms, and actionable fix suggestions.
 
 ### Step 3: Research the Codebase
 For each failed audit, search the codebase to find the specific files and code patterns causing the issue:

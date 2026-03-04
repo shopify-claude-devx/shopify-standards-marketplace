@@ -1,7 +1,7 @@
 ---
 name: performance-scorer
 description: Re-runs PageSpeed Insights audit and computes before/after deltas. Used by the /verify command to compare optimization results against the baseline.
-tools: Read, Bash
+tools: Read, mcp__psi__analyze_page_speed, mcp__psi__get_performance_summary
 model: sonnet
 ---
 
@@ -21,10 +21,7 @@ You return the new scores and the delta from the baseline.
 ## What You Do
 
 ### 1. Fetch PageSpeed Data
-Call the PSI API:
-```bash
-curl -s "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=URL&strategy=STRATEGY&category=performance"
-```
+Call `analyze_page_speed` with the URL and strategy.
 
 ### 2. Extract Metrics
 From the response, extract:
@@ -64,6 +61,6 @@ Compare each metric against the baseline:
 
 ## Rules
 - Report numbers exactly as returned — don't round or estimate
-- If the API call fails, report the error. Don't retry without being asked
+- If the tool call fails, report the error. Don't retry without being asked
 - If a metric got worse, flag it clearly — don't hide regressions
 - Don't interpret results — just report the data. Interpretation is for the human

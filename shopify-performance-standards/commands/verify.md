@@ -1,6 +1,6 @@
 ---
 description: Re-run PageSpeed Insights after optimization and compare before/after scores. Use after /optimize to validate improvements.
-allowed-tools: Read, Glob, Grep, mcp__psi__psi_audit_full, mcp__psi__psi_compare
+allowed-tools: Read, Glob, Grep, mcp__psi__analyze_page_speed, mcp__psi__get_performance_summary
 ---
 
 # Verify — Before/After Comparison
@@ -23,26 +23,23 @@ Ask the user:
 
 Wait for confirmation before proceeding.
 
-### Step 2: Run New Audit
-Call `psi_audit_full` with the same URL that was originally audited. This fetches fresh mobile + desktop reports and saves them to `.claude/performance/`.
+### Step 2: Note the Before Scores
+Look back in the conversation for the scores from the `/audit` step. Record:
+- Mobile score, LCP, CLS, TBT, FCP, SI
+- Desktop score, LCP, CLS, TBT, FCP, SI
+- List of failed audits
 
-The MCP server automatically saves each audit with a timestamp, so both the old (before) and new (after) audits coexist in storage.
+If no previous audit data exists in the conversation, tell the user:
+> No baseline scores found. I'll run a fresh audit, but I won't be able to show a before/after comparison. Consider running `/audit` first next time.
 
-### Step 3: Compare Results
-Call `psi_compare` for **both** strategies:
+### Step 3: Run New Audit
+Call `analyze_page_speed` twice with the same URL:
 
-1. `psi_compare` with `url` and `strategy: "mobile"` — compares the two most recent mobile audits
-2. `psi_compare` with `url` and `strategy: "desktop"` — compares the two most recent desktop audits
+1. `analyze_page_speed` with `url` and `strategy: "mobile"`
+2. `analyze_page_speed` with `url` and `strategy: "desktop"`
 
-The tool returns:
-- Score delta (before → after)
-- Core Web Vitals delta for each metric (with improved/regressed/same status)
-- Audits that were fixed (previously failing, now passing)
-- Audits that regressed (new failures)
-- Audits still failing
-
-### Step 4: Present Combined Comparison
-Combine the mobile and desktop comparisons into a single view:
+### Step 4: Present Before/After Comparison
+Combine the before (from conversation) and after (from new audit) into a comparison:
 
 ```
 ## Verification Results
@@ -57,13 +54,19 @@ Combine the mobile and desktop comparisons into a single view:
 | Change | [+/-X] | [+/-X] |
 
 ### Core Web Vitals
-[Include the detailed tables from both psi_compare results]
+| Metric | Before (M) | After (M) | Change | Before (D) | After (D) | Change |
+|--------|------------|-----------|--------|------------|-----------|--------|
+| LCP | [X]s | [X]s | [+/-] | [X]s | [X]s | [+/-] |
+| CLS | [X] | [X] | [+/-] | [X] | [X] | [+/-] |
+| TBT | [X]ms | [X]ms | [+/-] | [X]ms | [X]ms | [+/-] |
+| FCP | [X]s | [X]s | [+/-] | [X]s | [X]s | [+/-] |
+| SI | [X]s | [X]s | [+/-] | [X]s | [X]s | [+/-] |
 
 ### Audits Fixed
-[Combined list from both strategies]
+[Audits that were failing before but pass now]
 
 ### Audits Still Failing
-[Combined list]
+[Audits that still fail]
 
 ### Regressions
 [Any new failures, or "None"]
@@ -88,7 +91,7 @@ Combine the mobile and desktop comparisons into a single view:
 **If scores went down:**
 > Scores decreased. Possible causes:
 > - The preview URL doesn't reflect the latest changes
-> - A fix introduced a regression (check the "Audits Regressed" section)
+> - A fix introduced a regression (check the "Regressions" section)
 > - PageSpeed test variability
 >
 > Recommend re-running the test or investigating specific regressions.
@@ -100,7 +103,7 @@ Combine the mobile and desktop comparisons into a single view:
 
 ## Rules
 - Always confirm the preview is updated before testing
-- Always use `psi_compare` to compute deltas — never compare from memory
+- Compare using the before scores from the `/audit` step in conversation
 - Present both mobile and desktop
 - Be honest about variability — don't oversell small changes
-- If `psi_compare` returns an error about needing 2 audits, the before-audit may be missing — tell the user to check `.claude/performance/`
+- Mark each metric as "improved", "same", or "regressed" for clarity

@@ -1,6 +1,6 @@
 ---
 description: Fetch a full Google PageSpeed Insights report for a Shopify page URL. Tests both mobile and desktop. Use as the first step in the performance optimization workflow.
-allowed-tools: Read, Glob, Grep, mcp__psi__psi_audit, mcp__psi__psi_audit_full
+allowed-tools: Read, Glob, Grep, mcp__psi__analyze_page_speed, mcp__psi__get_performance_summary
 ---
 
 # Audit — PageSpeed Insights Data Fetching
@@ -20,34 +20,57 @@ If no URL is provided, ask the user for the page URL before proceeding.
 - If password-protected, warn the user: PSI cannot access password-protected pages
 
 ### Step 2: Fetch Both Reports
-Call `psi_audit_full` with the URL. This fetches both mobile and desktop reports in one call, parses the results, and saves the raw data to `.claude/performance/`.
+Call `analyze_page_speed` twice — once for each strategy:
 
-The tool returns:
-- Performance scores (mobile + desktop)
+1. `analyze_page_speed` with `url` and `strategy: "mobile"`
+2. `analyze_page_speed` with `url` and `strategy: "desktop"`
+
+Each call returns:
+- Performance score
 - Core Web Vitals (LCP, CLS, TBT, FCP, SI) with values and targets
-- Failed audits grouped by impact (High / Medium / Low) with specific flagged resources
-- Third-party script breakdown with blocking time and transfer size
-- Combined summary table
+- Failed audits with specific flagged resources
+- Optimization opportunities
 
-**Note:** Each API call takes 15-30 seconds. The tool runs both sequentially.
+**Note:** Each API call takes 15-30 seconds.
 
-### Step 3: Review the Results
-After the tool returns, review the output and verify:
-- Both mobile and desktop reports were fetched successfully
-- If either failed, report the error to the user
-- Note the save location for the raw data files
+### Step 3: Present Combined Results
+After both calls return, combine the results into a single summary:
 
-### Step 4: Present and Hand Off
-The tool output is already formatted. Present it to the user, then:
+```
+## Audit Results
+
+**URL:** [the URL tested]
+
+### Score Summary
+| | Mobile | Desktop |
+|--|--------|---------|
+| Performance | [X]/100 | [X]/100 |
+
+### Core Web Vitals
+| Metric | Mobile | Desktop | Target |
+|--------|--------|---------|--------|
+| LCP | [X]s | [X]s | < 2.5s |
+| CLS | [X] | [X] | < 0.1 |
+| TBT | [X]ms | [X]ms | < 200ms |
+| FCP | [X]s | [X]s | < 1.8s |
+| SI | [X]s | [X]s | < 3.4s |
+
+### Failed Audits
+[List from both reports, grouped by impact]
+```
+
+### Step 4: Hand Off
+After presenting the results:
 
 > Review the audit results above. When ready, run `/diagnose` to map these findings to specific Shopify theme fixes.
 
 ## Alternative: Single Strategy
-If the user only wants one strategy (e.g., just mobile), use `psi_audit` with `strategy: "mobile"` or `strategy: "desktop"` instead of `psi_audit_full`.
+If the user only wants one strategy (e.g., just mobile), call `analyze_page_speed` once with the requested strategy.
 
 ## Rules
 - Never diagnose or suggest fixes during audit — only present data
-- Always test both mobile AND desktop (use `psi_audit_full`)
-- If the tool returns an error about rate limits, tell the user to wait 60 seconds
+- Always test both mobile AND desktop
+- If the tool returns an error about rate limits, tell the user to wait 60 seconds or check their API key
 - If the tool returns an error about the URL not being accessible, tell the user to check the URL
 - Present numbers clearly — seconds for time metrics, scores out of 100
+- Note the scores in conversation — they'll be needed for `/verify` before/after comparison

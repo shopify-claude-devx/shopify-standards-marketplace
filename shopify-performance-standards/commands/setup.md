@@ -9,47 +9,54 @@ You are setting up the PageSpeed Insights MCP server for this project. This is a
 
 ## Process
 
-### Step 1: Find the MCP Server Path
-The MCP server lives inside the plugin marketplace repo. Determine the absolute path to `mcp-servers/pagespeed-insights/` by checking where this plugin is installed from.
+### Step 1: Ask for API Key
+Ask the user:
 
-Run this to find the plugin source:
-```bash
-find ~/.claude / -path "*/mcp-servers/pagespeed-insights/server.py" -maxdepth 8 2>/dev/null | head -5
-```
+> To use PageSpeed Insights, you need a free Google API key.
+>
+> **If you already have one**, paste it here.
+>
+> **If you need one** (takes 2 minutes):
+> 1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+> 2. Create a project (or use existing)
+> 3. Enable "PageSpeed Insights API" (APIs & Services → Library)
+> 4. Create an API key (APIs & Services → Credentials → Create Credentials → API Key)
+>
+> This gives you 25,000 free requests/day.
 
-If no results, ask the user for the path to the `shopify-standards-marketplace` repo.
+Wait for the user to provide the key before proceeding.
 
-### Step 2: Check if MCP Server Dependencies are Installed
-Run:
-```bash
-cd <mcp-server-directory> && uv venv && uv pip install -e . 2>&1
-```
-
-If `uv` is not available, tell the user:
-> You need `uv` installed. Run: `curl -LsSf https://astral.sh/uv/install.sh | sh`
-
-### Step 3: Write the MCP Config
-Read the current `.claude/settings.json` in the project directory (create it if it doesn't exist). Merge the `psi` MCP server config into the existing `mcpServers` object — do NOT overwrite other servers that may already be configured.
+### Step 2: Write the MCP Config
+Read the current `.mcp.json` in the project root (create it if it doesn't exist). Merge the `psi` MCP server config into the existing `mcpServers` object — do NOT overwrite other servers that may already be configured.
 
 The config to add:
 ```json
 {
   "mcpServers": {
     "psi": {
-      "command": "uv",
-      "args": ["run", "--directory", "<absolute-path-to-mcp-servers/pagespeed-insights>", "server.py"],
-      "env": {}
+      "command": "npx",
+      "args": ["-y", "-p", "pino-pretty", "-p", "pagespeed-insights-mcp", "pagespeed-insights-mcp"],
+      "env": {
+        "GOOGLE_API_KEY": "<user's API key>"
+      }
     }
   }
 }
 ```
 
+### Step 3: Add .mcp.json to .gitignore
+Check if `.mcp.json` is in `.gitignore`. If not, add it — the file contains the API key and should NOT be committed.
+
+```bash
+grep -q '.mcp.json' .gitignore 2>/dev/null || echo '.mcp.json' >> .gitignore
+```
+
 ### Step 4: Confirm
 Tell the user:
 
-> PSI MCP server configured. Restart Claude Code for the MCP server to load.
+> PSI MCP server configured. **Restart Claude Code** for the MCP server to load.
 >
-> You can now use:
+> After restart, you can use:
 > - `/audit <url>` — Fetch PageSpeed Insights scores
 > - `/diagnose` — Map issues to theme fixes
 > - `/optimize` — Execute performance fixes
@@ -58,5 +65,6 @@ Tell the user:
 
 ## Rules
 - Never overwrite existing MCP server configs — merge into the existing object
-- Always use absolute paths in the MCP config
-- If `.claude/settings.json` doesn't exist, create it with just the mcpServers config
+- Always add `.mcp.json` to `.gitignore` (it contains the API key)
+- If `.mcp.json` doesn't exist, create it with just the mcpServers config
+- The server alias MUST be `psi` — all commands reference tools as `mcp__psi__*`
