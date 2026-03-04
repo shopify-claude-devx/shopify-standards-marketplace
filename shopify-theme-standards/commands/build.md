@@ -37,6 +37,8 @@ Before writing ANY code, you MUST re-read the following files — even if you re
 
 **If you cannot find or read a skill file, STOP and tell the user.** Do not proceed with partial standards.
 
+3. Read `.claude/patterns-learned.md` if it exists — it contains project-specific learnings from previous tasks.
+
 Every line of code you write must align with these standards. Violations are build failures.
 
 ## Build Process

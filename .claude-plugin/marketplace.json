@@ -4,8 +4,8 @@
     "name": "Aditya Pasikanti"
   },
   "metadata": {
-    "description": "Shopify development standards — skills, commands, and agents for theme and app development",
-    "version": "1.0.0"
+    "description": "Shopify development standards — skills, commands, and agents for theme, app, and performance development",
+    "version": "1.1.0"
   },
   "plugins": [
     {
@@ -17,6 +17,11 @@
       "name": "shopify-app-standards",
       "source": "./shopify-app-standards",
       "description": "TypeScript, Remix, Prisma, Shopify API, and Polaris standards for Shopify apps"
+    },
+    {
+      "name": "shopify-performance-standards",
+      "source": "./shopify-performance-standards",
+      "description": "PageSpeed Insights auditing, performance optimization, and client reporting for Shopify themes"
     }
   ]
 }
