@@ -26,6 +26,9 @@ Before any planning, you MUST read the following files. Do NOT skip this step:
    - `js-standards` — Vanilla JS only, defer loading, no inline styles/DOM creation/price formatting
    - `theme-architecture` — File structure, naming conventions, when to create snippets
 
+**Conditional — if this task involves a Figma design:**
+   - `figma-to-code` — React+Tailwind to Liquid+CSS translation, Figma layer to schema mapping, responsive patterns, asset handling, Figma gotchas
+
 **If you cannot find or read a skill file, STOP and tell the user.**
 
 Plans that ignore project standards produce directionally wrong code. Every TODO in the plan must reference which skill standards apply.

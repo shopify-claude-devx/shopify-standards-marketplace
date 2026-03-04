@@ -54,6 +54,7 @@ For each learning, determine where it belongs:
 - CSS/Tailwind patterns → `skills/css-standards/references/patterns-learned.md`
 - JS patterns → `skills/js-standards/references/patterns-learned.md`
 - Theme file structure → `skills/theme-architecture/references/patterns-learned.md`
+- Figma translation patterns → `skills/figma-to-code/references/patterns-learned.md`
 
 **If the target skill directory doesn't exist yet:**
 - Create the skill directory with a SKILL.md and references/patterns-learned.md

@@ -32,6 +32,9 @@ Before writing ANY code, you MUST re-read the following files — even if you re
    - `js-standards` — Vanilla JS only, defer loading, DOMContentLoaded, Web Components, NO inline styles/DOM creation/price formatting/inline scripts
    - `theme-architecture` — File structure, kebab-case naming, when to create snippets, section independence
 
+**Conditional — if this task involves a Figma design:**
+   - `figma-to-code` — React+Tailwind to Liquid+CSS translation, Figma layer to schema mapping, responsive patterns, asset handling, Figma gotchas
+
 **If you cannot find or read a skill file, STOP and tell the user.** Do not proceed with partial standards.
 
 Every line of code you write must align with these standards. Violations are build failures.
@@ -94,6 +97,18 @@ Work through the plan's TODOs in order. For each TODO:
 - [ ] NO `element.style` — use `classList.add/remove` instead
 - [ ] NO `innerHTML` for creating elements — Liquid handles markup
 - [ ] NO price formatting in JS — use Liquid `| money` filter
+
+#### Figma Translation Checklist (EVERY file built from a Figma design — only when task involves a Figma design):
+- [ ] All Tailwind classes converted to BEM CSS — no Tailwind in output
+- [ ] All React patterns converted to Liquid — no JSX in output
+- [ ] Auto-layout translated to flexbox/grid — not absolute positioning
+- [ ] Base CSS matches the mobile Figma frame (mobile-first)
+- [ ] Breakpoint CSS matches the desktop Figma frame
+- [ ] Image layers use `image_picker` settings with alt text
+- [ ] Responsive images use `<picture>` or `image_url` with width parameters
+- [ ] Repeating elements use section blocks — not hardcoded repetitions
+- [ ] Design tokens mapped to CSS custom properties
+- [ ] Typography uses rem (converted from Figma px)
 
 **If ANY file fails a checklist item, fix it NOW before moving to the next TODO.**
 
