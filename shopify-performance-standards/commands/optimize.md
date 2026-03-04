@@ -19,14 +19,24 @@ Look for a confirmed diagnosis from `/diagnose` in the conversation. If none exi
 
 Do NOT proceed without a diagnosis unless the user explicitly overrides.
 
-### Check 2: Load Performance Standards — MANDATORY
-Before writing ANY code, read ALL skill files:
+### Check 2: Load ALL Standards — MANDATORY
+Before writing ANY code, read ALL performance skill files AND theme skill files. Performance fixes modify theme code, so both sets of standards apply.
+
+**Performance Skills:**
 - `image-performance` — lazy loading, srcset, sizes, LCP images, preloading, Shopify CDN
 - `css-performance` — critical CSS, async loading, unused CSS, containment, inline style patterns
 - `js-performance` — defer, async, code splitting, idle-time execution, unused JS
 - `font-performance` — font-display, preloading, font file count, system fallbacks
 - `liquid-performance` — render time, N+1 loops, caching, DOM size, pagination
 - `layout-stability` — CLS prevention, dimensions, aspect-ratio, skeleton placeholders
+
+**Theme Skills (from shopify-theme-standards):**
+- `liquid-standards` — Liquid syntax, filters, control flow, object access patterns
+- `css-standards` — CSS methodology, naming conventions, responsive patterns
+- `js-standards` — JavaScript patterns, DOM interaction, event handling
+- `section-standards` — Section file structure, rendering patterns
+- `section-schema-standards` — Schema definitions, settings, blocks
+- `theme-architecture` — File organization, layout structure, asset management
 
 Also read `.claude/patterns-learned.md` if it exists.
 
@@ -119,6 +129,8 @@ After all fixes are applied:
 
 **Any Deviations from Diagnosis:**
 - [What changed and why, or "None"]
+
+**Score Targets:** Mobile 70+ / Desktop 85+
 
 **Ready for Verification:**
 Run `/verify` to re-test PageSpeed and compare before/after scores.

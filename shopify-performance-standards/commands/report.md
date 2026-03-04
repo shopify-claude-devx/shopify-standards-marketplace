@@ -45,6 +45,9 @@ Write the report to the project directory:
 
 [2-3 sentences: What was the starting state, what was done, and what's the outcome. Write for a non-technical client.]
 
+**Performance Targets:** Mobile 70+ / Desktop 85+
+**Status:** [Targets met / Partially met / In progress]
+
 ---
 
 ## Score Improvements

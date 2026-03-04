@@ -14,14 +14,24 @@ If no context, look for audit results from a previous `/audit` step in the conve
 
 ## Process
 
-### Step 1: Read Performance Skills — MANDATORY
-Before diagnosing, read ALL skill files:
+### Step 1: Read ALL Standards — MANDATORY
+Before diagnosing, read ALL performance skill files AND theme skill files. You need both to correctly map issues to theme code fixes.
+
+**Performance Skills:**
 - `image-performance` — lazy loading, srcset, sizes, LCP images, Shopify CDN
 - `css-performance` — critical CSS, async loading, unused CSS, containment
 - `js-performance` — defer, async, code splitting, unused JS, third-party scripts
 - `font-performance` — font-display, preloading, font file count, fallbacks
 - `liquid-performance` — render time, N+1 loops, caching, DOM size
 - `layout-stability` — CLS prevention, dimensions, aspect-ratio, placeholders
+
+**Theme Skills (from shopify-theme-standards):**
+- `liquid-standards` — Liquid syntax, filters, control flow, object access patterns
+- `css-standards` — CSS methodology, naming conventions, responsive patterns
+- `js-standards` — JavaScript patterns, DOM interaction, event handling
+- `section-standards` — Section file structure, rendering patterns
+- `section-schema-standards` — Schema definitions, settings, blocks
+- `theme-architecture` — File organization, layout structure, asset management
 
 Also read `.claude/patterns-learned.md` if it exists — it contains project-specific learnings from previous optimizations.
 
@@ -130,9 +140,11 @@ These are inherent to Shopify and cannot be changed:
 ---
 
 ### Estimated Outcome
+**Targets:** Mobile 70+ / Desktop 85+
+
 If all Category A fixes are implemented:
-- **Mobile Score:** [current] → [estimated]
-- **Desktop Score:** [current] → [estimated]
+- **Mobile Score:** [current] → [estimated] (target: 70+)
+- **Desktop Score:** [current] → [estimated] (target: 85+)
 
 ---
 

@@ -59,7 +59,14 @@ After both calls return, combine the results into a single summary:
 [List from both reports, grouped by impact]
 ```
 
-### Step 4: Hand Off
+### Step 4: Score Assessment
+Compare against targets:
+- **Mobile target:** 70+
+- **Desktop target:** 85+
+
+Flag whether each score meets the target or how far off it is.
+
+### Step 5: Hand Off
 After presenting the results:
 
 > Review the audit results above. When ready, run `/diagnose` to map these findings to specific Shopify theme fixes.

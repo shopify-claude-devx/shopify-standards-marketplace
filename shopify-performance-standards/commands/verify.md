@@ -71,14 +71,23 @@ Combine the before (from conversation) and after (from new audit) into a compari
 ### Regressions
 [Any new failures, or "None"]
 
+### Target Assessment
+| | Mobile | Desktop |
+|--|--------|---------|
+| Target | 70+ | 85+ |
+| Achieved | [Yes/No] | [Yes/No] |
+
 ### Summary
-[2-3 sentences: What improved, what's still an issue, whether the optimization was successful]
+[2-3 sentences: What improved, what's still an issue, whether targets were met]
 ```
 
 ### Step 5: Recommend Next Steps
 
-**If significant improvement (score +10 or more):**
-> Optimization successful. Run `/report` to generate a client-facing report with before/after comparisons.
+**If targets met (Mobile 70+ and Desktop 85+):**
+> Targets achieved! Run `/report` to generate a client-facing report with before/after comparisons.
+
+**If significant improvement (score +10 or more) but targets not met:**
+> Good progress but targets not yet met (Mobile 70+ / Desktop 85+). Review remaining Category A items from `/diagnose` or consider another `/optimize` pass.
 
 **If minimal improvement (score +1 to +9):**
 > Results are modest. This could be due to:
