@@ -1,7 +1,7 @@
 {
   "name": "shopify-theme-standards",
   "description": "Skills, commands, and agents for Shopify theme development. Enforces Liquid, CSS, JS, schema, and section standards through a clarify → plan → build → assess → fix → capture workflow.",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "author": {
     "name": "Aditya Pasikanti"
   }

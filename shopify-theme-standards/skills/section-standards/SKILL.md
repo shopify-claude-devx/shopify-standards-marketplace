@@ -1,7 +1,11 @@
 ---
 name: section-standards
-description: Shopify section file structure and block rendering patterns. MUST be followed when creating, editing, or generating any section .liquid file. Covers CSS/HTML/JS/Schema ordering, section wrappers, block rendering via snippets, case/when patterns, and section independence rules.
-user-invocable: false
+description: >
+  Shopify section file structure and block rendering patterns. Apply whenever creating, editing,
+  reviewing, or generating any section .liquid file, including when converting designs into sections
+  or refactoring existing section code. Covers file ordering (CSS/HTML/JS/Schema), section wrappers,
+  block rendering via snippets, case/when patterns, and section independence.
+user-invocable: true
 globs: ["sections/**/*.liquid"]
 ---
 
@@ -48,10 +52,12 @@ Every section file follows this order from top to bottom:
 {% endschema %}
 ```
 
-Never mix this order. CSS at top, schema at bottom, always.
+Keep this order consistently. CSS loads first so the section renders styled before JS executes — preventing flash of unstyled content (FOUC). Schema at the bottom keeps the data contract separate from the rendering logic, making both easier to scan and edit independently. JS loads after HTML so the DOM elements it targets already exist.
 
 ## Section Wrapper
 Every section has a `<div>` wrapper. The wrapper class name matches the section filename exactly.
+
+A consistent wrapper class matching the filename makes CSS scoping predictable — when you see `hero-banner.liquid`, you know the root class is `.hero-banner` without opening the file.
 
 ```
 Section file: hero-banner.liquid     → class="hero-banner"
@@ -67,8 +73,10 @@ Section file: testimonials.liquid     → class="testimonials"
 
 No extra `id`, `data-` attributes, or additional tags on the wrapper unless the section's functionality specifically requires them.
 
+Keeping the wrapper minimal prevents attribute bloat. Add `data-` attributes only when JS needs to read configuration from the DOM.
+
 ## Block Rendering
-Always extract blocks into snippets using `{% render %}`. Never write block HTML inline in the section file.
+Extract blocks into snippets using `{% render %}`. Liquid's `{% render %}` tag creates an isolated scope, preventing variable name collisions between blocks and the parent section. It also keeps the section file scannable — a section with 5 block types stays under 30 lines of Liquid instead of ballooning to hundreds.
 
 ```liquid
 {%- comment -%} ✅ GOOD — block rendered via snippet {%- endcomment -%}
@@ -94,6 +102,8 @@ Always extract blocks into snippets using `{% render %}`. Never write block HTML
 The snippet name should match the block type: block type `hero-banner-slide` → snippet `hero-banner-slide.liquid`.
 
 ## Section Settings vs Block Settings
+This distinction matters because blocks are repeatable — merchants can add, remove, and reorder them in the theme editor. Section settings are fixed — one instance per section.
+
 - **Section settings** — single, non-repeatable things that affect the entire section (background color, section heading, layout style)
 - **Block settings** — repeatable content units (slides, cards, testimonials, FAQ items)
 
@@ -101,6 +111,8 @@ If a merchant might want more than one of it, it's a block. If there's only ever
 
 ## Multiple Block Types
 When a section has multiple block types, use `case/when` to render each:
+
+The `case/when` pattern maps each block type to its snippet cleanly. It's more readable than chained `if/elsif` when there are 3+ block types, and it makes adding a new block type a one-line addition.
 
 ```liquid
 {%- for block in section.blocks -%}
@@ -114,6 +126,8 @@ When a section has multiple block types, use `case/when` to render each:
 ```
 
 ## Section Independence
+Independence means a section works correctly regardless of which page template it appears on, what other sections surround it, or what position it occupies. This is the foundation of Shopify's drag-and-drop section reordering.
+
 Each section must be fully self-contained:
 - No section should depend on another section's CSS or JS
 - Sections should work regardless of page template or position

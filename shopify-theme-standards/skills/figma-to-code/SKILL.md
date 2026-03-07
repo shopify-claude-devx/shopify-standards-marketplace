@@ -1,7 +1,12 @@
 ---
 name: figma-to-code
-description: Standards for translating Figma designs into Shopify theme code. Covers React+Tailwind reference code to Liquid+CSS translation, Figma layer to section schema mapping, responsive patterns from desktop+mobile frames, image/asset handling, and common Figma-to-Shopify gotchas. Loaded by name from commands when a task involves a Figma design.
-user-invocable: false
+description: >
+  Standards for translating Figma designs into Shopify theme code. Apply whenever building sections
+  or components from Figma designs, converting React+Tailwind reference code to Liquid+CSS, mapping
+  Figma layers to section schemas, implementing responsive layouts from desktop+mobile frames, or
+  handling images and assets from design files. Also use when reviewing code that was generated from
+  a Figma source to verify translation fidelity.
+user-invocable: true
 ---
 
 # Figma-to-Code Translation Standards
@@ -61,11 +66,11 @@ Figma reference code is a **starting point**, not final output. Every translatio
 | Video layer | `video_url` |
 
 ### Repeating Elements to Blocks
-- Figma layers that repeat with the same structure → section blocks
+- Figma layers that repeat with the same structure → section blocks. Blocks are the right mapping because Figma's repeated instances correspond to content a merchant will want to add, remove, and reorder — exactly what Shopify blocks enable in the theme editor.
 - Each unique variant of a repeating element → a block type
 - Block type: `kebab-case`, block name: `Title Case`
 - Block settings follow the same layer-to-setting mapping above
-- Setting IDs use `block_` prefix context: `block_heading`, `block_image`
+- Setting IDs follow the same convention as section-schema-standards: snake_case with full section and block context prefix. For example, a heading inside a 'hero-banner-slide' block becomes `hero_banner_slide_heading`, not just `block_heading`.
 
 ### Naming Conventions
 - Section setting IDs: `snake_case` with section context prefix
@@ -115,6 +120,7 @@ Figma reference code is a **starting point**, not final output. Every translatio
 - Add breakpoints for tablet (768px) and desktop (1024px+) layouts
 - Use the desktop Figma frame for breakpoint-up styles
 - Use the mobile Figma frame for base styles
+- Starting from the mobile frame ensures the constrained layout works first. Desktop enhancements are additive — if a breakpoint is missed, the mobile layout still functions. The reverse (desktop-first) can leave mobile layouts broken.
 
 ### Mapping Two Frames to CSS
 1. **Start with the mobile frame** — write base CSS matching mobile layout
@@ -164,6 +170,7 @@ Figma reference code is a **starting point**, not final output. Every translatio
 - Figma absolute positioning does NOT mean CSS `position: absolute` — evaluate if flexbox/grid achieves the same layout first
 - Figma "pin to top-left" is often just normal document flow
 - Only use `position: absolute` when the element truly overlays another element
+- Figma uses absolute positioning as its default layout mechanism, but CSS flexbox and grid handle most of the same layouts more robustly. Absolute positioning in CSS breaks document flow and makes responsive behavior harder to manage.
 
 ### Effects
 - Figma drop shadow → CSS `box-shadow`
@@ -194,3 +201,9 @@ Figma reference code is a **starting point**, not final output. Every translatio
 - Convert Figma px values to rem where appropriate (font-size, padding, margin, gap)
 - Keep px for borders, box-shadow offsets, and small decorative values
 - **Gotcha:** Figma measurements are between frames — verify actual padding vs gap vs margin intent
+
+---
+
+## Reference Files
+- Check `references/figma-checklist.md` for a validation checklist to run against every file built from a Figma design.
+- Check `references/patterns-learned.md` for Figma-to-code patterns discovered during development.

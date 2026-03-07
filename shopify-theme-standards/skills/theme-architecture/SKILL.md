@@ -1,7 +1,13 @@
 ---
 name: theme-architecture
-description: Shopify theme file structure, naming conventions, and architecture. MUST be followed when creating new files, organizing code, deciding where to place sections/snippets/assets/templates, or reviewing overall theme structure. Covers directory layout, kebab-case naming, when to create snippets, section independence, and Online Store 2.0 JSON templates.
-user-invocable: false
+description: >
+  Shopify theme file structure, naming conventions, and architecture decisions. Apply when creating
+  new files anywhere in the theme, organizing code across directories, deciding where to place
+  sections vs snippets vs assets, reviewing theme structure, or working with JSON templates and
+  layout files. Also use when the user asks about project organization, file naming, or where
+  something should go in the theme. Covers directory layout, kebab-case naming, snippet extraction
+  criteria, section independence, and Online Store 2.0 patterns.
+user-invocable: true
 globs: ["templates/**/*.json", "layout/**/*.liquid", "config/*.json"]
 ---
 
@@ -26,6 +32,7 @@ theme/
 
 ### Sections
 - Always `kebab-case.liquid`
+- Kebab-case aligns with web conventions (URLs, HTML attributes, CSS class names all use hyphens) and avoids filesystem issues — some systems are case-insensitive, making `HeroBanner.liquid` and `herobanner.liquid` indistinguishable.
 - Name should describe the section's purpose
 
 ```
@@ -37,6 +44,7 @@ featured-collections.liquid
 
 ### Templates (JSON)
 - Always JSON templates (Online Store 2.0)
+- JSON templates enable merchants to add, remove, and reorder sections through the theme editor without touching code. Liquid-based templates lock the layout in code and remove this flexibility — which is the primary value of the Online Store 2.0 architecture.
 - `kebab-case.json`
 - Alternate templates: `product.kebab-case-name.json`
 
@@ -86,14 +94,14 @@ product-carousel-javascript.js
 ## When to Create a Snippet
 
 ### 1. Data Rendering from Single Source of Truth
-When rendering data from one object and the code is long, extract to a snippet. The classic example is a product card — it renders from a product object and is used in many places.
+When rendering data from one object and the code is long, extract to a snippet. The classic example is a product card — it renders from a product object and is used in many places. Extracting data rendering into a snippet creates a single source of truth. When the product card design changes, you update one file instead of hunting through every section that renders products.
 
 ```liquid
 {% render 'product-card', card_product: product %}
 ```
 
 ### 2. SVGs and Icons
-Never render SVG markup directly in sections or templates. Always use snippets for icons.
+Never render SVG markup directly in sections or templates. SVG markup is verbose (often 10-50 lines per icon). Inline SVGs bloat section files and make them hard to read. A snippet like `{% render 'icon', icon: 'cart' %}` keeps sections focused on structure and logic. Always use snippets for icons.
 
 ```liquid
 {%- comment -%} ✅ GOOD {%- endcomment -%}
@@ -119,7 +127,7 @@ When a section has distinct functional areas, extract each into a snippet to mak
 ```
 
 ### 4. Block Rendering
-All blocks are rendered via snippets. Snippet name matches block type.
+All blocks are rendered via snippets. Snippet name matches block type. This works hand-in-hand with `{% render %}`'s scope isolation — each block gets a clean variable scope, preventing naming collisions between blocks and their parent section.
 
 ```liquid
 {%- comment -%} Block type: hero-banner-slide → snippet: hero-banner-slide.liquid {%- endcomment -%}
@@ -129,12 +137,15 @@ All blocks are rendered via snippets. Snippet name matches block type.
 ### When NOT to Create a Snippet
 - Don't extract tiny pieces (2-3 lines) into snippets — that adds overhead without readability benefit
 - Don't create snippets that are only used once AND are short — keep them inline if under ~15 lines
+- Over-extracting creates navigation overhead — developers have to jump between files to understand a simple piece of markup. The goal is readability, and sometimes 10 inline lines are clearer than a snippet call plus a separate file.
 
 ---
 
 ## Architectural Principles
 
 ### Section Independence
+Independence means a section works correctly regardless of which page template it appears on, what other sections surround it, or what position it occupies. This is the foundation of Shopify's drag-and-drop section reordering in the theme editor.
+
 Each section must be fully self-contained:
 - Its own CSS file
 - Its own JS file (if interactive)
@@ -142,10 +153,10 @@ Each section must be fully self-contained:
 - Works regardless of page template or position
 
 ### Template Structure (JSON)
-Templates define which sections appear and in what order. Keep them thin — all customization happens at the section level through schema settings.
+Templates define which sections appear and in what order. Keep them thin — all customization happens at the section level through schema settings. Thin templates mean merchants control their store through the visual editor, not by requesting code changes. If customization logic lives in the template, it's only changeable by a developer.
 
 ### Settings Schema (config/settings_schema.json)
-Theme-level settings go here for values used across the entire theme. Section-specific settings always go in the section's schema, not here.
+Theme-level settings go here for values used across the entire theme. Section-specific settings always go in the section's schema, not here. Putting section-specific settings in `settings_schema.json` creates hidden coupling — the section depends on a global setting that might be changed without understanding which sections use it.
 
 ---
 

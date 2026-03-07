@@ -1,7 +1,11 @@
 ---
 name: section-schema-standards
-description: Shopify section schema standards. MUST be followed when writing or modifying any {% schema %} block in section files. Covers schema structure order, section class naming, setting IDs (snake_case with context prefix), setting labels (Title Case), setting type selection, block type/name conventions, and preset requirements.
-user-invocable: false
+description: >
+  Shopify section schema standards for {% schema %} blocks. Apply whenever writing, modifying, or
+  reviewing any {% schema %} JSON in section files — including adding new settings, creating blocks,
+  defining presets, or auditing naming conventions for consistency. Covers structure order, class
+  naming, setting ID/label conventions, type selection, block patterns, and preset requirements.
+user-invocable: true
 globs: ["sections/**/*.liquid"]
 ---
 
@@ -15,6 +19,8 @@ Every section schema follows this order:
 4. `blocks`
 5. `presets`
 
+A consistent order makes schemas scannable across all sections — developers always know where to find settings vs blocks vs presets without scrolling through the entire schema.
+
 ## Section Name
 - Use Title Case matching the section's purpose: `"name": "Hero Banner"`
 
@@ -22,9 +28,14 @@ Every section schema follows this order:
 - Kebab-case with `-section` suffix
 - Derived from the section name: `"class": "hero-banner-section"`
 
+The `-section` suffix distinguishes the Shopify-generated wrapper element from the section's internal CSS classes, preventing naming collisions with BEM block classes inside the section.
+
 ## Setting IDs
 - Always `snake_case`
 - Always prefix with section and block context — never use generic IDs
+
+Shopify's theme editor flattens settings from all sections into a single namespace for metafield references and Liquid access. Generic IDs like `image` collide when multiple sections appear on the same page, while `hero_banner_slide_desktop_image` is instantly traceable to its source section. Prefixed IDs also make Liquid code self-documenting — `section.settings.hero_banner_heading` tells you exactly what you're accessing without checking the schema.
+
 - The ID should read as: `section_block_element`
 
 ```
@@ -41,6 +52,8 @@ Every section schema follows this order:
 - Use Title Case
 - Always section-specific — never generic
 - Label should mirror the ID in readable form
+
+Labels appear in the Shopify theme editor where merchants customize their store. Section-specific labels like 'Hero Banner Slide Desktop Image' help merchants understand exactly which part of the page they're editing, while generic labels like 'Image' are ambiguous when the editor shows settings from multiple sections.
 
 ```
 ID: hero_banner_slide_desktop_image
@@ -68,6 +81,8 @@ Label: "Hero Banner Slide Button Text"
 - `color` — for color pickers
 - `color_scheme` — when integrating with theme color scheme system
 
+Note: `richtext` outputs HTML — use it when the merchant needs bold/italic/links and you handle the HTML output in Liquid (usually rendering directly in a container). Use `textarea` when you want plain multi-line text without formatting markup. Use `text` for short single-line values that should never contain HTML.
+
 ## Settings Grouping Order
 When a section has many settings, group them using `"header"` type in this order:
 1. **Content** settings first (text, images, videos)
@@ -90,6 +105,9 @@ Follow a logical flow within each group:
 ### Block Name
 - Title Case: `"name": "Hero Banner Slide"`
 - Block name and type must be the same — just different format (Title Case vs kebab-case)
+
+Matching names and types ensures the theme editor label corresponds exactly to what developers see in code. When a merchant sees 'Hero Banner Slide' in the editor and a developer sees `hero-banner-slide` in Liquid, there's zero ambiguity about what they're referring to.
+
 - Name should be meaningful, derived from both the section name and block purpose
 
 ```
@@ -106,7 +124,9 @@ Block name: "Testimonial Card"
 ```
 
 ### Block Settings
-Follow the same ID and label conventions as section settings. Prefix with the block context:
+Follow the same ID and label conventions as section settings. Prefix with the block context.
+
+Block settings share the same flat namespace as section settings in the Shopify admin's internal APIs. The full context prefix prevents collisions between identically-named settings in different block types.
 
 ```
 Block type: "hero-banner-slide"
@@ -118,6 +138,9 @@ Setting Label: "Hero Banner Slide Desktop Image"
 
 ## Presets
 - Always define at least one preset
+
+Presets make the section available in the theme editor's 'Add section' menu. Without a preset, the section exists in code but merchants cannot add it to pages through the editor — it becomes invisible to non-technical users.
+
 - Preset name matches the section name exactly
 
 ```json

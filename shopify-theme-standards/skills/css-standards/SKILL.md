@@ -1,7 +1,13 @@
 ---
 name: css-standards
-description: CSS and styling standards for Shopify themes. MUST be followed when writing, editing, or generating any CSS file, stylesheet, Tailwind classes, or style-related code in .liquid files. Covers BEM naming, section scoping, property ordering, responsive breakpoints, CSS variables, and dynamic schema values.
-user-invocable: false
+description: >
+  CSS and styling standards for Shopify themes. Apply when writing, editing, or generating any CSS
+  file, Tailwind classes in Liquid templates, inline style attributes, or any style-related code.
+  Use whenever the user is working on visual appearance, layout, responsive design, or theming —
+  even if they frame it as a "Liquid" or "section" task, if styling is involved, these standards
+  apply. Covers BEM naming, section scoping, property ordering, responsive breakpoints, CSS
+  variables, dynamic schema values, and CSS loading strategy.
+user-invocable: true
 globs: ["assets/**/*.css"]
 ---
 
@@ -19,6 +25,8 @@ Both approaches share the same core conventions below. Tailwind-specific and pur
 
 ### Always Use Asset Files
 CSS lives in asset files (`assets/` directory), not inline `<style>` tags. The only exception is CSS that is dynamically generated from Liquid values — that can live directly in the Liquid file.
+
+Keeping CSS in asset files enables browser caching — the stylesheet is downloaded once and reused across page navigations. Inline `<style>` tags are re-parsed on every page load and cannot be cached independently.
 
 ### File Naming
 Section-specific CSS files follow this format:
@@ -38,6 +46,8 @@ Use the `css.liquid` snippet for all CSS loading. Two modes based on fold positi
 ```liquid
 {% render 'css', filename: 'testimonials-stylesheet.css', loading: 'low' %}
 ```
+
+The following is a reference implementation for CSS loading. If your theme uses a different CSS loading approach, adapt the pattern while maintaining the preload/lazy distinction for performance.
 
 **The `css.liquid` snippet:**
 ```liquid
@@ -65,6 +75,8 @@ Use the `css.liquid` snippet for all CSS loading. Two modes based on fold positi
 ## Class Naming — BEM Model
 Use BEM (Block Element Modifier) for all class names:
 
+BEM gives every class a predictable, collision-resistant name. When multiple sections share a page, generic class names like `.container` or `.title` will conflict. BEM's `section-name__element--modifier` pattern is self-documenting — you can immediately tell which section a class belongs to.
+
 ```
 .section-name                     — Block
 .section-name__element            — Element
@@ -78,6 +90,8 @@ Keep names semantic and descriptive. The block name should match the section nam
 ## Section-Specific CSS Scoping
 
 CSS must be section-specific, not page-specific. Every selector for a section must include the section's parent class.
+
+Shopify sections can appear on any page in any order. Unscoped CSS breaks when a section moves to a different template or when multiple sections with similar class names share the same page.
 
 ```css
 /* ✅ Correct — scoped to section */
@@ -109,6 +123,8 @@ CSS must be section-specific, not page-specific. Every selector for a section mu
 
 ## CSS Property Ordering
 Follow a strict property order in declarations. This matches the Tailwind class ordering convention:
+
+Ordering properties from outside-in mirrors the browser's box model: layout and position first (how the element sits in the page), then sizing, then spacing, then visual details. This makes it easy to scan a rule and understand what an element does at a glance — structural decisions at the top, decorative details at the bottom.
 
 1. **Layout** — display, position, top/right/bottom/left, z-index, float, clear
 2. **Flexbox/Grid** — flex, flex-direction, align-items, justify-content, grid-template, gap
@@ -149,6 +165,9 @@ Follow a strict property order in declarations. This matches the Tailwind class 
 ---
 
 ## Common Variables
+
+CSS custom properties defined at `:root` create a single source of truth for theme-wide values. When a client changes their brand color, updating one variable propagates everywhere — no find-and-replace across dozens of files.
+
 Create CSS custom properties for theme-wide values:
 
 ```css
@@ -177,6 +196,8 @@ Use these variables in section CSS rather than hard-coding values.
 ## Dynamic Values from Schema
 When section settings need to affect styles (e.g., colors, spacing), use the `style` attribute with CSS custom properties:
 
+This pattern keeps CSS purely declarative while letting schema settings control values. The alternative — constructing class names dynamically — breaks Tailwind's purge step and makes pure CSS fragile because the class must exist in the stylesheet for every possible value.
+
 ```liquid
 <section
   class="hero-banner"
@@ -197,6 +218,8 @@ Never construct class names dynamically — they won't be purged in Tailwind and
 
 ## Responsive Approach
 Mobile-first always. Base styles are mobile, add breakpoints for larger screens.
+
+Mobile-first means base styles handle the smallest screens (which are also the most constrained), and breakpoints progressively enhance for larger screens. This produces smaller CSS because mobile styles don't need to be wrapped in media queries, and it ensures the mobile experience works even if a breakpoint is missed.
 
 ### Breakpoints
 ```
@@ -234,6 +257,8 @@ In Tailwind, these are configured in `tailwind.config.js` under `screens`. In pu
 
 Always use these exact breakpoint values — never use arbitrary values like `750px` or `990px`. Consistency across all sections.
 
+Consistent breakpoints across all sections prevent layout jumps where one section reflows at 768px but another at 750px. Using standard values also aligns with Tailwind defaults and common device widths.
+
 ---
 
 ## Tailwind-Specific (Scratch Themes Only)
@@ -254,6 +279,8 @@ Extend the default config per project with custom colors, spacing, and fonts to 
 
 ### Don't Mix Approaches Per Element
 Within a single element, don't mix Tailwind classes with custom CSS classes for styling. Pick one. Tailwind for utility-driven elements, custom CSS for complex components.
+
+Mixing Tailwind utilities and custom CSS on the same element makes specificity unpredictable and splits styling logic across two systems, making debugging harder.
 
 ---
 
