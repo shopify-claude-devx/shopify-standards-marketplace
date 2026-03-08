@@ -6,9 +6,23 @@ A Claude Code plugin that enforces Shopify theme development standards through s
 
 ## Installation
 
+### Step 1: Add the Marketplace
+
+Inside Claude Code, run:
+
 ```
-claude plugin add shopify-theme-standards --marketplace github:shopify-claude-devx/shopify-standards-marketplace
+/plugin marketplace add shopify-claude-devx/shopify-standards-marketplace
 ```
+
+### Step 2: Install the Plugin
+
+```
+/plugin install shopify-theme-standards@shopify-standards
+```
+
+### Step 3: Verify
+
+Restart Claude Code and type `/shopify-theme-standards:clarify` — if it responds, the plugin is working.
 
 ## Workflow
 
