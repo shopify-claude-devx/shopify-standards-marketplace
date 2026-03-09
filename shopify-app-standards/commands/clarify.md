@@ -1,6 +1,6 @@
 ---
 description: Clarify requirements before starting any task. Use this as the first step before planning or building anything.
-allowed-tools: Read, Grep, Glob
+allowed-tools: Read
 ---
 
 # Clarify — Requirement Extraction
@@ -19,11 +19,7 @@ Break the request into:
 - **Ambiguous areas** — things that could go multiple ways
 - **Missing information** — things you need answered to proceed
 
-### Step 3: Check Existing Context
-- Read `CLAUDE.md` if it exists for project context
-- Scan the codebase briefly to understand what already exists that relates to this request
-
-### Step 4: Ask Clarifying Questions
+### Step 3: Ask Clarifying Questions
 Present your understanding back to the user in this format:
 
 ```
@@ -44,7 +40,7 @@ Present your understanding back to the user in this format:
 - [Question 2]
 ```
 
-### Step 5: Confirm the Spec
+### Step 4: Confirm the Spec
 Once the user answers your questions, produce a final **Task Spec**:
 
 ```
