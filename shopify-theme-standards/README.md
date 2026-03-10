@@ -44,7 +44,7 @@ Restart Claude Code and type `/shopify-theme-standards:clarify` — if it respon
 
 ## Skills
 
-Skills auto-load based on file globs. They can also be invoked manually.
+Plugin skill descriptions are loaded into Claude's context, and Claude may auto-invoke skills it deems relevant — but this is unreliable for mandatory standards enforcement. Add CLAUDE.md instructions (see main README) to guarantee skills are invoked via the Skill tool before writing any code matching that file type.
 
 | Skill | Auto-loads on | What it enforces |
 |---|---|---|
