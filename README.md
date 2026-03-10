@@ -64,7 +64,7 @@ They must be invoked using the **Skill tool** before writing any code.
 Do not skip this step. The plugin skills have detailed rules and checklists that must be followed.
 ```
 
-**Why is this needed?** Skills have `globs` that auto-load content into Claude's context, but this is passive — Claude sees it but may not strictly follow it. The CLAUDE.md instructions create an active enforcement loop where Claude must explicitly invoke each skill before writing code.
+**Why is this needed?** Plugin skill descriptions are loaded into Claude's context, and Claude may auto-invoke skills it deems relevant — but this is unreliable for mandatory standards enforcement. The CLAUDE.md instructions make it explicit: Claude must invoke each skill via the Skill tool before writing any code matching that file type. This guarantees standards are loaded every time, not just when Claude decides to.
 
 ## Usage
 
