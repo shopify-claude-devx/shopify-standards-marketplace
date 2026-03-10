@@ -42,19 +42,26 @@ Restart Claude Code and type `/shopify-theme-standards:clarify` — if it respon
 | `/fix` | Debug workflow: investigate, diagnose, get approval, then fix. |
 | `/capture` | Extract learnings into `patterns-learned.md` for future reference. |
 
-## Skills
+## Skills & Enforcement
 
-Plugin skill descriptions are loaded into Claude's context, and Claude may auto-invoke skills it deems relevant — but this is unreliable for mandatory standards enforcement. Add CLAUDE.md instructions (see main README) to guarantee skills are invoked via the Skill tool before writing any code matching that file type.
+Plugin skill descriptions are loaded into Claude's context, and Claude may auto-invoke skills it deems relevant — but this is unreliable for mandatory standards enforcement. Add the following to your project's `CLAUDE.md` to guarantee skills are invoked every time:
 
-| Skill | Auto-loads on | What it enforces |
-|---|---|---|
-| `liquid-standards` | `**/*.liquid` | Variable naming, tag style, render vs include, whitespace control, filters, null checks |
-| `css-standards` | `assets/**/*.css` | BEM naming, section scoping, property ordering, responsive breakpoints, CSS variables |
-| `js-standards` | `assets/**/*.js` | Vanilla JS only, defer loading, Web Components, no inline styles/DOM creation |
-| `section-standards` | `sections/**/*.liquid` | File structure (CSS/HTML/JS/Schema), wrapper patterns, block rendering via snippets |
-| `section-schema-standards` | `sections/**/*.liquid` | Schema structure, setting IDs/labels, block conventions, presets |
-| `theme-architecture` | `templates/**/*.json`, `layout/**/*.liquid`, `config/*.json` | File structure, naming conventions, snippet extraction, section independence |
-| `figma-to-code` | Manual only | React+Tailwind to Liquid+CSS translation, Figma layer to schema mapping, responsive patterns |
+```markdown
+## Project Standards — MANDATORY
+
+Coding standards are provided as **plugin skills** from the `shopify-theme-standards` plugin.
+They must be invoked using the **Skill tool** before writing any code.
+
+**Before writing or modifying any file, invoke the relevant skill(s):**
+- **`.liquid` files** → invoke `shopify-theme-standards:liquid-standards`
+- **`.js` files** → invoke `shopify-theme-standards:js-standards`
+- **CSS / Tailwind / styling** → invoke `shopify-theme-standards:css-standards`
+- **Section files** → invoke `shopify-theme-standards:section-standards` and `shopify-theme-standards:section-schema-standards`
+- **New files / architecture decisions** → invoke `shopify-theme-standards:theme-architecture`
+- **Building from Figma designs** → invoke `shopify-theme-standards:figma-to-code`
+
+Do not skip this step. The plugin skills have detailed rules and checklists that must be followed.
+```
 
 ## Agents
 
