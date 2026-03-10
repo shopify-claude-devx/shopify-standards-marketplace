@@ -28,6 +28,7 @@ Restart Claude Code and type `/shopify-theme-standards:clarify` — if it respon
 
 ```
 /figma (optional) → /clarify → /plan → /build → /assess → /fix (if needed) → /capture
+/research — standalone, use anytime
 ```
 
 ## Commands
@@ -41,6 +42,7 @@ Restart Claude Code and type `/shopify-theme-standards:clarify` — if it respon
 | `/assess` | Dispatch two subagents to validate output and review code quality. |
 | `/fix` | Debug workflow: investigate, diagnose, get approval, then fix. |
 | `/capture` | Extract learnings into `patterns-learned.md` for future reference. |
+| `/research "topic"` | Look up any Shopify theme topic using web search. No prerequisites. |
 
 ## Skills & Enforcement
 
