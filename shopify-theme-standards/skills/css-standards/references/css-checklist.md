@@ -5,8 +5,14 @@ Validate every CSS file against these before committing.
 ## File Convention
 - [ ] CSS lives in `assets/` directory, not inline `<style>` tags
 - [ ] File named `section-name-stylesheet.css`
-- [ ] CSS loaded via `css.liquid` snippet (or equivalent loader)
-- [ ] Above-fold sections use `preload`, below-fold use lazy loading
+- [ ] No bare `{{ file | asset_url | stylesheet_tag }}` — use performance-aware loading
+- [ ] Above-fold sections use `preload` (`stylesheet_tag: preload: true`)
+- [ ] Below-fold sections use lazy loading (`media="print"` + `onload` pattern)
+
+## Comments
+- [ ] No decorative header banners or separator comments
+- [ ] No property group labels (`/* Block */`, `/* Desktop */`)
+- [ ] No element description comments
 
 ## Class Naming
 - [ ] All classes follow BEM: `.block__element--modifier`
@@ -14,9 +20,11 @@ Validate every CSS file against these before committing.
 - [ ] Names are semantic and descriptive
 
 ## Scoping
-- [ ] All selectors scoped to the section's parent class
+- [ ] Every child selector starts with the parent wrapper class (`.parent .child`)
+- [ ] Only the root block selector (`.section-name`) stands alone
+- [ ] Same parent wrapper rule applies inside media queries
+- [ ] No standalone child selectors, even with BEM names
 - [ ] No unscoped generic selectors (`.title`, `.container`)
-- [ ] Only intentionally shared styles are unscoped
 
 ## Property Ordering
 - [ ] Layout properties first (display, position, z-index)

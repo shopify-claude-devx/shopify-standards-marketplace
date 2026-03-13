@@ -83,12 +83,14 @@ Work through the plan's TODOs in order. For each TODO:
 
 #### CSS File Checklist (EVERY .css file):
 - [ ] BEM naming: `.section-name__element--modifier`
-- [ ] All selectors scoped to section parent class
+- [ ] All child selectors scoped with parent wrapper class (`.parent .child`)
 - [ ] Property order: Layout → Flex/Grid → Sizing → Spacing → Typography → Visual → Effects → Responsive
 - [ ] Mobile-first (base = mobile, breakpoints for larger)
 - [ ] Standard breakpoints only (320/360/475/768/1024/1280/1536)
 - [ ] CSS custom properties for theme-wide values
 - [ ] Dynamic schema values via `style` attribute + CSS custom properties
+- [ ] Performance-aware CSS loading (preload above-fold, lazy load below-fold)
+- [ ] No decorative comments in CSS files
 
 #### JS File Checklist (EVERY .js file):
 - [ ] Vanilla JS only — no frameworks, no jQuery

@@ -21,7 +21,7 @@ Every section file follows this order from top to bottom:
 
 ```liquid
 {%- comment -%} 1. CSS {%- endcomment -%}
-{% render 'css', filename: 'hero-banner-stylesheet.css', loading: 'preload' %}
+{{ 'hero-banner-stylesheet.css' | asset_url | stylesheet_tag: preload: true }}
 
 {%- comment -%} 2. HTML {%- endcomment -%}
 <div class="hero-banner">
