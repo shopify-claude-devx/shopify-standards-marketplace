@@ -215,5 +215,27 @@ Presets make the section available in the theme editor's 'Add section' menu. Wit
 
 ---
 
-## Reference Files
-Check `references/patterns-learned.md` for schema patterns and gotchas discovered during development.
+## Checklist
+
+Validate every `{% schema %}` block against these.
+
+### Structure
+- [ ] Schema order: name, class, settings, blocks, presets
+- [ ] Section name: Title Case
+- [ ] Section class: kebab-case with `-section` suffix
+
+### Setting IDs & Labels
+- [ ] All IDs use `snake_case` with section/block context prefix
+- [ ] No generic IDs (`image`, `title`, `text`)
+- [ ] All labels use Title Case
+- [ ] Labels are section-specific, never generic
+
+### Blocks
+- [ ] Block type: kebab-case
+- [ ] Block name: Title Case
+- [ ] Block name and type match (different format only)
+- [ ] Block settings follow same ID/label conventions with block context prefix
+
+### Presets
+- [ ] At least one preset defined
+- [ ] Preset name matches section name

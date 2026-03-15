@@ -160,5 +160,26 @@ Theme-level settings go here for values used across the entire theme. Section-sp
 
 ---
 
-## Reference Files
-Check `references/patterns-learned.md` for architecture decisions and patterns specific to this project.
+## Checklist
+
+Validate file structure and organization decisions against these.
+
+### Naming
+- [ ] Sections: `kebab-case.liquid`
+- [ ] Templates: `kebab-case.json` (Online Store 2.0)
+- [ ] Snippets: `kebab-case.liquid`
+- [ ] CSS assets: `section-name-stylesheet.css`
+- [ ] JS assets: `section-name-javascript.js`
+
+### Snippet Decisions
+- [ ] Blocks rendered via snippets (snippet name matches block type)
+- [ ] SVGs/icons in snippets, never inline in sections
+- [ ] Distinct functional areas extracted to snippets for readability
+- [ ] No over-extraction of tiny (2-3 line) pieces
+- [ ] No single-use short snippets (under ~15 lines)
+
+### Architecture
+- [ ] Each section is fully self-contained (own CSS, own JS)
+- [ ] No section depends on another section's assets
+- [ ] Templates are thin — customization at section level via schema
+- [ ] Section-specific settings in section schema, not global settings_schema.json

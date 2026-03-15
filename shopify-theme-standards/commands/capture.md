@@ -1,21 +1,29 @@
 ---
-description: Capture learnings from a completed task and write them into project skill files. Use after /assess when a task is complete. Grows project knowledge organically over time.
+description: Capture learnings from a completed task. Use after /assess when a task passes. Extracts patterns and writes them to the feature artifact and a persistent project-level file.
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---
 
 # Capture — Knowledge Extraction
 
-You are entering the Capture phase. Your job is to extract meaningful learnings from the task just completed and store them in the right place so future tasks benefit from this experience. Do not invent learnings. Only capture what genuinely matters.
+You are entering the Capture phase. Your job is to extract meaningful learnings from the task just completed and store them so future tasks benefit from this experience. Do not invent learnings. Only capture what genuinely matters.
 
 ## Input
-What to capture from: `$ARGUMENTS`
+Context or overrides: `$ARGUMENTS`
 
-If no context, review the current conversation for the task that was just completed.
+## Artifact Resolution
+1. Look in `.buildspace/artifacts/` for the relevant feature folder
+2. Read the artifacts from this feature to review what happened:
+   - `task-spec.md` — what was planned
+   - `plan.md` — the approach taken
+   - `execution-log.md` — what was built
+   - `assessment.md` — what issues were found (if any)
+
+If no artifacts found, ask the user which feature to capture learnings from. Do not fall back to conversation context — artifacts are the source of truth.
 
 ## Process
 
 ### Step 1: Review What Happened
-Look back through the conversation at:
+Look at:
 - The original task requirements
 - The plan and approach chosen
 - The code that was built
@@ -45,45 +53,36 @@ Something about THIS project's codebase that affects future work.
 **5. Platform Gotcha**
 A Shopify or tooling limitation/behavior that isn't obvious.
 
-### Step 3: Write to Project Directory
-All learnings go to a single file in the user's project: `.claude/patterns-learned.md`
+### Step 3: Write Learnings to Both Locations
 
-This file lives in the project directory (not inside the plugin), so learnings persist across plugin updates and are specific to this project.
-
-**Before writing**, read the existing file (if it exists) to:
-- Avoid duplicates
-- Merge with existing related patterns
-- Maintain consistent formatting
-
-**If the file doesn't exist**, create it with a header:
-```markdown
-# Patterns Learned
-
-Project-specific learnings captured from development work.
-```
-
-Tag each entry with a category so learnings are searchable:
-- Liquid code patterns → **Category: Liquid**
-- Section/block patterns → **Category: Sections**
-- Schema conventions → **Category: Schema**
-- CSS patterns → **Category: CSS**
-- JS patterns → **Category: JavaScript**
-- Theme file structure → **Category: Architecture**
-- Figma translation patterns → **Category: Figma**
-
-### Step 4: Write the Learning
-Format for each entry:
+**Location 1: Feature-scoped artifact**
+Write to `.buildspace/artifacts/{feature-name}/capture.md`:
 
 ```markdown
+# Capture: {Feature Name}
+
 ### [Brief Title]
 **Type:** [Pattern | Mistake & Fix | Convention | Codebase Context | Platform Gotcha]
 **Category:** [Liquid | Sections | Schema | CSS | JavaScript | Architecture | Figma]
-**Date:** [Today's date]
 
 [2-4 sentences explaining the learning. Include WHAT, WHY, and an example if helpful.]
 ```
 
-### Step 5: Report What Was Captured
+**Location 2: Persistent project-level file**
+Append to `.claude/patterns-learned.md` in the user's project directory:
+
+- If the file doesn't exist, create it with a header:
+  ```markdown
+  # Patterns Learned
+
+  Project-specific learnings captured from development tasks.
+  ```
+
+- Before writing, read the existing file to avoid duplicates and merge related patterns
+- Tag each entry with category, type, and date
+- Use the same format as above, adding a `**Date:**` field
+
+### Step 4: Report What Was Captured
 
 ```
 ## Capture Complete
@@ -91,8 +90,11 @@ Format for each entry:
 **Learnings Found:** [count]
 
 **Saved to:**
-- `[file path]` — [learning title]
-- `[file path]` — [learning title]
+- `.buildspace/artifacts/{feature-name}/capture.md` — feature-scoped
+- `.claude/patterns-learned.md` — persistent, survives artifact cleanup
+
+**Entries:**
+- [Learning title] — [type, category]
 ```
 
 If no meaningful learnings were found, say so honestly:
@@ -100,7 +102,7 @@ If no meaningful learnings were found, say so honestly:
 ```
 ## Capture Complete
 
-**No new learnings to capture.** This task followed existing patterns correctly. The knowledge base is sufficient for this type of work.
+**No new learnings to capture.** This task followed existing patterns correctly.
 ```
 
 ## Rules

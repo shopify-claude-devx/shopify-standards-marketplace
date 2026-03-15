@@ -133,5 +133,26 @@ Each section must be fully self-contained:
 - Sections should work regardless of page template or position
 - Shared code goes in snippets, not duplicated across sections
 
-## Reference Files
-Check `references/patterns-learned.md` for section patterns discovered during development.
+## Checklist
+
+Validate every section `.liquid` file against these.
+
+### File Structure
+- [ ] File order: CSS → HTML → JS → Schema
+- [ ] Wrapper `<div>` class matches section filename
+- [ ] No extra attributes on wrapper unless JS functionality requires them
+
+### Block Rendering
+- [ ] Blocks rendered via `{% render %}` snippets — NEVER inline HTML
+- [ ] Snippet name matches block type
+- [ ] `case/when` used for multiple block types (not if/elsif)
+
+### Section Independence
+- [ ] Section has its own CSS file
+- [ ] Section has its own JS file (if interactive)
+- [ ] No dependency on another section's assets
+- [ ] Works regardless of page template or position
+
+### Settings
+- [ ] Repeatable content uses blocks, not section settings
+- [ ] Non-repeatable content uses section settings, not blocks

@@ -1,16 +1,20 @@
 ---
 description: Fetch a Figma design and prepare structured Design Context for theme development. Use as the first step before /clarify when building from a Figma design. Does not write code.
-allowed-tools: Read, Grep, Glob, mcp__figma__get_design_context, mcp__figma__get_screenshot, mcp__figma__get_metadata, mcp__figma__get_variable_defs
+allowed-tools: Read, Write, Grep, Glob, mcp__figma__get_design_context, mcp__figma__get_screenshot, mcp__figma__get_metadata, mcp__figma__get_variable_defs
 ---
 
 # Figma — Design Fetching
 
-You are entering the Figma phase. Your job is to fetch a Figma design and produce a structured Design Context that the rest of the workflow (`/clarify` → `/plan` → `/build`) will use. Do NOT write any code. Do NOT plan implementation. Only fetch and present design information.
+You are entering the Figma phase. Your job is to fetch a Figma design and produce a structured Design Context that the rest of the workflow will use. Do NOT write any code. Do NOT plan implementation. Only fetch and present design information.
 
 ## Input
 The Figma URL or instructions: `$ARGUMENTS`
 
 If no Figma URL is provided, ask the user for one before proceeding.
+
+## Artifact Setup
+1. Derive a short, kebab-case feature name from the design (e.g., "hero-banner", "product-carousel")
+2. Create `.buildspace/artifacts/{feature-name}/` if it doesn't exist
 
 ## Process
 
@@ -62,29 +66,29 @@ Wait for the user to provide the mobile frame URL. If the user says there is no 
 ### Step 5: Fetch Mobile Design Context
 Parse the mobile frame URL and call `get_design_context` with its fileKey and nodeId. Review the mobile reference code and screenshot for responsive differences.
 
-### Step 6: Output Structured Design Context
-Compile everything into a single **Design Context** document:
+### Step 6: Save Design Context to Artifact
+Write the structured Design Context to `.buildspace/artifacts/{feature-name}/design-context.md`:
 
-```
-## Design Context
+```markdown
+# Design Context: {Feature Name}
 
-### Screenshots
+## Screenshots
 - **Desktop:** [screenshot from Step 2]
 - **Mobile:** [screenshot from Step 5]
 
-### Reference Code — Desktop
+## Reference Code — Desktop
 [React+Tailwind code from desktop frame — this is reference only, NOT final output]
 
-### Reference Code — Mobile
+## Reference Code — Mobile
 [React+Tailwind code from mobile frame — shows layout differences]
 
-### Design Tokens
+## Design Tokens
 [List of design tokens from get_variable_defs, or "No design tokens defined — colors and spacing will be extracted from the reference code"]
 
-### Asset URLs
+## Asset URLs
 [List any image/icon asset URLs found in the design context]
 
-### Layer Structure Summary
+## Layer Structure Summary
 [Brief summary of the design's component hierarchy:
 - Top-level container
   - Header area (heading, subheading, badge)
@@ -92,24 +96,23 @@ Compile everything into a single **Design Context** document:
   - Footer area (links, secondary actions)
 ]
 
-### Responsive Differences
+## Responsive Differences
 [Key differences between desktop and mobile frames:
-- Layout: [e.g., "horizontal → vertical stack"]
+- Layout: [e.g., "horizontal to vertical stack"]
 - Visibility: [e.g., "sidebar hidden on mobile"]
-- Typography: [e.g., "heading 48px → 32px"]
-- Spacing: [e.g., "section padding 80px → 40px"]
+- Typography: [e.g., "heading 48px to 32px"]
+- Spacing: [e.g., "section padding 80px to 40px"]
 ]
 
-### Notes for Implementation
+## Notes for Implementation
 [Any Code Connect mappings, designer annotations, or gotchas observed]
 ```
 
 ### Step 7: Hand Off to Next Step
-After presenting the Design Context:
 
-> Design Context is ready. Run `/clarify` with your additional requirements to begin the development workflow.
+> Design Context saved to `.buildspace/artifacts/{feature-name}/design-context.md`.
 >
-> The workflow from here: `/clarify` → `/plan` → `/build` → `/assess` → `/capture`
+> Run `/clarify` to define requirements and begin the development workflow.
 
 ## Rules
 - Never write implementation code — this command only fetches and presents design information

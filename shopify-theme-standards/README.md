@@ -1,6 +1,6 @@
 # Shopify Theme Standards
 
-A Claude Code plugin that enforces Shopify theme development standards through skills, commands, and agents. Version 1.0.6.
+A Claude Code plugin that enforces Shopify theme development standards through skills, commands, and agents. Uses artifact-based handshaking for efficient context management across stages. Version 2.0.0.
 
 **Author:** Aditya Pasikanti
 
@@ -31,18 +31,49 @@ Restart Claude Code and type `/shopify-theme-standards:clarify` — if it respon
 /research — standalone, use anytime
 ```
 
+Each command writes its output to `.buildspace/artifacts/{feature-name}/`. The next command reads from there. This means:
+- Each stage gets exactly the context it needs from one known place
+- You can pick up work across sessions (artifacts persist on disk)
+- You can review what each stage understood by reading the artifact file
+- You can hand-edit any artifact before the next stage runs
+
 ## Commands
 
-| Command | Description |
-|---|---|
-| `/figma <url>` | Fetch a Figma design and produce a structured Design Context. Does not write code. |
-| `/clarify` | Extract and confirm requirements. Produces a Task Spec. |
-| `/plan` | Research codebase, read all skills, produce a TODO-by-TODO execution plan. |
-| `/build` | Execute plan TODO-by-TODO. Validates each file against skill checklists. |
-| `/assess` | Dispatch two subagents to validate output and review code quality. |
-| `/fix` | Debug workflow: investigate, diagnose, get approval, then fix. |
-| `/capture` | Extract learnings into `patterns-learned.md` for future reference. |
-| `/research "topic"` | Look up any Shopify theme topic using web search. No prerequisites. |
+| Command | Input Artifact | Output Artifact |
+|---|---|---|
+| `/figma <url>` | — | `design-context.md` |
+| `/clarify` | `design-context.md` (optional) | `task-spec.md` |
+| `/plan` | `task-spec.md` | `plan.md` |
+| `/build` | `plan.md` | code + `execution-log.md` |
+| `/assess` | `task-spec.md` + `plan.md` + `execution-log.md` | `assessment.md` |
+| `/fix` | `assessment.md` | fixed code |
+| `/capture` | all artifacts | `capture.md` + `.claude/patterns-learned.md` |
+| `/research "topic"` | — | inline results |
+
+## Artifact Structure
+
+```
+.buildspace/
+  artifacts/
+    {feature-name}/
+      design-context.md    ← /figma output
+      task-spec.md         ← /clarify output
+      plan.md              ← /plan output
+      execution-log.md     ← /build output
+      assessment.md        ← /assess output
+      capture.md           ← /capture output
+```
+
+Add `.buildspace/` to your project's `.gitignore` — artifacts are working files, not source code.
+
+## Context Efficiency
+
+This plugin is designed to minimize token usage:
+
+- **Skills are loaded per-file, not per-stage.** `/build` only loads the skill relevant to the file it's currently writing (e.g., `css-standards` when writing a `.css` file), not all 7 skills upfront.
+- **`/plan` does not read skills.** Planning focuses on architecture and file changes. Skills are for the build phase when code is being written.
+- **Artifacts replace conversation history.** Each stage reads a small, structured artifact file instead of re-reading the entire conversation or re-loading all context.
+- **Checklists are in skill files.** Each skill has its checklist at the bottom, so loading a skill gives you both the rules and the validation criteria in one read.
 
 ## Skills & Enforcement
 
@@ -69,8 +100,8 @@ Do not skip this step. The plugin skills have detailed rules and checklists that
 
 | Agent | Role |
 |---|---|
-| `output-validator` | Checks if built features match requirements. Does not review code quality. |
-| `code-reviewer` | Reviews code quality against project standards. Does not validate functionality. |
+| `output-validator` | Reads task-spec artifact. Checks if built features match requirements. Does not review code quality. |
+| `code-reviewer` | Reads execution-log artifact. Loads relevant skills per file. Reviews code quality against standards. Does not validate functionality. |
 
 Both agents are dispatched automatically by the `/assess` command.
 
