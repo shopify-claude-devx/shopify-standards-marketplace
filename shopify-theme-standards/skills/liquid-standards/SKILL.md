@@ -54,12 +54,15 @@ Since `{% render %}` enforces scope isolation, the snippet's interface is its pa
 
 ```liquid
 {% doc %}
-  @param {String} title - The card title
-  @param {Object} product - The product object
-  @param {Boolean} [show_price] - Whether to show price (optional)
+  @param {string} title - The card title
+  @param {product} product - The product object
+  @param {boolean} [show_price] - Whether to show price (optional)
 {% enddoc %}
 ```
 
+- Types must be **lowercase**: `{string}`, `{number}`, `{boolean}`, `{object}`
+- Liquid object types are valid: `{product}`, `{collection}`, `{color}`, etc.
+- Array types use `[]` suffix: `{string[]}`, `{product[]}`
 - Required params listed without brackets
 - Optional params wrapped in `[brackets]`
 - Always include type and description
