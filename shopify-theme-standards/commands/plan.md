@@ -120,10 +120,15 @@ Before presenting to the user, self-check:
 - Is anything missing between current state and desired state?
 - Is this plan specific enough that building is just execution?
 
-### Step 6: Present and Save
-Present the plan to the user. Wait for confirmation or adjustments.
+### Step 6: Save and Ask for Review
+Write the plan directly to `.buildspace/artifacts/{feature-name}/plan.md`.
 
-Once confirmed, write the plan to `.buildspace/artifacts/{feature-name}/plan.md`.
+Then tell the user:
+- Where the plan was saved
+- A 2-3 line summary of the approach (NOT the full plan)
+- Ask them to review the plan file and confirm or request changes
+
+Do NOT output the full plan in the conversation. The artifact file is the source of truth. Keep the conversation message short.
 
 ## Rules
 - Never write implementation code during planning — pseudocode or brief snippets for clarity are acceptable

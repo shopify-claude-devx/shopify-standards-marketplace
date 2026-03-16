@@ -57,7 +57,7 @@ Present your understanding back to the user:
 ```
 
 ### Step 5: Save the Task Spec
-Once the user confirms, write the final Task Spec to `.buildspace/artifacts/{feature-name}/task-spec.md`:
+Once the user confirms, write the final Task Spec directly to `.buildspace/artifacts/{feature-name}/task-spec.md`:
 
 ```markdown
 # Task Spec: {Feature Name}
@@ -75,7 +75,11 @@ Once the user confirms, write the final Task Spec to `.buildspace/artifacts/{fea
 - [How do we know this is done correctly?]
 ```
 
-Tell the user where the artifact was saved and suggest running `/plan`.
+Then tell the user:
+- Where the task spec was saved
+- Suggest running `/plan`
+
+Do NOT output the full task spec in the conversation. The artifact file is the source of truth. The clarifying questions in Step 4 already showed the user what was understood — the saved artifact is the final version.
 
 ## Rules
 - Never suggest implementation details during clarify

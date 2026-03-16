@@ -109,7 +109,13 @@ After both agents return, compile the results and write to `.buildspace/artifact
 - **Needs Rework** — Significant issues. Run `/plan` again if approach needs changing, or `/build` if just implementation issues.
 ```
 
-Present the assessment to the user and save it to the artifact folder.
+Write the assessment to the artifact file first. Then tell the user:
+- Where the assessment was saved
+- The **Verdict** only (Ready / Needs Work / Needs Rework)
+- If issues were found, a one-line count (e.g., "2 critical, 1 should fix")
+- Ask them to review the full assessment at `.buildspace/artifacts/{feature-name}/assessment.md`
+
+Do NOT output the full assessment report in the conversation. The artifact file is the source of truth.
 
 ## Rules
 - Never fix issues during assessment — only identify them
