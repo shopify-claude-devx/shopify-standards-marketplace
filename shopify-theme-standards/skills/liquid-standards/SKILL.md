@@ -7,7 +7,6 @@ description: >
   the user doesn't explicitly mention Liquid or .liquid files. Covers variable naming, tag style,
   render vs include, snippet documentation, whitespace control, filters, null checks, and performance.
 user-invocable: true
-globs: ["**/*.liquid"]
 ---
 
 # Liquid Coding Standards

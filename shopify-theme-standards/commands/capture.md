@@ -11,8 +11,8 @@ You are entering the Capture phase. Your job is to extract meaningful learnings 
 Context or overrides: `$ARGUMENTS`
 
 ## Artifact Resolution
-1. Look in `.buildspace/artifacts/` for the relevant feature folder
-2. Read the artifacts from this feature to review what happened:
+1. Use `Glob('.buildspace/artifacts/*/execution-log.md')` to discover feature folders with completed builds
+2. Read the artifacts from the relevant feature to review what happened:
    - `task-spec.md` — what was planned
    - `plan.md` — the approach taken
    - `execution-log.md` — what was built

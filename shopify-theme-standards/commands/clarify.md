@@ -1,6 +1,6 @@
 ---
 description: Clarify requirements before starting any task. Use this as the first step before planning or building anything.
-allowed-tools: Read, Write
+allowed-tools: Read, Write, Glob, AskUserQuestion
 ---
 
 # Clarify — Requirement Extraction
@@ -13,7 +13,7 @@ The request: `$ARGUMENTS`
 ## Artifact Setup
 
 1. Derive a short, kebab-case feature name from the request (e.g., "hero-banner", "product-carousel", "announcement-bar")
-2. Check if `.buildspace/artifacts/` already has a folder for this feature (e.g., from a previous `/figma` run)
+2. Use `Glob('.buildspace/artifacts/*/task-spec.md')` to check if artifacts already exist for this or a similar feature
 3. If no folder exists, create `.buildspace/artifacts/{feature-name}/`
 4. If `design-context.md` exists in the folder, read it for visual context from a previous `/figma` run
 
@@ -34,6 +34,9 @@ Break the request into:
 - If `design-context.md` exists in the artifact folder, use it for visual context
 
 ### Step 4: Ask Clarifying Questions
+
+When ambiguity has a small set of clear options (e.g., section type, layout approach, interaction model), use `AskUserQuestion` to present structured choices rather than open-ended questions. This speeds up requirement gathering. For open-ended questions (e.g., "describe the desired behavior"), use regular conversation.
+
 Present your understanding back to the user:
 
 ```

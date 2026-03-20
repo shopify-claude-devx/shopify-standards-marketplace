@@ -1,6 +1,6 @@
 ---
 description: Execute a plan by building TODO by TODO. Use after /plan when the execution plan is confirmed. Loads relevant skills per file and follows them precisely.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
 ---
 
 # Build — Plan Execution
@@ -25,23 +25,25 @@ Work through the plan's TODOs in order. For each TODO:
 
 1. **State what you're about to do** — one line announcing the current TODO
 
-2. **Load the relevant skill(s) for this TODO's files.** Only load what this TODO needs — not all skills:
-   - Writing a `.liquid` file? → load `liquid-standards`
-   - Writing a section `.liquid` file? → load `section-standards` + `section-schema-standards` + `liquid-standards`
-   - Writing a `.css` file? → load `css-standards`
-   - Writing a `.js` file? → load `js-standards`
-   - Creating new files or organizing code? → load `theme-architecture`
-   - Building from a Figma design? → load `figma-to-code` (in addition to the above)
+2. **Load the relevant skill(s) for this TODO's files** using the `Skill` tool. Only load what this TODO needs — not all skills:
+   - Writing a `.liquid` file? → `Skill('liquid-standards')`
+   - Writing a section `.liquid` file? → `Skill('section-standards')` + `Skill('section-schema-standards')` + `Skill('liquid-standards')`
+   - Writing a `.css` file? → `Skill('css-standards')`
+   - Writing a `.js` file? → `Skill('js-standards')`
+   - Creating new files or organizing code? → `Skill('theme-architecture')`
+   - Building from a Figma design? → `Skill('figma-to-code')` (in addition to the above)
 
-   **Read the skill file(s) before writing any code for this TODO. If you cannot read a skill file, STOP and tell the user.**
+   **Load skill(s) before writing any code for this TODO. If a skill cannot be loaded, STOP and tell the user.**
 
-3. **Write the code** — following the plan's approach and the loaded skill's standards
+3. **Check for conflicts** — before creating a new file, use `Glob` to check for naming conflicts (e.g., `Glob('sections/hero-banner*')` to see if a similarly-named section exists). Use `Grep` to check if patterns you're about to create already exist elsewhere in the theme.
 
-4. **Per-file validation** — run the loaded skill's checklist (found at the bottom of each skill file) against EACH file you just wrote.
+4. **Write the code** — following the plan's approach and the loaded skill's standards
+
+5. **Per-file validation** — run the loaded skill's checklist (found at the bottom of each skill file) against EACH file you just wrote.
 
    **If ANY file fails a checklist item, fix it NOW before moving to the next TODO.**
 
-5. **Move to the next TODO**
+6. **Move to the next TODO**
 
 ### If You Encounter a Problem During Building
 
@@ -66,7 +68,12 @@ While building, always:
 
 ## Post-Build
 
-After completing all TODOs, write the execution log to `.buildspace/artifacts/{feature-name}/execution-log.md`:
+After completing all TODOs:
+
+1. **Run automated validation** — if `shopify theme check` is available, run it via `Bash` to catch linting violations: `shopify theme check --path . --fail-level error`. Fix any errors before proceeding.
+2. **Validate schema JSON** — for any section with a `{% schema %}` block, validate the JSON is well-formed via `Bash`: `node -e "JSON.parse(require('fs').readFileSync('path/to/file'))"` or equivalent.
+
+Then write the execution log to `.buildspace/artifacts/{feature-name}/execution-log.md`:
 
 ```markdown
 # Execution Log: {Feature Name}

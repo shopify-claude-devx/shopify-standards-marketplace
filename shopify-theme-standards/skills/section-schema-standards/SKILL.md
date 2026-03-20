@@ -6,7 +6,6 @@ description: >
   defining presets, or auditing naming conventions for consistency. Covers structure order, class
   naming, setting ID/label conventions, type selection, block patterns, and preset requirements.
 user-invocable: true
-globs: ["sections/**/*.liquid"]
 ---
 
 # Section Schema Standards

@@ -1,6 +1,6 @@
 ---
 description: Assess what was built — validates output against requirements and reviews code quality. Use after /build to ensure correctness and code standards. Dispatches specialized subagents for thorough review.
-allowed-tools: Read, Write, Grep, Glob, Task
+allowed-tools: Read, Write, Grep, Glob, Agent, Bash
 ---
 
 # Assess — Output Validation & Code Review
@@ -23,8 +23,15 @@ Read from `.buildspace/artifacts/{feature-name}/`:
 
 ## Assessment Process
 
+### Pre-Assessment: Automated Checks
+Before dispatching agents, run automated validation:
+- If `shopify theme check` is available, run it via `Bash`: `shopify theme check --path . --fail-level error` to catch linting violations
+- Use `Grep` to verify basic integration — e.g., `Grep('section-name', glob='templates/*.json')` to confirm new sections are registered in templates
+
+Include any automated check results in the context passed to both agents below.
+
 ### Assessment 1: Output Validation
-Use the Task tool to dispatch the **output-validator** agent:
+Use the Agent tool to dispatch the **output-validator** agent:
 
 > **Mission: Output Validation**
 >
@@ -43,7 +50,7 @@ Use the Task tool to dispatch the **output-validator** agent:
 > Return a structured report: each test case with pass/fail status, then requirements check, then any additional findings.
 
 ### Assessment 2: Code Review
-Use the Task tool to dispatch the **code-reviewer** agent:
+Use the Agent tool to dispatch the **code-reviewer** agent:
 
 > **Mission: Code Review**
 >

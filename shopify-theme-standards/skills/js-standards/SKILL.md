@@ -8,7 +8,6 @@ description: >
   modern ES syntax, defer loading, Web Components, data attributes for Liquid-to-JS. Enforces strict
   rules: NO inline styles via JS, NO DOM creation, NO price formatting in JS, NO inline scripts.
 user-invocable: true
-globs: ["assets/**/*.js"]
 ---
 
 # JavaScript Standards

@@ -1,6 +1,6 @@
 ---
 description: Debug and fix a bug. Investigates the codebase, performs root cause analysis, proposes the fix for user approval, then executes. Use when something is broken and needs diagnosing.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, WebSearch, WebFetch
 ---
 
 # Fix — Debug & Repair
@@ -31,15 +31,16 @@ If the bug description is too vague to investigate, ask one clarifying question.
 
 Find and read all relevant code:
 
-1. **Start from the symptom** — if it's a page bug, find the template. If it's a visual bug, find the section. If it's a data bug, find the Liquid logic.
-2. **Trace the data flow** — follow the logic from entry point to where it breaks. Read every file in the chain.
-3. **Check related files** — search for shared snippets, settings, or utilities that the broken code depends on.
+1. **Start from the symptom** — if it's a page bug, find the template. If it's a visual bug, find the section. If it's a data bug, find the Liquid logic. Use `Glob` to find candidate files (e.g., `Glob('sections/hero-banner*')`, `Glob('snippets/product-card*')`).
+2. **Trace the data flow** — follow the logic from entry point to where it breaks. Read every file in the chain. Use `Grep` to trace references (e.g., `Grep('render "snippet-name"', glob='**/*.liquid')` to find all callers of a snippet).
+3. **Check related files** — use `Glob` to find all files that could be affected (e.g., `Glob('snippets/product-card*')`). Use `Grep` to search for shared settings, variables, or utilities the broken code depends on.
+4. **Research if needed** — if the error or behavior is Shopify platform-specific and unfamiliar, use `WebSearch` to look it up on shopify.dev. Use `WebFetch` to read the full documentation page.
 
-Load the relevant skill(s) for the files involved to understand what the code SHOULD look like:
-- `.liquid` files → read `liquid-standards`
-- Section files → also read `section-standards` + `section-schema-standards`
-- `.css` files → read `css-standards`
-- `.js` files → read `js-standards`
+Load the relevant skill(s) for the files involved using the `Skill` tool to understand what the code SHOULD look like:
+- `.liquid` files → `Skill('liquid-standards')`
+- Section files → also `Skill('section-standards')` + `Skill('section-schema-standards')`
+- `.css` files → `Skill('css-standards')`
+- `.js` files → `Skill('js-standards')`
 
 Only load the skills relevant to the files you're investigating.
 
@@ -51,7 +52,7 @@ Now that you've read the code, answer these three questions:
 2. **What should happen?** — describe the expected behavior
 3. **Why is it wrong?** — the root cause, not the symptom
 
-Then search for other places in the codebase where the same root cause might exist.
+Then use `Grep` to search the entire codebase for other instances of the same root cause — e.g., `Grep('forloop.first', glob='**/*.liquid')` to find all occurrences of the problematic pattern.
 
 ## Step 4: Present Diagnosis — STOP HERE
 
@@ -90,12 +91,13 @@ Approve this fix? Say "go" to proceed or tell me what to adjust.
 
 ## Step 5: Apply the Fix (AFTER APPROVAL)
 
-1. **Re-read the relevant skill's checklist** before writing
+1. **Re-load the relevant skill's checklist** via `Skill` tool before writing
 2. **Make the fix** across all affected files
 3. **Verify no breakage:**
-   - Did you change a snippet interface? Update all usages
-   - Did you change a schema setting? Check the full chain
-   - Did you change a data shape? Trace all consumers
+   - Did you change a snippet interface? Use `Grep('render "snippet-name"', glob='**/*.liquid')` to find and update all usages
+   - Did you change a schema setting? Use `Grep('setting-id', glob='**/*.liquid')` to check the full chain
+   - Did you change a data shape? Use `Grep` to trace all consumers
+4. **Run automated validation** — if `shopify theme check` is available, run it via `Bash`: `shopify theme check --path . --fail-level error` to confirm no new violations were introduced
 
 ## Step 6: Report
 

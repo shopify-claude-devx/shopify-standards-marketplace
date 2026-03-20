@@ -8,7 +8,6 @@ description: >
   apply. Covers BEM naming, section scoping, property ordering, responsive breakpoints, CSS
   variables, dynamic schema values, and CSS loading strategy.
 user-invocable: true
-globs: ["assets/**/*.css","**/*.liquid"]
 ---
 
 # CSS Standards

@@ -1,6 +1,6 @@
 ---
 description: Create a detailed execution plan for a task. Use after /clarify when requirements are confirmed. Researches codebase and produces a step-by-step TODO plan.
-allowed-tools: Read, Write, Grep, Glob, Task
+allowed-tools: Read, Write, Grep, Glob, Agent, WebSearch, WebFetch
 ---
 
 # Plan — Execution Planning
@@ -25,7 +25,12 @@ If `design-context.md` exists in the same folder, read it for visual context.
 Read `CLAUDE.md` if it exists for project overview and conventions.
 
 ### Step 2: Analyze the Codebase
-Use the Task tool to dispatch the **codebase-analyzer** agent:
+Before dispatching the agent, use `Glob` and `Grep` for quick context gathering:
+- `Glob('sections/*.liquid')` — discover existing sections
+- `Glob('snippets/*.liquid')` — discover reusable snippets
+- `Grep('{% schema %}', glob='sections/*.liquid')` — find sections with schemas
+
+Then use the Agent tool to dispatch the **codebase-analyzer** agent for deep analysis:
 
 > **Mission: Codebase Analysis**
 >
@@ -42,7 +47,9 @@ If knowledge gaps exist, present them to the user:
 
 > I'm not confident about [specific topic]. Should I research this before planning?
 
-If the user agrees, use the Task tool to dispatch a research subagent:
+If the gap is small (a single API or tag), use `WebSearch` and `WebFetch` inline to look it up on shopify.dev.
+
+If the gap is larger, use the Agent tool to dispatch a research subagent:
 
 > Research the following Shopify topic: [specific topic]
 >
