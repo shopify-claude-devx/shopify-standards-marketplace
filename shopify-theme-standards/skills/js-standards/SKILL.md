@@ -7,7 +7,6 @@ description: >
   behavior that implies JavaScript, use this skill even if they don't mention JS explicitly. Covers
   modern ES syntax, defer loading, Web Components, data attributes for Liquid-to-JS. Enforces strict
   rules: NO inline styles via JS, NO DOM creation, NO price formatting in JS, NO inline scripts.
-user-invocable: true
 ---
 
 # JavaScript Standards

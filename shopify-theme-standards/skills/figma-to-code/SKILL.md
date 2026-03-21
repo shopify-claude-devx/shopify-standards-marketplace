@@ -6,7 +6,6 @@ description: >
   Figma layers to section schemas, implementing responsive layouts from desktop+mobile frames, or
   handling images and assets from design files. Also use when reviewing code that was generated from
   a Figma source to verify translation fidelity.
-user-invocable: true
 ---
 
 # Figma-to-Code Translation Standards
@@ -80,6 +79,37 @@ Figma reference code is a **starting point**, not final output. Every translatio
 ---
 
 ## Image and Asset Handling
+
+### Asset Manifest Integration
+
+When building from a Figma design, check for an asset manifest at `.buildspace/assets/{feature-name}/asset-manifest.json`. If it exists, use the `shopifyUrl` values from the manifest to reference uploaded assets in template JSON files.
+
+### Referencing Uploaded Assets in Template JSON
+
+Assets uploaded to Shopify via the `/figma` command are referenced using Shopify's internal URL format:
+
+- **Images:** `shopify://shop_images/{filename}.png`
+- **Videos:** `shopify://files/videos/{filename}.mp4`
+
+When writing template JSON files during `/build`, use these URLs as setting values for `image_picker` and `video_url` settings:
+
+```json
+{
+  "sections": {
+    "hero-banner": {
+      "type": "hero-banner",
+      "settings": {
+        "hero_image": "shopify://shop_images/hero-banner-hero-background-desktop.png",
+        "hero_image_mobile": "shopify://shop_images/hero-banner-hero-background-mobile.png",
+        "hero_video": "shopify://files/videos/hero-banner-compatibility-video.mp4"
+      },
+      "blocks": {}
+    }
+  }
+}
+```
+
+If the manifest shows `"status": "LOCAL_ONLY"` (no Shopify upload), leave image/video settings empty in the template JSON — the merchant will upload manually via the theme editor.
 
 ### Image Layers
 - Every image layer maps to an `image_picker` setting in the schema
@@ -240,6 +270,9 @@ Validate every file built from a Figma design against these before moving to the
 - [ ] Setting labels are Title Case and section-specific
 
 ### Asset Handling
+- [ ] Asset manifest checked at `.buildspace/assets/{feature-name}/asset-manifest.json`
+- [ ] Template JSON uses `shopify://` URLs from manifest for uploaded assets
+- [ ] Assets with `LOCAL_ONLY` status: image/video settings left empty for manual upload
 - [ ] Icons: small UI icons as inline SVG snippets, complex SVGs as asset files
 - [ ] No icon fonts used
 - [ ] Hero/above-fold images: `loading="eager"` + `fetchpriority="high"`

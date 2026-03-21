@@ -5,7 +5,6 @@ description: >
   from shopify.dev, Dawn theme repo, Shopify Community, and other trusted sources, then synthesizes
   findings into an actionable summary. Use whenever you need to look up Liquid syntax, AJAX API details,
   theme architecture patterns, changelog entries, or community solutions.
-user-invocable: true
 allowed-tools: WebSearch, WebFetch, Read, Grep, Glob
 ---
 

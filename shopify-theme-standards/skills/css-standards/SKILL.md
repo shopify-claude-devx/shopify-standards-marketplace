@@ -7,7 +7,6 @@ description: >
   even if they frame it as a "Liquid" or "section" task, if styling is involved, these standards
   apply. Covers BEM naming, section scoping, property ordering, responsive breakpoints, CSS
   variables, dynamic schema values, and CSS loading strategy.
-user-invocable: true
 ---
 
 # CSS Standards

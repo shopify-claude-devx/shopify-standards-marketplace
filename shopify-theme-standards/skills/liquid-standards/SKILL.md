@@ -6,7 +6,6 @@ description: >
   component, building sections, writing snippet logic, or working with Liquid template code, even if
   the user doesn't explicitly mention Liquid or .liquid files. Covers variable naming, tag style,
   render vs include, snippet documentation, whitespace control, filters, null checks, and performance.
-user-invocable: true
 ---
 
 # Liquid Coding Standards

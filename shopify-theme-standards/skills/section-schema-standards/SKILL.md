@@ -5,7 +5,6 @@ description: >
   reviewing any {% schema %} JSON in section files — including adding new settings, creating blocks,
   defining presets, or auditing naming conventions for consistency. Covers structure order, class
   naming, setting ID/label conventions, type selection, block patterns, and preset requirements.
-user-invocable: true
 ---
 
 # Section Schema Standards

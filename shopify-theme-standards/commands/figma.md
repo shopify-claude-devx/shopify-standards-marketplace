@@ -1,6 +1,6 @@
 ---
 description: Fetch a Figma design and prepare structured Design Context for theme development. Use as the first step before /clarify when building from a Figma design. Does not write code.
-allowed-tools: Read, Write, Grep, Glob, mcp__figma__get_design_context, mcp__figma__get_screenshot, mcp__figma__get_metadata, mcp__figma__get_variable_defs
+allowed-tools: Read, Write, Bash, Grep, Glob, AskUserQuestion, mcp__claude_ai_Figma__get_design_context, mcp__claude_ai_Figma__get_screenshot, mcp__claude_ai_Figma__get_metadata, mcp__claude_ai_Figma__get_variable_defs
 ---
 
 # Figma — Design Fetching
@@ -108,9 +108,93 @@ Write the structured Design Context to `.buildspace/artifacts/{feature-name}/des
 [Any Code Connect mappings, designer annotations, or gotchas observed]
 ```
 
-### Step 7: Hand Off to Next Step
+### Step 7: Process Assets
+
+After writing design-context.md, process the Figma assets for Shopify upload. The asset URLs from Steps 2 and 5 are already in your context — this step costs minimal extra tokens.
+
+#### 7a. Generate asset-input.json
+
+Create `.buildspace/assets/{feature-name}/asset-input.json` from the Asset URLs you identified. For each asset, determine:
+
+- **name**: Kebab-case, prefixed with section name + block/role. Examples:
+  - `hero-banner-hero-background-desktop`
+  - `hero-banner-hero-background-mobile`
+  - `hero-banner-google-find-hub-badge`
+  - `hero-banner-cta-background`
+- **type**: `IMAGE` or `VIDEO` — infer from design context (e.g., "video placeholder with play button" = VIDEO, image fills = IMAGE)
+- **upload**: `true` for assets the theme needs. `false` for screenshots of existing UI, SVG icons that should be inline, or placeholder elements.
+- **skipReason**: If `upload: false`, explain why (e.g., "Existing theme header — not rebuilt")
+
+Deduplicate assets that appear in both desktop and mobile — if the same conceptual asset has different URLs for each viewport, include both with `-desktop` / `-mobile` suffix.
+
+```json
+{
+  "section": "{feature-name}",
+  "assets": [
+    {
+      "url": "https://www.figma.com/api/mcp/asset/...",
+      "name": "{section}-{block}-{descriptor}",
+      "type": "IMAGE",
+      "upload": true,
+      "alt": "Descriptive alt text for the image"
+    },
+    {
+      "url": "https://www.figma.com/api/mcp/asset/...",
+      "name": "nav-screenshot",
+      "type": "IMAGE",
+      "upload": false,
+      "skipReason": "Existing theme header — not rebuilt"
+    }
+  ]
+}
+```
+
+#### 7b. Check for Shopify credentials
+
+Run via `Bash`: `echo "${SHOPIFY_ACCESS_TOKEN:+set}" "${SHOPIFY_STORE_URL:+set}"`
+
+- If **both set**: proceed to upload.
+- If **missing**: use `AskUserQuestion` to inform the user:
+  > "No Shopify Admin API token found. Assets will be downloaded and saved locally but not uploaded to Shopify. You can set `SHOPIFY_ACCESS_TOKEN` and `SHOPIFY_STORE_URL` environment variables to enable automatic upload. Continue without uploading?"
+  - If user says yes → proceed (script handles LOCAL_ONLY mode)
+  - If user says no → stop and show setup instructions
+
+#### 7c. Run the asset processing script
+
+Run via `Bash`:
+```
+node "${CLAUDE_SKILL_DIR}/scripts/process-assets.js" --input ".buildspace/assets/{feature-name}/asset-input.json"
+```
+
+The script:
+1. Downloads all assets from Figma URLs to `.buildspace/assets/{feature-name}/`
+2. Renames them with the meaningful names from asset-input.json
+3. If Shopify credentials exist: uploads via staged uploads (stagedUploadsCreate → presigned URL → fileCreate)
+4. Writes `asset-manifest.json` with `shopify://` URLs (or LOCAL_ONLY status)
+5. Returns a small JSON summary to stdout
+
+#### 7d. Update design-context.md
+
+Read `.buildspace/assets/{feature-name}/asset-manifest.json`. Update the `## Asset URLs` section in design-context.md to replace Figma URLs with `shopify://` URLs:
+
+```markdown
+## Asset URLs
+- Hero background (desktop): `shopify://shop_images/hero-banner-hero-background-desktop.png`
+- Hero background (mobile): `shopify://shop_images/hero-banner-hero-background-mobile.png`
+- Google Find Hub badge: `shopify://shop_images/hero-banner-google-find-hub-badge.png`
+```
+
+If assets were not uploaded (LOCAL_ONLY), note the local paths instead and add a reminder:
+```markdown
+## Asset URLs (NOT UPLOADED — upload manually or set SHOPIFY_ACCESS_TOKEN)
+- Hero background (desktop): `.buildspace/assets/hero-banner/hero-banner-hero-background-desktop.png`
+```
+
+### Step 8: Hand Off to Next Step
 
 > Design Context saved to `.buildspace/artifacts/{feature-name}/design-context.md`.
+> Assets: [uploaded count] uploaded to Shopify, [local count] saved locally, [skipped count] skipped.
+> Manifest: `.buildspace/assets/{feature-name}/asset-manifest.json`
 >
 > Run `/clarify` to define requirements and begin the development workflow.
 
@@ -121,3 +205,5 @@ Write the structured Design Context to `.buildspace/artifacts/{feature-name}/des
 - Always present the raw reference code — the user and future commands need it for context
 - If a Figma API call fails, report the error clearly and suggest the user check the URL or permissions
 - If the design uses Code Connect, highlight the mapped components prominently — they indicate existing codebase components that should be reused
+- When naming assets, always use kebab-case with section name prefix — never use Figma's auto-generated names (e.g., `imgRectangle3` or `imgHf20260226...`)
+- Distinguish between assets to upload (theme images/videos) and assets to skip (screenshots of existing UI, inline SVG icons, placeholder elements)
