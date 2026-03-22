@@ -1,8 +1,0 @@
-{
-  "name": "skill-toolkit",
-  "description": "Create and validate Claude Code skills. Includes an interactive skill creator and a multi-phase skill validator with mechanical checks and LLM-powered quality analysis.",
-  "version": "1.0.0",
-  "author": {
-    "name": "Aditya Pasikanti"
-  }
-}
