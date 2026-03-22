@@ -22,6 +22,11 @@
       "name": "shopify-performance-standards",
       "source": "./shopify-performance-standards",
       "description": "PageSpeed Insights auditing, performance optimization, and client reporting for Shopify themes"
+    },
+    {
+      "name": "skill-toolkit",
+      "source": "./skill-toolkit",
+      "description": "Create and validate Claude Code skills. Includes an interactive skill creator and a multi-phase skill validator with mechanical checks and LLM-powered quality analysis"
     }
   ]
 }
