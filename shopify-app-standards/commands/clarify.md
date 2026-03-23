@@ -1,16 +1,25 @@
 ---
 description: Clarify requirements before starting any task. Use this as the first step before planning or building anything.
-allowed-tools: Read, Grep, Glob
+allowed-tools: Read, Write, Glob, AskUserQuestion
 ---
 
 # Clarify — Requirement Extraction
 
 You are entering the Clarify phase. Your job is to fully understand WHAT needs to be done before any planning or building begins. Do not write code. Do not plan implementation. Only extract and confirm requirements.
 
+## Input
+The request: `$ARGUMENTS`
+
+## Artifact Setup
+
+1. Derive a short, kebab-case feature name from the request (e.g., "product-sync", "discount-manager", "settings-page")
+2. Use `Glob('.buildspace/artifacts/*/task-spec.md')` to check if artifacts already exist for this or a similar feature
+3. If no folder exists, create `.buildspace/artifacts/{feature-name}/`
+
 ## Process
 
 ### Step 1: Understand the Request
-Read the user's input carefully: `$ARGUMENTS`
+Read the user's input carefully.
 
 ### Step 2: Identify What You Know and Don't Know
 Break the request into:
@@ -24,12 +33,17 @@ Break the request into:
 - Scan the codebase briefly to understand what already exists that relates to this request
 
 ### Step 4: Ask Clarifying Questions
-Present your understanding back to the user in this format:
+
+When ambiguity has a small set of clear options (e.g., page type, data source, UI pattern), use `AskUserQuestion` to present structured choices rather than open-ended questions. This speeds up requirement gathering. For open-ended questions (e.g., "describe the desired behavior"), use regular conversation.
+
+Present your understanding back to the user:
 
 ```
 ## Here's What I Understand
 
 [Restate the task in your own words — what is the end goal?]
+
+**Feature name:** `{feature-name}` (artifacts will be saved to `.buildspace/artifacts/{feature-name}/`)
 
 ## What's Clear
 - [Requirement 1]
@@ -44,11 +58,11 @@ Present your understanding back to the user in this format:
 - [Question 2]
 ```
 
-### Step 5: Confirm the Spec
-Once the user answers your questions, produce a final **Task Spec**:
+### Step 5: Save the Task Spec
+Once the user confirms, write the final Task Spec directly to `.buildspace/artifacts/{feature-name}/task-spec.md`:
 
-```
-## Task Spec
+```markdown
+# Task Spec: {Feature Name}
 
 **Goal:** [One sentence — what are we building/doing?]
 
@@ -63,7 +77,11 @@ Once the user answers your questions, produce a final **Task Spec**:
 - [How do we know this is done correctly?]
 ```
 
-Wait for the user to confirm the Task Spec before suggesting any next steps. Once confirmed, suggest they run `/plan` to begin planning.
+Then tell the user:
+- Where the task spec was saved
+- Suggest running `/plan`
+
+Do NOT output the full task spec in the conversation. The artifact file is the source of truth. The clarifying questions in Step 4 already showed the user what was understood — the saved artifact is the final version.
 
 ## Rules
 - Never suggest implementation details during clarify

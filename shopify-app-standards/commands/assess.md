@@ -1,6 +1,6 @@
 ---
 description: Assess what was built — validates output against requirements and reviews code quality. Use after /build to ensure correctness and code standards. Dispatches specialized subagents for thorough review.
-allowed-tools: Read, Grep, Glob, Task
+allowed-tools: Read, Write, Grep, Glob, Agent, Bash
 ---
 
 # Assess — Output Validation & Code Review
@@ -8,94 +8,96 @@ allowed-tools: Read, Grep, Glob, Task
 You are entering the Assess phase. Your job is to thoroughly validate what was built — both that it works correctly AND that the code meets project standards. Do not fix anything yet. Only identify issues.
 
 ## Input
-What to assess: `$ARGUMENTS`
+Context or overrides: `$ARGUMENTS`
 
-If no context about what was built exists, ask the user what files or features to assess.
+## Artifact Resolution
+1. Look in `.buildspace/artifacts/` for feature folders containing `execution-log.md`
+2. If one folder exists → use it
+3. If multiple folders exist → ask the user which feature to assess
+4. If no execution-log.md found → ask the user what files or features to assess
 
-## Pre-Assessment Setup
-
-1. Read `CLAUDE.md` if it exists for project overview
-2. Re-read EVERY skill file listed below — even if loaded during `/plan` or `/build`. You need the full standards fresh to assess against:
-   - `typescript-standards` — Strict typing, naming, imports, no any/unknown, no empty blocks, pre-commit quality gate
-   - `remix-patterns` — Loader/action structure, authenticate.admin first, ErrorBoundary, embedded app rules
-   - `shopify-api` — GraphQL only, userErrors checking, pagination, rate limits, webhook handlers
-   - `prisma-standards` — db.server.ts singleton, schema design, query patterns, error handling
-   - `polaris-appbridge` — Page/Card/BlockStack layout, App Bridge Modal/Toast, embedded UI rules
-3. Locate the execution plan from the conversation (if available)
-
-**If you cannot find or read a skill file, STOP and tell the user.**
+Read from `.buildspace/artifacts/{feature-name}/`:
+- `task-spec.md` — the requirements to validate against
+- `plan.md` — the approach that was planned
+- `execution-log.md` — what was built and which files were created/modified
 
 ## Assessment Process
 
+### Pre-Assessment: Automated Checks
+Before dispatching agents, run automated validation:
+- Run `npm run lint && npx tsc --noEmit` via `Bash` to catch lint and type errors
+- Use `Grep` to verify basic integration — e.g., `Grep('authenticate.admin', glob='app/routes/**/*.{ts,tsx}')` to confirm auth is present in all routes
+
+Include any automated check results in the context passed to both agents below.
+
 ### Assessment 1: Output Validation
-Use the Task tool to dispatch the **output-validator** agent:
+Use the Agent tool to dispatch the **output-validator** agent:
 
 > **Mission: Output Validation**
 >
-> Review the recently built/modified files and validate against the task requirements.
+> Read the task spec at: `.buildspace/artifacts/{feature-name}/task-spec.md`
+> Read the plan at: `.buildspace/artifacts/{feature-name}/plan.md`
+> Read the execution log at: `.buildspace/artifacts/{feature-name}/execution-log.md`
 >
-> **Task Requirements:** [paste the Task Spec or plan requirements]
->
-> **Files to review:** [list files that were created/modified]
+> The plan contains a **Test Cases** section with specific verification criteria. Run through every test case.
 >
 > Check:
-> 1. Are ALL requirements from the plan implemented? List each requirement and whether it's met.
-> 2. Are there any missing edge cases or error states not handled?
-> 3. Are there any obvious bugs or broken functionality?
+> 1. Go through each test case in the plan's Test Cases section. For each one, read the relevant code and verify whether it passes or fails.
+> 2. Are ALL requirements from the task spec implemented? List each requirement and whether it's met.
+> 3. Are there any edge cases not covered by the test cases that you can identify?
 > 4. Does the implementation actually achieve the stated goal?
 >
-> Return a structured report of findings — what passes, what fails, what's missing.
+> Return a structured report: each test case with pass/fail status, then requirements check, then any additional findings.
 
 ### Assessment 2: Code Review
-Use the Task tool to dispatch the **code-reviewer** agent:
+Use the Agent tool to dispatch the **code-reviewer** agent:
 
 > **Mission: Code Review**
 >
-> Review the recently built/modified files against project coding standards.
+> Read the execution log at: `.buildspace/artifacts/{feature-name}/execution-log.md`
 >
-> **Project Standards to check against:**
-> [Paste relevant content from project skill files]
->
-> **Files to review:** [list files that were created/modified]
+> Review the files listed in the execution log against project coding standards.
+> For each file, the relevant skills are pre-loaded. Use the checklist at the bottom of each skill file for validation:
+> - `.ts` / `.tsx` files → `typescript-standards` checklist
+> - Route files (`app/routes/**`) → also `remix-patterns` checklist
+> - Files with Polaris/AppBridge → also `polaris-appbridge` checklist
+> - Files with `admin.graphql()` → also `shopify-api` checklist
+> - Files with Prisma calls → also `prisma-standards` checklist
 >
 > Review for:
-> 1. **Structure** — Is the code organized following project patterns?
+> 1. **Standards Compliance** — Does every file follow the relevant skill's rules and checklist?
 > 2. **Readability** — Can another developer understand this code easily?
 > 3. **Maintainability** — Is this easy to modify later? No tight coupling, no magic values?
 > 4. **Reusability** — Are there patterns that could be extracted? Or existing patterns that should have been reused?
-> 5. **Standards Compliance** — Does every file follow the project skill standards?
 >
-> For each issue found, report:
-> - File and location
-> - What the issue is
-> - Why it matters
-> - Severity: Critical / Should Fix / Nice to Have
->
-> Return a structured code review report.
+> For each issue found, report: file, location, what's wrong, which standard it violates, severity (Critical / Should Fix / Nice to Have).
 
 ### Compile Assessment Report
-After both agents return, compile the results:
+After both agents return, compile the results and write to `.buildspace/artifacts/{feature-name}/assessment.md`:
 
-```
-## Assessment Report
+```markdown
+# Assessment: {Feature Name}
 
-### Output Validation
-**Status:** [All Requirements Met / Issues Found]
+## Output Validation
+**Status:** [All Tests Pass / Failures Found]
+
+**Test Cases (from plan):**
+- [ ] [Test case] — Pass / Fail [reason if fail]
+- [ ] [Test case] — Pass / Fail [reason if fail]
 
 **Requirements Check:**
-- ✅ [Requirement] — Implemented correctly
-- ❌ [Requirement] — [What's wrong]
+- [Requirement] — Met / Partially met / Not implemented
 
-**Bugs or Missing Functionality:**
-- [Issue description, or "None found"]
+**Additional Issues:**
+- [Anything not covered by test cases, or "None found"]
 
 ---
 
-### Code Review
+## Code Review
 **Status:** [Passes Standards / Issues Found]
 
 **Critical Issues (must fix):**
-- [Issue with file, location, and impact]
+- [Issue with file, location, standard violated, and impact]
 
 **Should Fix:**
 - [Issue with file, location, and impact]
@@ -105,12 +107,20 @@ After both agents return, compile the results:
 
 ---
 
-### Verdict
+## Verdict
 [One of:]
-- ✅ **Ready** — All requirements met, code passes standards. Run `/capture` to extract learnings from this task.
-- ⚠️ **Needs Work** — Issues found. Run `/fix` to address them, then run `/assess` again.
-- ❌ **Needs Rework** — Significant issues. Reiterate from `/plan` if approach needs changing, or `/build` if just implementation issues.
+- **Ready** — All requirements met, code passes standards. Run `/capture` to extract learnings.
+- **Needs Work** — Issues found. Run `/fix` to address them, then `/assess` again.
+- **Needs Rework** — Significant issues. Run `/plan` again if approach needs changing, or `/build` if just implementation issues.
 ```
+
+Write the assessment to the artifact file first. Then tell the user:
+- Where the assessment was saved
+- The **Verdict** only (Ready / Needs Work / Needs Rework)
+- If issues were found, a one-line count (e.g., "2 critical, 1 should fix")
+- Ask them to review the full assessment at `.buildspace/artifacts/{feature-name}/assessment.md`
+
+Do NOT output the full assessment report in the conversation. The artifact file is the source of truth.
 
 ## Rules
 - Never fix issues during assessment — only identify them
