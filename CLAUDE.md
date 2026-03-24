@@ -127,3 +127,6 @@ Agents run on `sonnet` model with 15-20 max turns. The code-reviewer pre-loads r
 | **Standards focus** | Liquid, CSS, JS, sections, schema | TypeScript, Remix, Prisma, GraphQL, Polaris | Core Web Vitals, fonts, images, CSS/JS loading |
 | **Auto-lint hook** | `shopify theme check` on `.liquid` | `npx tsc --noEmit` on `.ts`/`.tsx` | None |
 | **Figma integration** | Yes (design-to-code) | No | No |
+
+
+Don't make any assumptions or hallucination
