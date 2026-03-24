@@ -22,6 +22,11 @@
       "name": "shopify-performance-standards",
       "source": "./shopify-performance-standards",
       "description": "PageSpeed Insights auditing, performance optimization, and client reporting for Shopify themes"
+    },
+    {
+      "name": "pilot",
+      "source": "./pilot",
+      "description": "Pilot plugin to use independent features of claude"
     }
   ]
 }
