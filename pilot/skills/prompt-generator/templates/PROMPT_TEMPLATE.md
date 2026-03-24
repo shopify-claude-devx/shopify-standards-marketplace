@@ -1,6 +1,6 @@
 # Prompt Template
 
-Use this as the starting structure for every generated prompt. Adapt sections as needed — remove sections that don't apply, add sections if the user's requirements demand it. The goal is clarity and completeness, not rigid adherence to a template.
+Use this as the starting structure for every elaborated prompt. Adapt sections as needed — remove sections that don't apply, add sections if the user's requirements demand it. The goal is clarity and completeness, not rigid adherence to a template.
 
 ---
 
