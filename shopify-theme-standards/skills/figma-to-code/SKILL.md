@@ -84,6 +84,8 @@ Figma reference code is a **starting point**, not final output. Every translatio
 
 When building from a Figma design, check for an asset manifest at `.buildspace/assets/{feature-name}/asset-manifest.json`. If it exists, use the `shopifyUrl` values from the manifest to reference uploaded assets in template JSON files.
 
+Each asset in the manifest includes a `viewport` field (`desktop`, `mobile`, or `both`) indicating which breakpoint(s) the asset is intended for. Use this to map assets to the correct responsive image settings (e.g., `hero_image` for desktop, `hero_image_mobile` for mobile).
+
 ### Referencing Uploaded Assets in Template JSON
 
 Assets uploaded to Shopify via the `/figma` command are referenced using Shopify's internal URL format:
@@ -110,6 +112,8 @@ When writing template JSON files during `/build`, use these URLs as setting valu
 ```
 
 If the manifest shows `"status": "LOCAL_ONLY"` (no Shopify upload), leave image/video settings empty in the template JSON — the merchant will upload manually via the theme editor.
+
+If an individual asset has `"status": "FAILED"` in the manifest, treat it the same as LOCAL_ONLY for that specific asset — leave the setting empty and add a code comment noting the failed upload needs manual resolution.
 
 ### Image Layers
 - Every image layer maps to an `image_picker` setting in the schema
@@ -278,6 +282,9 @@ Validate every file built from a Figma design against these before moving to the
 - [ ] Hero/above-fold images: `loading="eager"` + `fetchpriority="high"`
 - [ ] Below-fold images: `loading="lazy"`
 - [ ] All images have `width` and `height` attributes
+- [ ] Video assets use `video_url` settings, not `image_picker`
+- [ ] Video assets from manifest use `shopify://files/videos/` URLs (not `shopify://shop_images/`)
+- [ ] Failed assets (`"status": "FAILED"`) have settings left empty with a comment for manual upload
 
 ### Code Standards Compliance
 - [ ] All other skill checklists still pass (liquid, css, section, schema, js, architecture)
