@@ -16,7 +16,6 @@ You are entering the Figma phase. Your job:
 3. Parse the JSON into a clean `design-context.md` (0 AI tokens)
 4. Create SVG icon snippets from the design
 5. Upload image assets to Shopify Files
-6. Extract design tokens → `assets/design-system.css`
 
 **Do NOT write any implementation code. Do NOT plan. Only fetch, parse, and organize.**
 
@@ -209,53 +208,7 @@ If an asset CDN URL is null (not found in `figma-images.json`), skip it and tell
 
 ---
 
-## Phase 5 — Design Tokens
-
-Read `design-context.md` (already written by parse-figma.js). Extract:
-
-**Typography:** all unique font sizes, families, weights, line-heights
-**Colors:** background, text, accent, border colors
-**Spacing:** section padding (desktop + mobile), gap values
-
-Normalize values:
-- Round font sizes to nearest 0.5px if within 1px of each other
-- Deduplicate near-identical colors (within 5 RGB units)
-- Round spacing to 4px increments where values are near-identical
-
-### Create or update `assets/design-system.css`
-
-**If it doesn't exist:** create it.
-**If it exists:** read it first, then merge — add new tokens only. Never remove existing tokens. If a token name conflicts, keep the existing value and report the conflict.
-
-```css
-/* Design System — auto-generated from Figma, merged incrementally */
-/* Do not add section-specific styles here. Shared tokens only. */
-
-:root {
-  /* Typography */
-  --ff-primary: '{fontFamily}', sans-serif;
-  --fs-{size-name}: {value}px;
-  --fw-{weight-name}: {value};
-
-  /* Colors */
-  --color-{name}: {hex};
-
-  /* Spacing — Mobile (base) */
-  --section-py-{size}: {mobile-value}px;
-  --gap-{size}: {value}px;
-}
-
-@media (min-width: 768px) {
-  :root {
-    /* Spacing — Desktop overrides */
-    --section-py-{size}: {desktop-value}px;
-  }
-}
-```
-
----
-
-## Phase 6 — Report & Hand-off
+## Phase 5 — Report & Hand-off
 
 Print a summary — do NOT dump file contents to conversation:
 
@@ -273,8 +226,6 @@ Images uploaded to Shopify:
   ✅ {asset-name} → shopify://shop_images/{file}
   ⚠  {failed-asset} → FAILED (manual upload needed)
 
-Design tokens → assets/design-system.css (updated)
-
 Next step: run /prd to define requirements.
 ```
 
@@ -288,5 +239,4 @@ Next step: run /prd to define requirements.
 - MCP Figma tools are NOT used in this workflow — REST API only
 - If an image asset has no CDN URL in `figma-images.json`, skip and report — never guess
 - If Shopify upload fails for an asset, continue with the rest and report all failures at the end
-- If `design-system.css` exists, always merge — never overwrite
 - SVGs go to snippets, not Shopify Files — never reverse this
