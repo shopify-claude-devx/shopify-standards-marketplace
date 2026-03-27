@@ -1,19 +1,3 @@
-#!/usr/bin/env node
-/**
- * fetch-svgs.js — Fetch SVG code from Figma and write icon snippets
- *
- * Reads figma-assets.json → batch-fetches SVG export URLs from Figma API
- * → downloads SVG content → writes snippets/icon-*.liquid
- *
- * Usage:
- *   FIGMA_TOKEN=figd_... node fetch-svgs.js <fileKey> <feature> [--theme-path <path>]
- *
- * Default theme path: current working directory (.)
- * Snippet output: {themePath}/snippets/icon-{name}.liquid
- *
- * Also updates figma-assets.json with snippetPath and status per SVG.
- */
-
 'use strict';
 
 const { readFile, writeFile, mkdir, access } = require('node:fs/promises');
@@ -30,7 +14,6 @@ function log(msg) {
   console.error(`[fetch-svgs] ${msg}`);
 }
 
-// ── Args ─────────────────────────────────────────────────────────
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -49,7 +32,6 @@ function parseArgs() {
   return { fileKey, feature, themePath };
 }
 
-// ── HTTP ─────────────────────────────────────────────────────────
 
 async function figmaGet(endpoint) {
   log(`GET ${endpoint}`);
@@ -115,17 +97,15 @@ async function downloadText(url) {
   return res.text();
 }
 
-// ── SVG cleanup ───────────────────────────────────────────────────
 
 function cleanSvg(raw) {
   return raw
-    .replace(/<\?xml[^>]*\?>\s*/g, '')          // remove XML declaration
-    .replace(/<!DOCTYPE[^>]*>\s*/g, '')          // remove DOCTYPE
-    .replace(/\s+id="[^"]*figma[^"]*"/gi, '')   // remove Figma internal IDs
+    .replace(/<\?xml[^>]*\?>\s*/g, '')
+    .replace(/<!DOCTYPE[^>]*>\s*/g, '')
+    .replace(/\s+id="[^"]*figma[^"]*"/gi, '')
     .trim();
 }
 
-// ── Main ─────────────────────────────────────────────────────────
 
 async function main() {
   if (!FIGMA_TOKEN) {
@@ -137,7 +117,6 @@ async function main() {
   const base = path.resolve(`.buildspace/artifacts/${feature}`);
   const snippetsDir = path.resolve(path.join(themePath, 'snippets'));
 
-  // Read figma-assets.json
   const assetsRaw = await readFile(path.join(base, 'figma-assets.json'), 'utf-8').catch(() => {
     throw new Error('figma-assets.json not found. Run parse-figma.js first.');
   });
@@ -157,7 +136,6 @@ async function main() {
   log(`${assets.svgs.length} SVG(s) to fetch`);
   await mkdir(snippetsDir, { recursive: true });
 
-  // Batch fetch SVG export URLs (one Figma API call)
   const nodeIds = assets.svgs.map((s) => s.nodeId).join(',');
   const svgResponse = await figmaGet(
     `/v1/images/${fileKey}?ids=${encodeURIComponent(nodeIds)}&format=svg`
@@ -189,14 +167,9 @@ async function main() {
       const rawSvg = await downloadText(exportUrl);
       const cleanedSvg = cleanSvg(rawSvg);
 
-      // Ensure snippet name always starts with icon-
-      const snippetName = svgAsset.snippetName.startsWith('icon-')
-        ? svgAsset.snippetName
-        : `icon-${svgAsset.snippetName}`;
-
+      const snippetName = svgAsset.snippetName;
       const snippetFile = path.join(snippetsDir, `${snippetName}.liquid`);
 
-      // Bug fix: do not overwrite existing snippets — report conflict to user
       const alreadyExists = await access(snippetFile).then(() => true).catch(() => false);
       if (alreadyExists) {
         log(`⚠ Snippet already exists — skipping ${snippetName}.liquid (delete it manually to regenerate)`);
@@ -206,7 +179,6 @@ async function main() {
         continue;
       }
 
-      // Validate downloaded content is SVG
       if (!cleanedSvg.includes('<svg')) {
         throw new Error(
           `Downloaded content for "${svgAsset.name}" is not valid SVG (no <svg> tag found). ` +
@@ -228,7 +200,6 @@ async function main() {
     }
   }
 
-  // Save updated figma-assets.json with status + snippetPath
   await writeFile(path.join(base, 'figma-assets.json'), JSON.stringify(assets, null, 2));
   log('Updated figma-assets.json with snippet paths');
 

@@ -1,26 +1,3 @@
-#!/usr/bin/env node
-/**
- * fetch-figma.js — Fetch Figma design data via REST API
- *
- * 3 API calls:
- *   Call 1 — /v1/files/{fileKey}/nodes     → node trees (desktop + mobile)
- *   Call 2 — /v1/images/{fileKey}?format=png → section screenshots
- *   Call 3 — /v1/files/{fileKey}/images    → image fills CDN URL map
- *
- * Usage:
- *   FIGMA_TOKEN=figd_... node fetch-figma.js <fileKey> <feature> <desktopNodeId> [mobileNodeId|-]
- *
- * Output (.buildspace/artifacts/{feature}/):
- *   figma-full.json           — Desktop node tree (never read by AI)
- *   figma-full-mobile.json    — Mobile node tree (if mobileNodeId provided)
- *   figma-sections.json       — Section index with mobileWidth
- *   figma-images.json         — CDN URL map for image fills (imageRef → URL)
- *   screenshots/figma-desktop.png
- *   screenshots/figma-mobile.png  (if mobile provided)
- *
- * Node IDs: pass as "110:363" (colon) or "110-363" (dash) — both accepted.
- */
-
 'use strict';
 
 const { writeFile, mkdir } = require('node:fs/promises');
@@ -33,13 +10,10 @@ const TIMEOUT_MS = 30000;
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
 
-// ── Logging ──────────────────────────────────────────────────────
-
 function log(msg) {
   console.error(`[fetch-figma] ${msg}`);
 }
 
-// ── Args ─────────────────────────────────────────────────────────
 
 function parseArgs() {
   const [fileKey, feature, desktop, mobile] = process.argv.slice(2);
@@ -59,7 +33,6 @@ function parseArgs() {
   };
 }
 
-// ── HTTP ─────────────────────────────────────────────────────────
 
 async function figmaGet(endpoint) {
   log(`GET ${endpoint}`);
@@ -158,7 +131,6 @@ async function downloadBinary(url, destPath) {
   }
 }
 
-// ── Main ─────────────────────────────────────────────────────────
 
 async function main() {
   if (!FIGMA_TOKEN) {
@@ -168,7 +140,6 @@ async function main() {
 
   const { fileKey, feature, desktopNodeId, mobileNodeId } = parseArgs();
 
-  // Paths
   const artifactDir = path.resolve(`.buildspace/artifacts/${feature}`);
   const screenshotsDir = path.join(artifactDir, 'screenshots');
   const assetsDir = path.join(artifactDir, 'assets');
@@ -177,7 +148,6 @@ async function main() {
   await mkdir(screenshotsDir, { recursive: true });
   await mkdir(assetsDir, { recursive: true });
 
-  // ── Call 1: Node trees ────────────────────────────────────────
   const nodeIds = mobileNodeId
     ? `${desktopNodeId},${mobileNodeId}`
     : desktopNodeId;
@@ -215,8 +185,7 @@ async function main() {
   );
   log('Saved figma-full.json');
 
-  // Mobile node
-  let mobileWidth = 390; // sensible fallback
+  let mobileWidth = 390;
   if (mobileNodeId) {
     const mobileNode = nodes[mobileNodeId];
     if (!mobileNode) {
@@ -228,13 +197,11 @@ async function main() {
       );
       log('Saved figma-full-mobile.json');
 
-      // Extract mobileWidth from the frame bounding box
       const box = mobileNode?.document?.absoluteBoundingBox;
       if (box?.width) mobileWidth = Math.round(box.width);
     }
   }
 
-  // figma-sections.json — used by screenshot and position-diff scripts
   const sectionsData = {
     feature,
     fileKey,
@@ -248,7 +215,6 @@ async function main() {
   );
   log('Saved figma-sections.json');
 
-  // ── Call 2: Section screenshots (PNG) ─────────────────────────
   const screenshotResponse = await figmaGet(
     `/v1/images/${fileKey}?ids=${encodeURIComponent(nodeIds)}&format=png&scale=2`
   );
@@ -275,7 +241,6 @@ async function main() {
     }
   }
 
-  // ── Call 3: Image fills CDN URL map ───────────────────────────
   const imagesResponse = await figmaGet(`/v1/files/${fileKey}/images`);
   await writeFile(
     path.join(artifactDir, 'figma-images.json'),
@@ -283,7 +248,6 @@ async function main() {
   );
   log('Saved figma-images.json');
 
-  // ── Summary ───────────────────────────────────────────────────
   const summary = {
     feature,
     fileKey,

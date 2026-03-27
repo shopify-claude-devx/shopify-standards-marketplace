@@ -1,21 +1,3 @@
-#!/usr/bin/env node
-/**
- * parse-figma.js — Extract design data from figma-full.json
- *
- * Reads raw Figma JSON (never touched by AI) → writes:
- *   design-context.md         — The ONLY Figma file AI reads
- *   figma-assets.json         — IMAGE and SVG assets with node IDs and CDN URLs
- *   figma-diff-reference.json — Expected positions + styles per node (for position-diff.js)
- *
- * Usage:
- *   node parse-figma.js <feature>
- *
- * Reads from .buildspace/artifacts/{feature}/
- *   figma-full.json           — Required
- *   figma-full-mobile.json    — Optional (for responsive diff)
- *   figma-images.json         — Required (imageRef → CDN URL map)
- */
-
 'use strict';
 
 const { readFile, writeFile } = require('node:fs/promises');
@@ -25,7 +7,6 @@ function log(msg) {
   console.error(`[parse-figma] ${msg}`);
 }
 
-// ── Args ─────────────────────────────────────────────────────────
 
 function parseArgs() {
   const feature = process.argv[2];
@@ -36,7 +17,6 @@ function parseArgs() {
   return feature;
 }
 
-// ── Conversion helpers ────────────────────────────────────────────
 
 function toKebab(str) {
   return (str || '')
@@ -46,14 +26,12 @@ function toKebab(str) {
 }
 
 function pxToRem(px) {
-  const rem = px / 16;
-  // e.g. 32 → "2rem", 14 → "0.875rem"
-  return `${parseFloat(rem.toFixed(4))}rem`;
+  return `${parseFloat((px / 16).toFixed(4))}rem`;
 }
 
 function figmaColorToHex({ r, g, b, a = 1 }) {
   const h = (v) => Math.round(v * 255).toString(16).padStart(2, '0');
-  return a < 0.99 ? `rgba(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)},${a.toFixed(2)})` : `#${h(r)}${h(g)}${h(b)}`;
+  return a < 0.99 ? `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${a.toFixed(2)})` : `#${h(r)}${h(g)}${h(b)}`;
 }
 
 function figmaColorToCSS({ r, g, b, a = 1 }) {
@@ -74,11 +52,8 @@ function lineHeightValue(style) {
     return `${Math.round(style.lineHeightPx * 100) / 100}px`;
   }
   if (style.lineHeightUnit === 'PERCENT' || style.lineHeightUnit === 'FONT_SIZE_%') {
-    // Convert percent to unitless ratio: 120% → 1.2
-    const ratio = ((style.lineHeightPercent || 100) / 100).toFixed(2);
-    return ratio;
+    return ((style.lineHeightPercent || 100) / 100).toFixed(2);
   }
-  // AUTO
   return 'normal';
 }
 
@@ -95,27 +70,60 @@ function extractEffects(effects) {
     .map((e) => {
       const c = e.color;
       const rgba = c
-        ? `rgba(${Math.round(c.r*255)},${Math.round(c.g*255)},${Math.round(c.b*255)},${c.a?.toFixed(2) || 1})`
+        ? `rgba(${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)},${c.a?.toFixed(2) || 1})`
         : '';
 
       if (e.type === 'DROP_SHADOW') {
-        return { css: 'box-shadow', value: `${e.offset?.x||0}px ${e.offset?.y||0}px ${e.radius||0}px ${e.spread||0}px ${rgba}` };
+        return { css: 'box-shadow', value: `${e.offset?.x || 0}px ${e.offset?.y || 0}px ${e.radius || 0}px ${e.spread || 0}px ${rgba}` };
       }
       if (e.type === 'INNER_SHADOW') {
-        return { css: 'box-shadow', value: `inset ${e.offset?.x||0}px ${e.offset?.y||0}px ${e.radius||0}px ${rgba}` };
+        return { css: 'box-shadow', value: `inset ${e.offset?.x || 0}px ${e.offset?.y || 0}px ${e.radius || 0}px ${rgba}` };
       }
       if (e.type === 'LAYER_BLUR') {
-        return { css: 'filter', value: `blur(${e.radius||0}px)` };
+        return { css: 'filter', value: `blur(${e.radius || 0}px)` };
       }
       if (e.type === 'BACKGROUND_BLUR') {
-        return { css: 'backdrop-filter', value: `blur(${e.radius||0}px)` };
+        return { css: 'backdrop-filter', value: `blur(${e.radius || 0}px)` };
       }
       return null;
     })
     .filter(Boolean);
 }
 
-// ── Asset detection ───────────────────────────────────────────────
+
+const GENERIC_NAME_RE = /^(frame|rectangle|ellipse|group|component|instance|vector|image|polygon|star|line|boolean-operation|mask|union|subtract|intersect|exclude)\s*\d*$/i;
+
+function isGenericName(name) {
+  return !name || GENERIC_NAME_RE.test(name.trim());
+}
+
+function meaningfulName(layerName, { parentName, nodeType, siblingIndex, totalSiblings }) {
+  let base;
+
+  if (!isGenericName(layerName)) {
+    base = toKebab(layerName);
+  } else if (parentName && !isGenericName(parentName)) {
+    base = toKebab(parentName);
+    if (totalSiblings > 1) base = `${base}-${siblingIndex + 1}`;
+  } else {
+    const typeLabel = nodeType === 'IMAGE' ? 'image' : 'graphic';
+    base = totalSiblings > 1 ? `${typeLabel}-${siblingIndex + 1}` : typeLabel;
+  }
+
+  if (nodeType === 'SVG') {
+    base = base.replace(/^icon-/, '').replace(/-icon$/, '') || base;
+  }
+
+  return base;
+}
+
+let _usedNames;
+function uniqueAssetName(name) {
+  const count = (_usedNames.get(name) || 0) + 1;
+  _usedNames.set(name, count);
+  return count === 1 ? name : `${name}-${count}`;
+}
+
 
 const SVG_TYPES = new Set(['VECTOR', 'BOOLEAN_OPERATION', 'STAR', 'POLYGON', 'LINE']);
 const SVG_KEYWORDS = ['icon', 'arrow', 'chevron', 'logo', 'close', 'menu', 'search', 'cart', 'check', 'plus', 'minus', 'heart', 'play', 'pause'];
@@ -135,7 +143,6 @@ function getImageRef(node) {
   return imgFill?.imageRef || null;
 }
 
-// ── Relative bounds ───────────────────────────────────────────────
 
 function relativeBounds(nodeBox, originBox) {
   if (!nodeBox || !originBox) return null;
@@ -147,7 +154,6 @@ function relativeBounds(nodeBox, originBox) {
   };
 }
 
-// ── Tree walker ───────────────────────────────────────────────────
 
 class FigmaParser {
   constructor(desktopRoot, mobileRoot, imagesMap, sectionName) {
@@ -156,16 +162,14 @@ class FigmaParser {
     this.imagesMap = imagesMap;
     this.sectionName = sectionName;
 
-    // Origin for relative position calculation
     this.originBox = this.desktop.absoluteBoundingBox || { x: 0, y: 0 };
-
-    // Outputs
-    this.typography = new Map();   // deduplicated by family+size+weight
-    this.layouts = [];             // frames with auto-layout
+    this.typography = new Map();
+    this.layouts = [];
     this.imageAssets = [];
     this.svgAssets = [];
     this.layerLines = [];
-    this.diffNodes = {};           // nodeId → { selector, type, relativeBounds, typography }
+    this.diffNodes = {};
+    _usedNames = new Map();
   }
 
   run() {
@@ -174,9 +178,7 @@ class FigmaParser {
     return this;
   }
 
-  // ── Node walker ─────────────────────────────────────────────────
-
-  walkNode(node, depth, parentBem, isRoot = false) {
+  walkNode(node, depth, parentBem, isRoot = false, parentName = '', siblingIndex = 0, totalSiblings = 1) {
     if (!node || typeof node !== 'object') return;
     const { id: nodeId, name = '', type, children } = node;
     if (!nodeId || !type) return;
@@ -184,7 +186,6 @@ class FigmaParser {
     const bem = isRoot ? this.sectionName : `${this.sectionName}__${slug}`;
     const indent = '  '.repeat(depth);
 
-    // ── TEXT ──────────────────────────────────────────────────────
     if (type === 'TEXT' && node.style) {
       const s = node.style;
       const fill = getFirstSolidFill(node.fills);
@@ -227,19 +228,19 @@ class FigmaParser {
       return;
     }
 
-    // ── SVG / icon ────────────────────────────────────────────────
     if (isSvgNode(node)) {
-      const snippetName = `icon-${slug}`;
+      const iconSlug = meaningfulName(name, { parentName, nodeType: 'SVG', siblingIndex, totalSiblings });
+      const snippetName = uniqueAssetName(`icon-${iconSlug}`);
       this.svgAssets.push({ nodeId, name: snippetName, layerName: name, snippetName });
       this.layerLines.push(`${indent}Node ${nodeId} → {% render '${snippetName}' %} [SVG]`);
-      return; // don't recurse into SVG internals
+      return;
     }
 
-    // ── IMAGE fill ────────────────────────────────────────────────
     const imageRef = getImageRef(node);
     if (imageRef) {
       const cdnUrl = this.imagesMap[imageRef] || null;
-      const assetName = `${this.sectionName}-${slug}`;
+      const imgSlug = meaningfulName(name, { parentName, nodeType: 'IMAGE', siblingIndex, totalSiblings });
+      const assetName = uniqueAssetName(`${this.sectionName}-${imgSlug}`);
       this.imageAssets.push({ nodeId, name: assetName, layerName: name, cdnUrl, viewport: 'desktop' });
 
       this.diffNodes[nodeId] = {
@@ -249,12 +250,9 @@ class FigmaParser {
       };
 
       this.layerLines.push(`${indent}Node ${nodeId} → .${bem} [IMAGE] "${assetName}"`);
-      // still recurse — image fills can have children (e.g. overlaid text)
     }
 
-    // ── Layout frame ──────────────────────────────────────────────
     if (['FRAME', 'COMPONENT', 'INSTANCE', 'GROUP'].includes(type)) {
-      // Don't overwrite the IMAGE diffNode already written above for image-fill frames
       if (!imageRef && node.absoluteBoundingBox) {
         this.diffNodes[nodeId] = {
           selector: `.${bem}`,
@@ -285,7 +283,6 @@ class FigmaParser {
           effects: extractEffects(node.effects),
         });
       } else if (isRoot) {
-        // Root frame without auto-layout — still capture background
         const bg = getFirstSolidFill(node.fills);
         this.layouts.push({
           nodeId,
@@ -301,21 +298,17 @@ class FigmaParser {
       }
     }
 
-    // Only write layer line if IMAGE fill didn't already write one above
     if (!imageRef) {
       const lineType = isRoot ? '[section]' : `[${type}]`;
       this.layerLines.push(`${indent}Node ${nodeId} → .${bem} ${lineType}`);
     }
 
-    // ── Recurse ───────────────────────────────────────────────────
     if (Array.isArray(children)) {
-      for (const child of children) {
-        this.walkNode(child, depth + 1, bem);
+      for (let i = 0; i < children.length; i++) {
+        this.walkNode(children[i], depth + 1, bem, false, name, i, children.length);
       }
     }
   }
-
-  // ── Responsive diff ───────────────────────────────────────────
 
   diffMobile() {
     const changes = [];
@@ -342,16 +335,20 @@ class FigmaParser {
 
     if (dNode.layoutMode && mNode.layoutMode) {
       if (dNode.layoutMode !== mNode.layoutMode) {
-        changes.push({ property: 'flex-direction', selector: `.${bem}`, nodeId: dNode.id,
+        changes.push({
+          property: 'flex-direction', selector: `.${bem}`, nodeId: dNode.id,
           desktop: dNode.layoutMode === 'HORIZONTAL' ? 'row' : 'column',
-          mobile: mNode.layoutMode === 'HORIZONTAL' ? 'row' : 'column' });
+          mobile: mNode.layoutMode === 'HORIZONTAL' ? 'row' : 'column'
+        });
       }
       if (dNode.itemSpacing !== mNode.itemSpacing) {
-        changes.push({ property: 'gap', selector: `.${bem}`, nodeId: dNode.id,
-          desktop: `${dNode.itemSpacing || 0}px`, mobile: `${mNode.itemSpacing || 0}px` });
+        changes.push({
+          property: 'gap', selector: `.${bem}`, nodeId: dNode.id,
+          desktop: `${dNode.itemSpacing || 0}px`, mobile: `${mNode.itemSpacing || 0}px`
+        });
       }
-      const dPad = `${dNode.paddingTop||0}px ${dNode.paddingRight||0}px ${dNode.paddingBottom||0}px ${dNode.paddingLeft||0}px`;
-      const mPad = `${mNode.paddingTop||0}px ${mNode.paddingRight||0}px ${mNode.paddingBottom||0}px ${mNode.paddingLeft||0}px`;
+      const dPad = `${dNode.paddingTop || 0}px ${dNode.paddingRight || 0}px ${dNode.paddingBottom || 0}px ${dNode.paddingLeft || 0}px`;
+      const mPad = `${mNode.paddingTop || 0}px ${mNode.paddingRight || 0}px ${mNode.paddingBottom || 0}px ${mNode.paddingLeft || 0}px`;
       if (dPad !== mPad) {
         changes.push({ property: 'padding', selector: `.${bem}`, nodeId: dNode.id, desktop: dPad, mobile: mPad });
       }
@@ -365,12 +362,9 @@ class FigmaParser {
     }
   }
 
-  // ── design-context.md builder ────────────────────────────────
-
   buildDesignContext() {
     const section = this.sectionName;
 
-    // CSS typography comment block
     const commentLines = Array.from(this.typography.values()).map((t) => {
       let line = `  ${t.role.padEnd(14)}: ${t.family}, ${t.sizePx}px (${t.sizeRem}), weight ${t.weight}, lh ${t.lineHeight}`;
       if (t.letterSpacing !== '0') line += `, ls ${t.letterSpacing}`;
@@ -390,12 +384,10 @@ class FigmaParser {
       '```',
     ].join('\n');
 
-    // Typography table
     const typRows = Array.from(this.typography.values()).map((t) =>
       `| ${t.role} | ${t.family} | ${t.sizePx}px | ${t.sizeRem} | ${t.weight} | ${t.lineHeight} | ${t.letterSpacing} | ${t.colorHex} | ${t.nodeId} |`
     );
 
-    // Layout section
     const layoutBlocks = this.layouts.map((l) => {
       const lines = [`### .${l.bem}  —  Node \`${l.nodeId}\`  —  "${l.name}"`];
       if (l.direction) lines.push(`- **flex-direction**: \`${l.direction}\``);
@@ -412,7 +404,6 @@ class FigmaParser {
       return lines.join('\n');
     });
 
-    // Assets
     const imgRows = this.imageAssets.map((a) =>
       `| \`${a.name}\` | \`${a.nodeId}\` | ${a.cdnUrl ? '[CDN URL in figma-assets.json]' : '⚠ not found in figma-images.json'} |`
     );
@@ -420,7 +411,6 @@ class FigmaParser {
       `| \`${a.snippetName}\` | \`${a.nodeId}\` | \`snippets/${a.snippetName}.liquid\` |`
     );
 
-    // Responsive
     const respRows = (this.mobileChanges || []).map((c) =>
       `| \`${c.property}\` | \`${c.desktop}\` | \`${c.mobile}\` | \`${c.selector}\` | \`${c.nodeId}\` |`
     );
@@ -479,19 +469,17 @@ ${svgRows.join('\n') || '| (none) | | |'}
 ## Responsive Differences (mobile overrides)
 
 ${respRows.length
-  ? `| Property | Desktop | Mobile | Selector | Node ID |\n|----------|---------|--------|----------|----------|\n${respRows.join('\n')}`
-  : '_No mobile frame provided or no differences found_'}
+        ? `| Property | Desktop | Mobile | Selector | Node ID |\n|----------|---------|--------|----------|----------|\n${respRows.join('\n')}`
+        : '_No mobile frame provided or no differences found_'}
 `;
   }
 }
 
-// ── Main ─────────────────────────────────────────────────────────
 
 async function main() {
   const feature = parseArgs();
   const base = path.resolve(`.buildspace/artifacts/${feature}`);
 
-  // Read desktop JSON
   const desktopRaw = await readFile(path.join(base, 'figma-full.json'), 'utf-8').catch(() => {
     throw new Error('figma-full.json not found. Run fetch-figma.js first.');
   });
@@ -508,7 +496,6 @@ async function main() {
     );
   }
 
-  // Read mobile JSON (optional)
   let mobileRoot = null;
   try {
     const raw = await readFile(path.join(base, 'figma-full-mobile.json'), 'utf-8');
@@ -527,7 +514,6 @@ async function main() {
     log('No mobile frame (figma-full-mobile.json not present)');
   }
 
-  // Read images CDN map
   const imagesRaw = await readFile(path.join(base, 'figma-images.json'), 'utf-8').catch(() => {
     throw new Error('figma-images.json not found. Run fetch-figma.js first.');
   });
@@ -542,7 +528,6 @@ async function main() {
     log('Note: figma-images.json has no image entries (no image fills in this design, or the design has no rasterized assets)');
   }
 
-  // Derive section name from root node name
   const rootDoc = desktopRoot.document;
   if (!rootDoc.name && !feature) {
     throw new Error('Cannot derive section name: root document has no name and no feature argument provided.');
@@ -550,16 +535,13 @@ async function main() {
   const sectionName = toKebab(rootDoc.name || feature);
   log(`Section: "${sectionName}"`);
 
-  // Parse
   const parser = new FigmaParser(desktopRoot, mobileRoot, imagesMap, sectionName);
   parser.run();
 
-  // Write design-context.md
   const designContext = parser.buildDesignContext();
   await writeFile(path.join(base, 'design-context.md'), designContext);
   log('Saved design-context.md');
 
-  // Write figma-assets.json
   const assetsOut = {
     feature,
     sectionName,
@@ -569,7 +551,6 @@ async function main() {
   await writeFile(path.join(base, 'figma-assets.json'), JSON.stringify(assetsOut, null, 2));
   log('Saved figma-assets.json');
 
-  // Write figma-diff-reference.json
   const diffOut = {
     feature,
     sectionName,

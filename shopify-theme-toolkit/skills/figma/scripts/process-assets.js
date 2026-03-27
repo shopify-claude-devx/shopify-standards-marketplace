@@ -1,17 +1,11 @@
-#!/usr/bin/env node
-// process-assets.js — Download Figma assets and upload to Shopify
-// Zero dependencies — Node 18+ built-ins only
-
 const { readFile, writeFile, copyFile, mkdir, stat } = require('node:fs/promises');
 const path = require('node:path');
 
-// ─── Config ────────────────────────────────────────────────────
 const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
 const SHOPIFY_STORE_URL = process.env.SHOPIFY_STORE_URL;
 const SHOPIFY_API_VERSION = '2025-01';
 const BATCH_LIMIT = 250;
 
-// ─── MIME / Extension Mapping ──────────────────────────────────
 const CONTENT_TYPE_TO_EXT = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
@@ -46,7 +40,6 @@ function mimeFromExt(ext) {
   return EXT_TO_MIME[ext] || 'application/octet-stream';
 }
 
-// ─── Helpers ───────────────────────────────────────────────────
 function chunk(array, size) {
   const chunks = [];
   for (let i = 0; i < array.length; i += size) {
@@ -59,7 +52,6 @@ function log(msg) {
   console.error(`[process-assets] ${msg}`);
 }
 
-// ─── CLI Argument Parsing ──────────────────────────────────────
 function parseArgs() {
   const args = process.argv.slice(2);
   const inputIdx = args.indexOf('--input');
@@ -70,7 +62,7 @@ function parseArgs() {
   return path.resolve(args[inputIdx + 1]);
 }
 
-// ─── Input Validation ──────────────────────────────────────────
+
 async function readInput(inputPath) {
   const raw = await readFile(inputPath, 'utf-8');
   const input = JSON.parse(raw);
@@ -95,7 +87,6 @@ async function readInput(inputPath) {
   return input;
 }
 
-// ─── Download Phase ────────────────────────────────────────────
 async function downloadAll(assets, outputDir) {
   await mkdir(outputDir, { recursive: true });
   const results = [];
@@ -103,7 +94,6 @@ async function downloadAll(assets, outputDir) {
   for (const asset of assets) {
     try {
       if (asset.url) {
-        // Download from URL (Figma MCP localhost proxy or any HTTP URL)
         log(`Downloading: ${asset.name} from ${asset.url}`);
         const response = await fetch(asset.url);
 
@@ -133,7 +123,6 @@ async function downloadAll(assets, outputDir) {
 
         log(`  → Saved: ${filename} (${fileStat.size} bytes)`);
       } else if (asset.localPath) {
-        // Copy user-provided local file
         const sourceExt = path.extname(asset.localPath).slice(1).toLowerCase() || 'mp4';
         const filename = `${asset.name}.${sourceExt}`;
         const destPath = path.join(outputDir, filename);
@@ -168,7 +157,6 @@ async function downloadAll(assets, outputDir) {
   return results;
 }
 
-// ─── Shopify GraphQL Helper ────────────────────────────────────
 async function shopifyGraphQL(query, variables) {
   const url = `https://${SHOPIFY_STORE_URL}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`;
 
@@ -195,7 +183,6 @@ async function shopifyGraphQL(query, variables) {
   return data;
 }
 
-// ─── Step 1: Batch Staged Uploads ──────────────────────────────
 const STAGED_UPLOADS_MUTATION = `
   mutation stagedUploadsCreate($input: [StagedUploadInput!]!) {
     stagedUploadsCreate(input: $input) {
@@ -244,7 +231,6 @@ async function batchStagedUploads(assets) {
   return allTargets;
 }
 
-// ─── Step 2: Upload Files to Presigned URLs ────────────────────
 async function uploadToPresignedUrls(assets, targets) {
   for (let i = 0; i < assets.length; i++) {
     const asset = assets[i];
@@ -260,7 +246,6 @@ async function uploadToPresignedUrls(assets, targets) {
       const fileBuffer = await readFile(asset.localPath);
 
       if (asset.type === 'VIDEO') {
-        // Videos use POST with multipart form — parameters as fields, file LAST
         log(`Uploading (POST multipart): ${asset.filename}`);
         const formData = new FormData();
         for (const param of target.parameters) {
@@ -278,10 +263,8 @@ async function uploadToPresignedUrls(assets, targets) {
           throw new Error(`Upload POST ${response.status}: ${text}`);
         }
       } else {
-        // Images use PUT with headers
         log(`Uploading (PUT): ${asset.filename}`);
 
-        // Build headers from parameters
         const headers = { 'Content-Type': asset.mimeType };
         for (const param of target.parameters) {
           if (param.name.toLowerCase() !== 'content-type') {
@@ -312,7 +295,6 @@ async function uploadToPresignedUrls(assets, targets) {
   }
 }
 
-// ─── Step 3: Batch File Create ─────────────────────────────────
 const FILE_CREATE_MUTATION = `
   mutation fileCreate($files: [FileCreateInput!]!) {
     fileCreate(files: $files) {
@@ -332,7 +314,6 @@ const FILE_CREATE_MUTATION = `
 `;
 
 async function batchFileCreate(assets) {
-  // Only create files for successfully staged assets
   const staged = assets.filter((a) => a.resourceUrl && a.status !== 'FAILED');
   if (staged.length === 0) {
     log('No assets to register in Shopify — all failed or skipped');
@@ -356,7 +337,6 @@ async function batchFileCreate(assets) {
 
     if (userErrors && userErrors.length > 0) {
       log(`  ⚠ File create errors: ${JSON.stringify(userErrors)}`);
-      // Mark affected assets
       for (const err of userErrors) {
         log(`    - ${err.field}: ${err.message}`);
       }
@@ -369,7 +349,7 @@ async function batchFileCreate(assets) {
   }
 }
 
-// ─── Build Shopify URL ─────────────────────────────────────────
+
 function buildShopifyUrl(asset) {
   if (asset.type === 'VIDEO') {
     return `shopify://files/videos/${asset.filename}`;
@@ -377,7 +357,7 @@ function buildShopifyUrl(asset) {
   return `shopify://shop_images/${asset.filename}`;
 }
 
-// ─── Write Manifest ────────────────────────────────────────────
+
 async function writeManifest(section, assets, skippedAssets, outputDir, uploaded) {
   const manifest = {
     status: uploaded ? 'UPLOADED' : 'LOCAL_ONLY',
@@ -404,10 +384,8 @@ async function writeManifest(section, assets, skippedAssets, outputDir, uploaded
   return manifestPath;
 }
 
-// ─── Main ──────────────────────────────────────────────────────
 async function main() {
   try {
-    // 1. Parse args and read input
     const inputPath = parseArgs();
     const input = await readInput(inputPath);
     const outputDir = path.dirname(inputPath);
@@ -415,7 +393,6 @@ async function main() {
     log(`Section: ${input.section}`);
     log(`Total assets: ${input.assets.length}`);
 
-    // 2. Separate uploadable vs skipped
     const toUpload = input.assets.filter((a) => a.upload);
     const skipped = input.assets.filter((a) => !a.upload);
 
@@ -428,34 +405,27 @@ async function main() {
       return;
     }
 
-    // 3. Download all assets
     const downloaded = await downloadAll(toUpload, outputDir);
     const successfulDownloads = downloaded.filter((a) => a.status !== 'FAILED');
 
     log(`Downloaded: ${successfulDownloads.length}/${toUpload.length}`);
 
-    // 4. Upload to Shopify if credentials are present
     const hasCredentials = SHOPIFY_ACCESS_TOKEN && SHOPIFY_STORE_URL;
 
     if (hasCredentials && successfulDownloads.length > 0) {
       log(`Uploading to Shopify (${SHOPIFY_STORE_URL})...`);
 
-      // 4a. Batch staged uploads
       const targets = await batchStagedUploads(successfulDownloads);
 
-      // 4b. Upload files to presigned URLs
       await uploadToPresignedUrls(successfulDownloads, targets);
 
-      // 4c. Batch file create
       await batchFileCreate(successfulDownloads);
     } else if (!hasCredentials) {
       log('No Shopify credentials — running in LOCAL_ONLY mode');
     }
 
-    // 5. Write manifest
     const manifestPath = await writeManifest(input.section, downloaded, skipped, outputDir, hasCredentials);
 
-    // 6. Print summary to stdout
     const uploaded = downloaded.filter((a) => a.status === 'REGISTERED').length;
     const failed = downloaded.filter((a) => a.status === 'FAILED').length;
     const localOnly = downloaded.filter((a) => a.status === 'DOWNLOADED').length;
@@ -472,7 +442,6 @@ async function main() {
 
     console.log(JSON.stringify(summary));
 
-    // Exit with error only if ALL uploads failed
     if (toUpload.length > 0 && successfulDownloads.length === 0) {
       process.exit(1);
     }
