@@ -52,7 +52,8 @@ If any are missing, tell the user exactly which ones and stop.
 ### Step 2: Ensure package.json exists
 
 ```bash
-test -f package.json || echo '{"name":"shopify-theme","version":"1.0.0","private":true}' > package.json
+# Use the current directory name as the project name
+test -f package.json || echo "{\"name\":\"$(basename "$PWD")\",\"version\":\"1.0.0\",\"private\":true}" > package.json
 ```
 
 ### Step 3: Ensure .gitignore covers generated files
