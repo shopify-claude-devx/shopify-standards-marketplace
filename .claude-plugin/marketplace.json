@@ -16,7 +16,7 @@
     {
       "name": "shopify-theme-toolkit",
       "source": "./shopify-theme-toolkit",
-      "description": "Liquid, CSS, JS, schema, and section standards for Shopify themes"
+      "description": "Shopify theme development plugin with workflow orchestration — skills, commands, and agents for Liquid, CSS, JS, schema, and section standards"
     },
     {
       "name": "shopify-app-standards",

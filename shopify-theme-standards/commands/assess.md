@@ -1,6 +1,7 @@
 ---
 description: Assess what was built — validates output against requirements and reviews code quality. Use after /build to ensure correctness and code standards. Dispatches specialized subagents for thorough review.
 allowed-tools: Read, Write, Grep, Glob, Agent, Bash
+disable-model-invocation: true
 ---
 
 # Assess — Output Validation & Code Review

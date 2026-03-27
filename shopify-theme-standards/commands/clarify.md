@@ -1,6 +1,7 @@
 ---
 description: Clarify requirements before starting any task. Use this as the first step before planning or building anything.
 allowed-tools: Read, Write, Glob, AskUserQuestion
+disable-model-invocation: true
 ---
 
 # Clarify — Requirement Extraction

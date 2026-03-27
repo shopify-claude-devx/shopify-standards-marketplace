@@ -1,6 +1,7 @@
 ---
 description: Create a detailed execution plan for a task. Use after /clarify when requirements are confirmed. Researches codebase and produces a step-by-step TODO plan.
 allowed-tools: Read, Write, Grep, Glob, Agent, WebSearch, WebFetch
+disable-model-invocation: true
 ---
 
 # Plan — Execution Planning

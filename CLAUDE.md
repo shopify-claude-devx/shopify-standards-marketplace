@@ -29,7 +29,7 @@ plugin-name/
 ├── skills/{skill-name}/SKILL.md   ← Standards + embedded checklists
 ├── commands/{command-name}.md      ← Workflow stage definitions
 ├── agents/{agent-name}.md          ← Specialized subagent roles
-├── setup/hooks.json                ← Optional auto-linting hooks
+├── hooks/hooks.json                ← Optional auto-linting hooks
 └── README.md
 ```
 
@@ -57,9 +57,9 @@ The performance plugin uses a different action-focused pipeline: `/setup` → `/
 ---
 name: skill-id
 description: >
-  When/why this skill triggers. Globs optional.
-globs: ["**/*.liquid"]        # optional, for auto-triggering
-user-invocable: false         # optional, default false
+  When/why this skill triggers. Paths optional.
+paths: ["**/*.liquid"]        # optional, for auto-triggering
+user-invocable: false         # optional, default true
 ---
 ```
 Content: rules organized by topic, code examples, then a **Checklist** section at the bottom with `[ ]` items for validation. The checklist is critical — `/build` validates every file against it.
@@ -70,7 +70,7 @@ Content: rules organized by topic, code examples, then a **Checklist** section a
 description: One-line purpose
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, Skill
 model: sonnet                 # optional override
-maxTurns: 20                  # optional
+disable-model-invocation: true  # optional, prevents Claude from auto-triggering
 ---
 ```
 Content: input (`$ARGUMENTS`), step-by-step process, output specification, rules/constraints.

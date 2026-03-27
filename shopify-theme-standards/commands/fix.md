@@ -1,6 +1,7 @@
 ---
 description: Debug and fix a bug. Investigates the codebase, performs root cause analysis, proposes the fix for user approval, then executes. Use when something is broken and needs diagnosing.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, WebSearch, WebFetch
+disable-model-invocation: true
 ---
 
 # Fix — Debug & Repair

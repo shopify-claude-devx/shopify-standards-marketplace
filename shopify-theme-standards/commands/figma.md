@@ -1,6 +1,7 @@
 ---
 description: Fetch a Figma design and prepare structured Design Context for theme development. Use as the first step before /clarify when building from a Figma design. Does not write code.
-allowed-tools: Read, Write, Bash, Grep, Glob, AskUserQuestion, mcp__claude_ai_Figma__get_design_context, mcp__claude_ai_Figma__get_screenshot, mcp__claude_ai_Figma__get_metadata, mcp__claude_ai_Figma__get_variable_defs
+allowed-tools: Read, Write, Bash, Grep, Glob, AskUserQuestion, mcp__figma__get_design_context, mcp__figma__get_screenshot, mcp__figma__get_metadata, mcp__figma__get_variable_defs
+disable-model-invocation: true
 ---
 
 # Figma — Design Fetching

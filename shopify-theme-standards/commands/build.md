@@ -1,6 +1,7 @@
 ---
 description: Execute a plan by building TODO by TODO. Use after /plan when the execution plan is confirmed. Loads relevant skills per file and follows them precisely.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
+disable-model-invocation: true
 ---
 
 # Build — Plan Execution

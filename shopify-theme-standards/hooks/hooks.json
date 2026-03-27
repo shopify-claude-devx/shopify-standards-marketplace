@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat) && file=$(echo \"$INPUT\" | jq -r '.tool_input.file_path // empty') && [[ \"$file\" == *.liquid ]] && shopify theme check \"$file\" --fail-level error 2>&1 | tail -30 || true"
+          }
+        ]
+      }
+    ]
+  }
+}

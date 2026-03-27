@@ -3,7 +3,12 @@ name: code-reviewer
 description: Reviews code quality against project standards for readability, maintainability, flexibility, and reusability. Use during assessment phase to ensure code follows project conventions.
 tools: Read, Grep, Glob
 model: sonnet
-skills: liquid-standards, css-standards, js-standards, section-standards, section-schema-standards
+skills:
+  - liquid-standards
+  - css-standards
+  - js-standards
+  - section-standards
+  - section-schema-standards
 maxTurns: 20
 ---
 

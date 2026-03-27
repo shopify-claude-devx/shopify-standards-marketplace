@@ -1,6 +1,7 @@
 ---
 description: Capture learnings from a completed task. Use after /assess when a task passes. Extracts patterns and writes them to the feature artifact and a persistent project-level file.
 allowed-tools: Read, Write, Edit, Glob, Grep
+disable-model-invocation: true
 ---
 
 # Capture — Knowledge Extraction
