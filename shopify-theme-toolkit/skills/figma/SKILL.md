@@ -1,373 +1,291 @@
 ---
 name: figma
 description: >
-  Fetch Figma design, download and rename assets, upload to Shopify,
-  extract design tokens. Use before /prd for Figma-to-code workflow.
+  Fetch Figma design via REST API, parse exact design values, create SVG snippets,
+  upload images to Shopify. Use before /prd for the Figma-to-code workflow.
+  Requires FIGMA_TOKEN, SHOPIFY_STORE_URL, SHOPIFY_ACCESS_TOKEN in .env.
 disable-model-invocation: true
-allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion, mcp__figma__get_design_context, mcp__figma__get_screenshot, mcp__figma__get_metadata, mcp__figma__get_variable_defs, mcp__claude_ai_Figma__get_design_context, mcp__claude_ai_Figma__get_screenshot, mcp__claude_ai_Figma__get_metadata, mcp__claude_ai_Figma__get_variable_defs
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 ---
 
-# Figma — Design Fetching, Asset Processing & Token Extraction
+# Figma — Design Fetch, Parse, Assets
 
-You are entering the Figma phase. Your job is to:
-1. Fetch the Figma design (desktop + mobile)
-2. Download all assets, rename them meaningfully, upload to Shopify
-3. Extract design tokens and create/update the shared design system CSS
-4. Save everything as structured artifacts for downstream commands
+You are entering the Figma phase. Your job:
+1. Pre-flight the project (package.json, .gitignore, .env)
+2. Fetch the raw Figma design via REST API (3 API calls, 0 AI tokens)
+3. Parse the JSON into a clean `design-context.md` (0 AI tokens)
+4. Create SVG icon snippets from the design
+5. Upload image assets to Shopify Files
+6. Extract design tokens → `assets/design-system.css`
 
-**Do NOT write any implementation code. Do NOT plan. Only fetch, process, and organize.**
+**Do NOT write any implementation code. Do NOT plan. Only fetch, parse, and organize.**
+
+---
 
 ## Input
-Figma URLs: `$ARGUMENTS`
 
-Expected format:
+Figma URL(s): `$ARGUMENTS`
+
+Expected formats (pass both if the design has a mobile frame):
 ```
-Desktop: <figma-url>
-Mobile: <figma-url>
+Desktop: https://www.figma.com/design/{fileKey}/{name}?node-id={nodeId}
+Mobile:  https://www.figma.com/design/{fileKey}/{name}?node-id={nodeId}
 ```
-
-If both URLs are not provided, ask the user for both before proceeding. If the user says there is no mobile frame, note that responsive styles will be inferred from the desktop frame only.
-
-## Artifact Setup
-1. Derive a short kebab-case feature name from the design (e.g., `hero-banner`, `product-carousel`)
-2. Create `.buildspace/artifacts/{feature-name}/` and `.buildspace/artifacts/{feature-name}/screenshots/` if they don't exist
 
 ---
 
-## Phase 1: Fetch Design Context
+## Phase 0 — Pre-flight
 
-### Step 1: Parse Figma URLs
-Extract `fileKey` and `nodeId` from both URLs:
-- `figma.com/design/:fileKey/:fileName?node-id=:nodeId` → convert `-` to `:` in nodeId
-- `figma.com/design/:fileKey/branch/:branchKey/:fileName` → use branchKey as fileKey
-- `figma.com/make/:makeFileKey/:makeFileName` → use makeFileKey
+Before running any scripts:
 
-Store as `desktopFileKey`, `desktopNodeId`, `mobileFileKey`, `mobileNodeId`.
+### Step 1: Load .env credentials
 
-If either URL format is unclear, ask the user to confirm.
-
-### Step 2: Fetch Desktop Design Context
-Call `get_design_context` with the desktop fileKey and nodeId. This returns:
-- Reference code (React+Tailwind) — structural guide only, NOT final code
-- Screenshot of the design
-- Asset URLs and contextual hints
-
-Review the response for:
-- **Code Connect snippets** — note which codebase components are already mapped
-- **Design annotations** — capture any notes from the designer
-- **Design tokens as CSS variables** — note for token extraction
-
-Collect ALL asset URLs from the response.
-
-### Step 3: Fetch Mobile Design Context
-Call `get_design_context` with the mobile fileKey and nodeId.
-
-Collect ALL asset URLs from the mobile response.
-
-If no mobile URL was provided, skip this step.
-
-### Step 4: Fetch Design Tokens
-Call `get_variable_defs` with the fileKey to retrieve design tokens (colors, spacing, typography).
-
-### Step 5: Capture Screenshots for Visual Validation
-Call `get_screenshot` for desktop and mobile frames.
-
-Save screenshots to:
-- `.buildspace/artifacts/{feature-name}/screenshots/figma-desktop.png`
-- `.buildspace/artifacts/{feature-name}/screenshots/figma-mobile.png`
-
-These are used later by `/test` for visual validation. Do not skip this step.
-
----
-
-## Phase 2: Asset Extraction & Meaningful Naming
-
-### Step 1: Collect All Assets
-From both desktop and mobile design context responses, collect every asset URL (images, SVGs, icons).
-
-### Step 2: Rename Assets Meaningfully
-Figma assets have random names like `Frame 47`, `Rectangle 12`, `Group 8`. Rename each based on:
-- **What it represents** in the design (analyze the layer hierarchy and context)
-- **Section name as prefix** for scoping
-
-Naming convention: `{section-name}-{element-purpose}.{ext}`
-
-Examples:
-- `Frame 47` (background image in hero) → `hero-banner-background.png`
-- `Rectangle 12` (product thumbnail) → `product-card-thumbnail.png`
-- `Group 8` (arrow icon in CTA) → `hero-banner-cta-arrow.svg`
-- `image 3` (slide 1 in carousel) → `hero-carousel-slide-1.jpg`
-
-### Step 3: Determine Asset Viewport
-For each asset, identify whether it's:
-- `desktop` — only in desktop frame
-- `mobile` — only in mobile frame
-- `both` — in both frames
-
-### Step 4: Identify Video Elements
-Scan the design for elements that appear to be video placeholders (large rectangular frames with play button overlays, or layers named with "video" keywords).
-
-If video elements are found:
-1. List each video with its layer name and position in the design
-2. Tell the user: "Figma MCP cannot export videos. Please download these videos and place them in `.buildspace/assets/{feature-name}/`"
-3. List each video file needed with a suggested meaningful name
-4. Wait for user confirmation that videos are placed before proceeding to Phase 3
-
----
-
-## Phase 3: Upload to Shopify
-
-### Step 1: Check Credentials
-Read `.env` in the project root for:
-- `SHOPIFY_STORE_URL` (e.g., `mystore.myshopify.com`)
-- `SHOPIFY_ACCESS_TOKEN` (Admin API token with `read_files`, `write_files` scopes)
-
-If `.env` doesn't exist or credentials are missing, inform the user:
+Read `.env` in the project root and verify these three keys exist:
 ```
-Shopify credentials not found in .env. Assets will be downloaded locally
-but not uploaded to Shopify.
-
-To enable upload, create a .env file with:
+FIGMA_TOKEN=figd_...
 SHOPIFY_STORE_URL=yourstore.myshopify.com
-SHOPIFY_ACCESS_TOKEN=shpat_xxxxx
-
-The token needs read_files and write_files access scopes.
+SHOPIFY_ACCESS_TOKEN=shpat_...
 ```
 
-Proceed in LOCAL_ONLY mode — download assets but skip upload.
+If any are missing, tell the user exactly which ones and stop.
 
-### Step 2: Prepare Asset Input
-Generate `.buildspace/artifacts/{feature-name}/asset-input.json`:
+### Step 2: Ensure package.json exists
+
+```bash
+test -f package.json || echo '{"name":"shopify-theme","version":"1.0.0","private":true}' > package.json
+```
+
+### Step 3: Ensure .gitignore covers generated files
+
+Read `.gitignore` (create if missing). Add any of these entries that are absent:
+```
+node_modules/
+.env
+.env.local
+.buildspace/
+```
+
+Do not overwrite existing content — only append what is missing.
+
+### Step 4: Parse Figma URL(s)
+
+If URLs were not provided in `$ARGUMENTS`, ask the user:
+1. Desktop Figma URL
+2. Mobile Figma URL (or "none" if no mobile frame)
+
+From each URL extract:
+- `fileKey` — from `figma.com/design/:fileKey/`
+- `nodeId` — from `?node-id=` — **convert `-` to `:`**
+
+Store as `desktopFileKey`, `desktopNodeId`, `mobileFileKey` (usually same), `mobileNodeId`.
+
+### Step 5: Confirm feature name
+
+Derive a short kebab-case feature name from the URL file name or design name
+(e.g., `hero-banner`, `product-carousel`). Confirm with the user.
+
+---
+
+## Phase 1 — Fetch [SCRIPT]
+
+**Tokens used: 0. Scripts handle all API calls.**
+
+Run `fetch-figma.js` (3 REST API calls upfront, then fully offline):
+
+```bash
+source .env && FIGMA_TOKEN="$FIGMA_TOKEN" node ${CLAUDE_SKILL_DIR}/scripts/fetch-figma.js \
+  {desktopFileKey} \
+  {feature} \
+  {desktopNodeId} \
+  {mobileNodeId or -}
+```
+
+This saves to `.buildspace/artifacts/{feature}/`:
+- `figma-full.json` — desktop node tree (AI never reads this)
+- `figma-full-mobile.json` — mobile node tree (if mobile provided)
+- `figma-sections.json` — section index with `mobileWidth` from actual Figma frame
+- `figma-images.json` — CDN URL map for all image fills
+- `screenshots/figma-desktop.png` — Figma design screenshot
+- `screenshots/figma-mobile.png` — Figma mobile screenshot (if provided)
+
+If the script fails, check: correct node ID? Token has read access to the file?
+
+---
+
+## Phase 2 — Parse [SCRIPT]
+
+**Tokens used: 0. Parse extracts exact values without AI.**
+
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/parse-figma.js {feature}
+```
+
+This reads `figma-full.json` locally (zero API calls) and writes:
+
+**`design-context.md`** — The only Figma file AI will ever read. Contains:
+- CSS typography comment block (copy-paste ready for the CSS file)
+- Typography table with exact values: family, px, rem, weight, line-height, letter-spacing, color, node ID
+- Layout: flex-direction, gap, padding, background per frame
+- Layer structure with every node ID and BEM class suggestion
+- Asset lists: images (with CDN URL) and SVGs (with snippet name)
+- Responsive differences between desktop and mobile frames
+
+**`figma-assets.json`** — Structured IMAGE and SVG asset lists with node IDs.
+
+**`figma-diff-reference.json`** — Expected positions + typography per node ID (used by position-diff.js in /test).
+
+After running, read `design-context.md` and confirm the layer structure looks correct.
+
+---
+
+## Phase 3 — SVG Snippets [SCRIPT]
+
+**Tokens used: 0 for fetching. SVG code goes straight to snippets.**
+
+If `figma-assets.json` contains SVG entries:
+
+```bash
+source .env && FIGMA_TOKEN="$FIGMA_TOKEN" node ${CLAUDE_SKILL_DIR}/scripts/fetch-svgs.js \
+  {desktopFileKey} \
+  {feature} \
+  --theme-path .
+```
+
+This fetches SVG export code from Figma for each SVG node and writes:
+- `snippets/icon-{name}.liquid` — clean SVG code (XML declaration stripped)
+
+After running, verify the snippet files exist and contain valid SVG.
+
+If a snippet already exists with the same name, **do not overwrite** — report the conflict to the user.
+
+---
+
+## Phase 4 — Image Upload [SCRIPT]
+
+**Tokens used: 0 for download/upload. Scripts handle all file I/O.**
+
+Read `figma-assets.json`. For each IMAGE asset, build `asset-input.json`:
+
+```bash
+# Read the CDN URL from figma-assets.json images[n].cdnUrl
+# Write to .buildspace/artifacts/{feature}/asset-input.json
+```
+
+Write `.buildspace/artifacts/{feature}/asset-input.json`:
 
 ```json
 {
-  "section": "{feature-name}",
+  "section": "{feature}",
   "assets": [
     {
-      "name": "hero-banner-background",
+      "name": "{asset.name}",
       "type": "IMAGE",
       "upload": true,
-      "url": "http://localhost:.../asset-url",
-      "alt": "Hero banner background image",
-      "viewport": "both"
+      "url": "{asset.cdnUrl}",
+      "alt": "{human-readable description from layer name}",
+      "viewport": "{asset.viewport}"
     }
   ]
 }
 ```
 
-For user-provided videos, use `localPath` instead of `url`:
-```json
-{
-  "name": "hero-banner-video",
-  "type": "VIDEO",
-  "upload": true,
-  "localPath": ".buildspace/assets/{feature-name}/video-filename.mp4",
-  "alt": "Hero banner background video",
-  "viewport": "both",
-  "fileSize": "12345678"
-}
-```
+Then run:
 
-### Step 3: Run Asset Processing
-Read the `.env` file values and pass them as environment variables when running the script:
 ```bash
-source .env 2>/dev/null; SHOPIFY_STORE_URL="$SHOPIFY_STORE_URL" SHOPIFY_ACCESS_TOKEN="$SHOPIFY_ACCESS_TOKEN" node ${CLAUDE_SKILL_DIR}/scripts/process-assets.js --input .buildspace/artifacts/{feature-name}/asset-input.json
+source .env && SHOPIFY_STORE_URL="$SHOPIFY_STORE_URL" SHOPIFY_ACCESS_TOKEN="$SHOPIFY_ACCESS_TOKEN" \
+  node ${CLAUDE_SKILL_DIR}/scripts/process-assets.js \
+  --input .buildspace/artifacts/{feature}/asset-input.json
 ```
 
-This script:
-1. Downloads all assets from Figma MCP URLs (ephemeral — must download in same session)
-2. Copies user-provided local files
-3. If Shopify credentials present: uploads via `stagedUploadsCreate` → presigned URL → `fileCreate`
-4. Writes `asset-manifest.json` with final URLs
+This downloads images from Figma CDN and uploads them to Shopify Files via `stagedUploadsCreate` → presigned URL → `fileCreate`.
 
-### Step 4: Verify Manifest
-Read the generated `.buildspace/artifacts/{feature-name}/asset-manifest.json` and verify:
-- All assets have status `REGISTERED` (uploaded) or `DOWNLOADED` (local only)
-- Note any `FAILED` assets and report to user
+Read the generated `asset-manifest.json`:
+- `REGISTERED` — uploaded to Shopify, `shopifyUrl` is set
+- `DOWNLOADED` — local only (no Shopify credentials, won't happen since credentials are always present)
+- `FAILED` — report to user, do not silently skip
 
-The manifest provides `shopifyUrl` for each asset:
-- Images: `shopify://shop_images/{filename}.png`
-- Videos: `shopify://files/videos/{filename}.mp4`
+If an asset CDN URL is null (not found in `figma-images.json`), skip it and tell the user which layer it was.
 
 ---
 
-## Phase 4: Design Token Extraction
+## Phase 5 — Design Tokens
 
-### Step 1: Collect Raw Values
-From the design context responses and `get_variable_defs` results, extract:
+Read `design-context.md` (already written by parse-figma.js). Extract:
 
-**Typography:**
-- All unique font sizes used (desktop and mobile separately)
-- Font families
-- Font weights
-- Line heights
+**Typography:** all unique font sizes, families, weights, line-heights
+**Colors:** background, text, accent, border colors
+**Spacing:** section padding (desktop + mobile), gap values
 
-**Colors:**
-- Text colors
-- Background colors
-- Accent/highlight colors
-- Border colors
+Normalize values:
+- Round font sizes to nearest 0.5px if within 1px of each other
+- Deduplicate near-identical colors (within 5 RGB units)
+- Round spacing to 4px increments where values are near-identical
 
-**Spacing:**
-- Section padding (top/bottom) for desktop and mobile
-- Element gaps (between items in a row/column)
-- Container max-widths
+### Create or update `assets/design-system.css`
 
-### Step 2: Normalize Values
-Figma designs often have inconsistent values. Normalize:
-- Font sizes: Round similar values to a standard set (e.g., 13px and 14px → 14px)
-- Spacing: Round to a consistent scale (e.g., 8px increments)
-- Colors: Deduplicate near-identical colors
+**If it doesn't exist:** create it.
+**If it exists:** read it first, then merge — add new tokens only. Never remove existing tokens. If a token name conflicts, keep the existing value and report the conflict.
 
-### Step 3: Save Design Tokens JSON
-Save raw extracted tokens to `.buildspace/artifacts/{feature-name}/design-tokens.json`:
-
-```json
-{
-  "typography": {
-    "families": {
-      "primary": "'DM Sans', sans-serif",
-      "secondary": "'Playfair Display', serif"
-    },
-    "sizes": {
-      "xs": "12px",
-      "sm": "14px",
-      "base": "16px",
-      "md": "18px",
-      "lg": "24px",
-      "xl": "32px",
-      "2xl": "48px"
-    },
-    "weights": {
-      "regular": "400",
-      "medium": "500",
-      "semibold": "600",
-      "bold": "700"
-    }
-  },
-  "colors": {
-    "primary": "#1a1a1a",
-    "secondary": "#666666",
-    "accent": "#4A90D9",
-    "background": "#ffffff",
-    "background-alt": "#f5f5f5",
-    "border": "#e0e0e0"
-  },
-  "spacing": {
-    "section-py": {
-      "sm": { "mobile": "40px", "desktop": "60px" },
-      "md": { "mobile": "60px", "desktop": "80px" },
-      "lg": { "mobile": "80px", "desktop": "120px" }
-    },
-    "gap": {
-      "xs": "4px",
-      "sm": "8px",
-      "md": "16px",
-      "lg": "24px",
-      "xl": "32px",
-      "2xl": "48px"
-    }
-  }
-}
-```
-
-### Step 4: Create/Update design-system.css
-Check if `assets/design-system.css` exists in the project.
-
-**If it doesn't exist:** Create it with all extracted tokens as CSS custom properties.
-
-**If it exists:** Read it, merge new tokens (add new ones, don't remove existing ones). If a token value conflicts, keep the existing value and note the conflict for the user.
-
-The file format:
 ```css
-/* Design System — Auto-generated from Figma, updated incrementally */
-/* Do not add section-specific styles here. Only shared tokens. */
+/* Design System — auto-generated from Figma, merged incrementally */
+/* Do not add section-specific styles here. Shared tokens only. */
 
 :root {
   /* Typography */
-  --ff-primary: 'DM Sans', sans-serif;
-  --ff-secondary: 'Playfair Display', serif;
-
-  --fs-xs: 12px;
-  --fs-sm: 14px;
-  --fs-base: 16px;
-  --fs-md: 18px;
-  --fs-lg: 24px;
-  --fs-xl: 32px;
-  --fs-2xl: 48px;
-
-  --fw-regular: 400;
-  --fw-medium: 500;
-  --fw-semibold: 600;
-  --fw-bold: 700;
+  --ff-primary: '{fontFamily}', sans-serif;
+  --fs-{size-name}: {value}px;
+  --fw-{weight-name}: {value};
 
   /* Colors */
-  --color-primary: #1a1a1a;
-  --color-secondary: #666666;
-  --color-accent: #4A90D9;
-  --color-bg: #ffffff;
-  --color-bg-alt: #f5f5f5;
-  --color-border: #e0e0e0;
+  --color-{name}: {hex};
 
   /* Spacing — Mobile (base) */
-  --section-py-sm: 40px;
-  --section-py-md: 60px;
-  --section-py-lg: 80px;
-  --gap-xs: 4px;
-  --gap-sm: 8px;
-  --gap-md: 16px;
-  --gap-lg: 24px;
-  --gap-xl: 32px;
-  --gap-2xl: 48px;
+  --section-py-{size}: {mobile-value}px;
+  --gap-{size}: {value}px;
 }
 
 @media (min-width: 768px) {
   :root {
     /* Spacing — Desktop overrides */
-    --section-py-sm: 60px;
-    --section-py-md: 80px;
-    --section-py-lg: 120px;
+    --section-py-{size}: {desktop-value}px;
   }
 }
 ```
 
 ---
 
-## Phase 5: Save Design Context Artifact
+## Phase 6 — Report & Hand-off
 
-Write `.buildspace/artifacts/{feature-name}/design-context.md`.
-
-Read the template from `${CLAUDE_SKILL_DIR}/templates/design-context-template.md` and fill it in with the design context extracted from Figma.
-
----
-
-## Phase 6: Report and Hand Off
-
-Present a summary to the user:
+Print a summary — do NOT dump file contents to conversation:
 
 ```
-Design context saved to .buildspace/artifacts/{feature-name}/
+Design context saved → .buildspace/artifacts/{feature}/design-context.md
 
-Assets: X images, X videos processed
-  - Uploaded to Shopify: X  (or "Local only — no credentials")
-  - Failed: X (if any)
-Design tokens: X values extracted → assets/design-system.css updated
-Screenshots: saved for visual validation in /test
+Fetch complete:
+  ✅ figma-desktop.png + figma-mobile.png
+  ✅ figma-full.json parsed → design-context.md
 
-Run /prd to define requirements.
+SVG snippets:
+  ✅ snippets/icon-{name}.liquid (×N)
+
+Images uploaded to Shopify:
+  ✅ {asset-name} → shopify://shop_images/{file}
+  ⚠  {failed-asset} → FAILED (manual upload needed)
+
+Design tokens → assets/design-system.css (updated)
+
+Next step: run /prd to define requirements.
 ```
-
-**Do NOT output full artifact contents in conversation. The files are the source of truth.**
 
 ---
 
 ## Rules
-- Never write implementation code — only fetch, process, and organize
-- Never make assumptions about implementation approach — that's for /plan
-- Always fetch both desktop and mobile frames when both URLs are provided
-- MCP asset URLs are ephemeral (localhost proxy) — download them immediately, do not defer
-- Always rename assets meaningfully — never keep Figma's random names
-- If a Figma API call fails, report the error clearly and suggest the user check the URL or permissions
-- If Shopify upload fails for some assets, continue with others and report failures
-- If design-system.css already exists, merge — never overwrite
-- Save screenshots for /test visual validation — do not skip this step
+
+- Never read `figma-full.json` or `figma-full-mobile.json` directly — they are for scripts only
+- Never write implementation code (Liquid, CSS, JS) — that is for /execute
+- Always run `fetch-figma.js` before `parse-figma.js` — order matters
+- MCP Figma tools are NOT used in this workflow — REST API only
+- If an image asset has no CDN URL in `figma-images.json`, skip and report — never guess
+- If Shopify upload fails for an asset, continue with the rest and report all failures at the end
+- If `design-system.css` exists, always merge — never overwrite
+- SVGs go to snippets, not Shopify Files — never reverse this

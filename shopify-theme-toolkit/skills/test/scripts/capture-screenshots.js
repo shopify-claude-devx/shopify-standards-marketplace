@@ -1,165 +1,176 @@
 #!/usr/bin/env node
-// capture-screenshots.js — Capture page screenshots for visual validation
-// Requires: playwright (auto-installed if missing)
+/**
+ * capture-screenshots.js — Capture page screenshots for visual validation
+ *
+ * Uses Playwright to screenshot the live Shopify preview.
+ * Mobile viewport width is read from figma-sections.json (actual Figma frame width),
+ * not hardcoded.
+ *
+ * Usage:
+ *   node capture-screenshots.js --url <preview-url> --feature <feature> [--selectors <file>] [--password <pass>]
+ *
+ * Output (.buildspace/artifacts/{feature}/screenshots/):
+ *   code-desktop.png        — full-page desktop screenshot
+ *   code-mobile.png         — full-page mobile screenshot
+ *   code-{name}-desktop.png — section screenshot (if --selectors provided)
+ *   code-{name}-mobile.png
+ */
+
+'use strict';
 
 const { execSync } = require('node:child_process');
-const { mkdir, rm, readFile, writeFile } = require('node:fs/promises');
+const { mkdir, readFile, writeFile } = require('node:fs/promises');
 const path = require('node:path');
-
-// ─── Config ────────────────────────────────────────────────────
-const VIEWPORTS = {
-  mobile: { width: 360, height: 800 },
-  desktop: { width: 1280, height: 900 },
-};
 
 const WAIT_OPTIONS = { waitUntil: 'networkidle', timeout: 30000 };
 
-// ─── CLI Argument Parsing ──────────────────────────────────────
+// ── Args ─────────────────────────────────────────────────────────
+
 function parseArgs() {
   const args = process.argv.slice(2);
-  const urlIdx = args.indexOf('--url');
-  const outputIdx = args.indexOf('--output');
-  const selectorsIdx = args.indexOf('--selectors');
-  const passwordIdx = args.indexOf('--password');
-
-  if (urlIdx === -1 || !args[urlIdx + 1]) {
-    console.error('Usage: capture-screenshots.js --url <preview-url> --output <dir> [--selectors <file>] [--password <storefront-password>]');
+  const get = (flag) => {
+    const i = args.indexOf(flag);
+    return i !== -1 ? args[i + 1] : null;
+  };
+  const url = get('--url');
+  const feature = get('--feature');
+  if (!url || !feature) {
+    console.error(
+      'Usage: capture-screenshots.js --url <preview-url> --feature <feature> [--selectors <file>] [--password <pass>]'
+    );
     process.exit(1);
   }
-
   return {
-    url: args[urlIdx + 1],
-    outputDir: args[outputIdx + 1] || './screenshots',
-    selectorsFile: args[selectorsIdx + 1] || null,
-    password: args[passwordIdx + 1] || null,
+    url,
+    feature,
+    selectorsFile: get('--selectors'),
+    password: get('--password'),
   };
 }
 
-// ─── Ensure Playwright Installed ───────────────────────────────
+// ── Playwright install ────────────────────────────────────────────
+
 function ensurePlaywright() {
   try {
     require.resolve('playwright');
+    return;
   } catch {
-    console.error('[capture] Playwright not found. Installing...');
-    execSync('npm install playwright', { stdio: 'inherit' });
-    console.error('[capture] Installing Chromium browser...');
-    execSync('npx playwright install chromium', { stdio: 'inherit' });
-    console.error('[capture] Playwright installed successfully.');
+    console.error('[capture] Playwright not found — installing...');
   }
+  execSync('npm install playwright', { stdio: 'inherit' });
+  execSync('npx playwright install chromium', { stdio: 'inherit' });
+  console.error('[capture] Playwright installed');
 }
 
-// ─── Handle Storefront Password ────────────────────────────────
+// ── Storefront password ───────────────────────────────────────────
+
 async function handlePassword(page, password) {
   if (!password) return;
-
   try {
-    // Check if password page is shown
-    const passwordInput = await page.$('input[type="password"]');
-    if (passwordInput) {
-      console.error('[capture] Storefront password page detected. Entering password...');
-      await passwordInput.fill(password);
-      const submitBtn = await page.$('button[type="submit"]');
-      if (submitBtn) {
-        await submitBtn.click();
+    const input = await page.$('input[type="password"]');
+    if (input) {
+      await input.fill(password);
+      const btn = await page.$('button[type="submit"]');
+      if (btn) {
+        await btn.click();
         await page.waitForLoadState('networkidle');
       }
     }
   } catch {
-    // No password page, continue
+    // No password page — continue
   }
 }
 
-// ─── Capture Full Page Screenshots ─────────────────────────────
-async function captureFullPage(page, url, outputDir, password) {
-  const results = [];
+// ── Wait for images ───────────────────────────────────────────────
 
-  for (const [viewport, size] of Object.entries(VIEWPORTS)) {
-    await page.setViewportSize(size);
+async function waitForImages(page) {
+  await page.evaluate(() =>
+    Promise.all(
+      Array.from(document.images)
+        .filter((img) => !img.complete)
+        .map((img) => new Promise((r) => { img.onload = r; img.onerror = r; }))
+    )
+  );
+}
+
+// ── Full-page screenshots ─────────────────────────────────────────
+
+async function captureFullPage(page, url, outputDir, viewports, password) {
+  const results = [];
+  for (const { name, width, height } of viewports) {
+    await page.setViewportSize({ width, height });
     await page.goto(url, WAIT_OPTIONS);
     await handlePassword(page, password);
+    await waitForImages(page);
 
-    // Wait for images to load
-    await page.evaluate(() => {
-      return Promise.all(
-        Array.from(document.images)
-          .filter((img) => !img.complete)
-          .map((img) => new Promise((resolve) => {
-            img.onload = resolve;
-            img.onerror = resolve;
-          }))
-      );
-    });
-
-    const filename = `rendered-${viewport}.png`;
+    const filename = `code-${name}.png`;
     const filepath = path.join(outputDir, filename);
     await page.screenshot({ path: filepath, fullPage: true });
-
-    results.push({ viewport, filename, filepath, width: size.width, height: size.height });
-    console.error(`[capture] ${viewport}: saved ${filename}`);
+    results.push({ viewport: name, filename, status: 'CAPTURED' });
+    console.error(`[capture] ${name}: saved ${filename}`);
   }
-
   return results;
 }
 
-// ─── Capture Section Screenshots ───────────────────────────────
-async function captureSections(page, url, selectors, outputDir, password) {
-  const results = [];
+// ── Section screenshots ───────────────────────────────────────────
 
-  for (const [viewport, size] of Object.entries(VIEWPORTS)) {
-    await page.setViewportSize(size);
+async function captureSections(page, url, selectors, outputDir, viewports, password) {
+  const results = [];
+  for (const { name: vpName, width, height } of viewports) {
+    await page.setViewportSize({ width, height });
     await page.goto(url, WAIT_OPTIONS);
     await handlePassword(page, password);
-
-    // Wait for images
-    await page.evaluate(() => {
-      return Promise.all(
-        Array.from(document.images)
-          .filter((img) => !img.complete)
-          .map((img) => new Promise((resolve) => {
-            img.onload = resolve;
-            img.onerror = resolve;
-          }))
-      );
-    });
+    await waitForImages(page);
 
     for (const { name, selector } of selectors) {
       try {
-        const element = await page.locator(selector);
-        const isVisible = await element.isVisible();
-
-        if (!isVisible) {
-          console.error(`[capture] ${viewport}/${name}: element not visible, skipping`);
-          results.push({ viewport, name, selector, status: 'NOT_VISIBLE' });
+        const el = page.locator(selector);
+        const visible = await el.isVisible();
+        if (!visible) {
+          console.error(`[capture] ${vpName}/${name}: not visible — skipped`);
+          results.push({ viewport: vpName, name, status: 'NOT_VISIBLE' });
           continue;
         }
-
-        const filename = `rendered-${name}-${viewport}.png`;
+        const filename = `code-${name}-${vpName}.png`;
         const filepath = path.join(outputDir, filename);
-        await element.screenshot({ path: filepath });
-
-        results.push({ viewport, name, selector, filename, filepath, status: 'CAPTURED' });
-        console.error(`[capture] ${viewport}/${name}: saved ${filename}`);
+        await el.screenshot({ path: filepath });
+        results.push({ viewport: vpName, name, filename, status: 'CAPTURED' });
+        console.error(`[capture] ${vpName}/${name}: saved ${filename}`);
       } catch (err) {
-        console.error(`[capture] ${viewport}/${name}: FAILED — ${err.message}`);
-        results.push({ viewport, name, selector, status: 'FAILED', error: err.message });
+        console.error(`[capture] ${vpName}/${name}: FAILED — ${err.message}`);
+        results.push({ viewport: vpName, name, status: 'FAILED', error: err.message });
       }
     }
   }
-
   return results;
 }
 
-// ─── Main ──────────────────────────────────────────────────────
+// ── Main ─────────────────────────────────────────────────────────
+
 async function main() {
-  const { url, outputDir, selectorsFile, password } = parseArgs();
+  const { url, feature, selectorsFile, password } = parseArgs();
 
   ensurePlaywright();
 
-  const { chromium } = require('playwright');
-
+  const base = path.resolve(`.buildspace/artifacts/${feature}`);
+  const outputDir = path.join(base, 'screenshots');
   await mkdir(outputDir, { recursive: true });
 
-  // Read selectors file if provided
+  // Read mobileWidth from figma-sections.json
+  let mobileWidth = 390;
+  try {
+    const sectionsRaw = await readFile(path.join(base, 'figma-sections.json'), 'utf-8');
+    const sections = JSON.parse(sectionsRaw);
+    if (sections.mobileWidth) mobileWidth = sections.mobileWidth;
+  } catch {
+    console.error('[capture] figma-sections.json not found — using default mobile width 390px');
+  }
+
+  const viewports = [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'mobile', width: mobileWidth, height: 900 },
+  ];
+
   let selectors = null;
   if (selectorsFile) {
     const raw = await readFile(selectorsFile, 'utf-8');
@@ -167,41 +178,48 @@ async function main() {
   }
 
   console.error(`[capture] URL: ${url}`);
-  console.error(`[capture] Output: ${outputDir}`);
+  console.error(`[capture] Feature: ${feature}`);
+  console.error(`[capture] Mobile width: ${mobileWidth}px`);
   console.error(`[capture] Mode: ${selectors ? 'section-level' : 'full-page'}`);
 
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
-  const page = await context.newPage();
-
+  const { chromium } = require('playwright');
+  let browser;
   try {
-    let results;
+    browser = await chromium.launch({ headless: true });
+  } catch (err) {
+    throw new Error(
+      `Failed to launch Chromium: ${err.message}\n` +
+      `Run: npx playwright install chromium`
+    );
+  }
 
+  let results;
+  try {
+    const context = await browser.newContext();
+    const page = await context.newPage();
     if (selectors && selectors.length > 0) {
-      results = await captureSections(page, url, selectors, outputDir, password);
+      results = await captureSections(page, url, selectors, outputDir, viewports, password);
     } else {
-      results = await captureFullPage(page, url, outputDir, password);
+      results = await captureFullPage(page, url, outputDir, viewports, password);
     }
-
-    // Write results manifest
-    const manifest = {
-      url,
-      timestamp: new Date().toISOString(),
-      mode: selectors ? 'section-level' : 'full-page',
-      results,
-    };
-
-    const manifestPath = path.join(outputDir, 'capture-manifest.json');
-    await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
-
-    // Output manifest to stdout
-    console.log(JSON.stringify(manifest));
   } finally {
     await browser.close();
   }
+
+  const manifest = {
+    feature,
+    url,
+    mobileWidth,
+    timestamp: new Date().toISOString(),
+    mode: selectors ? 'section-level' : 'full-page',
+    results,
+  };
+
+  await writeFile(path.join(outputDir, 'capture-manifest.json'), JSON.stringify(manifest, null, 2));
+  console.log(JSON.stringify(manifest));
 }
 
 main().catch((err) => {
-  console.error(`[capture] Fatal error: ${err.message}`);
+  console.error(`[capture] Fatal: ${err.message}`);
   process.exit(1);
 });

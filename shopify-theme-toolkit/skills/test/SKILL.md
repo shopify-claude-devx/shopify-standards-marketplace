@@ -2,60 +2,60 @@
 name: test
 description: >
   Validate built features — requirements coverage, edge cases, integration,
-  and visual fidelity against Figma. Works after /execute (pipeline) or
-  standalone on any existing code. Includes Playwright visual validation.
+  visual fidelity against Figma, and pixel-accurate position diff with automated
+  fix loop. Works after /execute (pipeline) or standalone on existing code.
 disable-model-invocation: true
 context: fork
 agent: general-purpose
 allowed-tools: Read, Write, Grep, Glob, Agent, Bash, AskUserQuestion
 ---
 
-# Test — Functional Validation
+# Test — Validation, Position Diff, and Fix Loop
 
-You are entering the Test phase. Your job is to verify that the code works correctly — does it meet requirements, handle edge cases, integrate properly, and match the design?
+You are entering the Test phase. Your job is to validate the built code, run a pixel-accurate
+position diff against the Figma design, fix any failures, and deliver a clean build.
 
-**Do NOT fix anything. Only identify issues. Fixing happens in /fix.**
+---
 
 ## Input
+
 Context or overrides: `$ARGUMENTS`
+
+---
 
 ## Mode Detection
 
 ### Pipeline Mode (after /execute)
+
 Check `.buildspace/artifacts/` for feature folders containing `execution-log.md`.
-If found, read from `.buildspace/artifacts/{feature-name}/`:
+If found, read from `.buildspace/artifacts/{feature}/`:
 - `prd.md` — requirements to validate against
-- `plan.md` — test cases and file specs
+- `plan.md` — test cases
 - `execution-log.md` — files created/modified
-- `design-context.md` — if exists, visual validation is needed
+- `design-context.md` — if present, position diff is available
+- `figma-diff-reference.json` — if present, position diff will run
 - `screenshots/figma-desktop.png` + `figma-mobile.png` — Figma reference screenshots
 
-### Standalone Mode (direct invocation)
-If no execution-log.md exists:
-1. Ask the user what to test (section name, file paths, or feature description)
+### Standalone Mode
+
+If no `execution-log.md` found:
+1. Ask the user what to test (section name, file paths, feature description)
 2. Use `Glob` and `Grep` to find the relevant files
 3. Skip requirements validation (no PRD)
-4. Visual validation available if user provides Figma URLs
+4. Position diff available if `figma-diff-reference.json` exists
 
 ---
 
-## Test Process
+## Step 1 — Automated Checks
 
-### 1. Automated Checks
-
-**Shopify Theme Check:**
+### Shopify Theme Check
 ```bash
 shopify theme check --path . --fail-level error
 ```
-If `shopify theme check` is not available, skip and note it.
+If not available, skip and note it.
 
-**Schema JSON Validation:**
-For each section file found in execution-log (or user-specified files), verify:
-- `{% schema %}` block contains valid JSON
-- Setting IDs are non-empty strings
-- Setting types are valid Shopify types
-- Block types are non-empty strings
-
+### Schema JSON Validation
+For each section file from execution-log:
 ```bash
 node -e "
 const fs = require('fs');
@@ -66,137 +66,222 @@ else { console.log('No schema found'); }
 "
 ```
 
-**Integration Checks (via Grep):**
+### Integration Checks
 - New sections registered in templates: `Grep('{section-name}', glob='templates/*.json')`
-- Snippets referenced correctly: `Grep('render "{snippet-name}"', glob='sections/*.liquid')`
-- CSS files loaded: `Grep('{css-filename}', glob='sections/*.liquid')`
-- JS files loaded: `Grep('{js-filename}', glob='sections/*.liquid')`
-- Schema setting IDs unique: `Grep('{setting-id}', glob='sections/*.liquid')` — check for collisions
-
-### 2. Functional Validation
-
-Dispatch the **output-validator** agent:
-
-> Validate feature: {feature-name}
->
-> Files to validate: [list from execution-log or user-specified]
->
-> PRD: .buildspace/artifacts/{feature-name}/prd.md (if exists)
-> Plan: .buildspace/artifacts/{feature-name}/plan.md (if exists)
->
-> Check every file for:
-> 1. Null/blank guards on every setting that outputs HTML
-> 2. Empty collection handling in loops
-> 3. Block rendering covers all declared block types in schema
-> 4. Image tags have alt text and width parameters
-> 5. Links have valid href (not empty anchors)
-> 6. Conditional display works (elements hidden when settings are blank)
-> 7. Schema settings wired correctly to Liquid output
->
-> If PRD exists: check each requirement — Met / Partially met / Not implemented
-> If plan exists: run each test case — Pass / Fail with reason
-
-### 3. Visual Validation (when applicable)
-
-Visual validation runs when:
-- **Pipeline mode:** `design-context.md` and `screenshots/figma-desktop.png` exist
-- **Standalone mode:** User provides Figma URLs (fetch screenshots first using Figma MCP tools)
-
-#### Step 1: Get Figma Screenshots
-- Pipeline: Read from `.buildspace/artifacts/{feature-name}/screenshots/`
-- Standalone: Ask user to provide Figma screenshot files (desktop + mobile). Save them to `.buildspace/artifacts/{feature-name}/screenshots/figma-desktop.png` and `figma-mobile.png`. If user wants to fetch from Figma directly, suggest running `/figma` first.
-
-#### Step 2: Check Playwright
-```bash
-node -e "try { require.resolve('playwright'); console.log('installed'); } catch { console.log('not-installed'); }"
-```
-
-If not installed:
-```bash
-npm install playwright && npx playwright install chromium
-```
-
-#### Step 3: Get Preview URL
-Ask the user for the preview URL where the built feature can be viewed.
-
-If the store has a storefront password, ask for that too.
-
-#### Step 4: Capture Rendered Screenshots
-Determine the CSS selectors for the sections to capture. Create a selectors file:
-```json
-[
-  {"name": "hero-banner", "selector": ".hero-banner"},
-  {"name": "product-grid", "selector": ".product-grid"}
-]
-```
-
-Save to `.buildspace/artifacts/{feature-name}/screenshots/selectors.json`.
-
-Run the capture script:
-```bash
-node ${CLAUDE_SKILL_DIR}/scripts/capture-screenshots.js \
-  --url "{preview-url}" \
-  --output ".buildspace/artifacts/{feature-name}/screenshots" \
-  --selectors ".buildspace/artifacts/{feature-name}/screenshots/selectors.json" \
-  --password "{storefront-password-if-any}"
-```
-
-#### Step 5: Compare with Claude Vision
-Read both image files:
-- Figma screenshot: `.buildspace/artifacts/{feature-name}/screenshots/figma-desktop.png`
-- Rendered screenshot: `.buildspace/artifacts/{feature-name}/screenshots/rendered-desktop.png`
-
-Compare them visually. Evaluate across these dimensions:
-
-| Dimension | What to check |
-|-----------|--------------|
-| Layout & Structure | Positions, proportions, columns, content block order |
-| Spacing | Margins, padding, gaps between elements |
-| Typography | Font sizes, weights, line heights, alignment |
-| Colors | Background, text, accent, border colors |
-| Images & Media | Sizing, positioning, cropping |
-| Interactive Elements | Button, link, form styling |
-
-Rate each dimension: **MATCH** / **MINOR DEVIATION** / **SIGNIFICANT DEVIATION**
-
-For each deviation, identify:
-- Which element is affected
-- What the design shows vs. what the build shows
-- Suggested CSS property or Liquid change to fix
-
-Repeat for mobile (figma-mobile.png vs rendered-mobile.png).
-
-#### Step 6: Cleanup Playwright Files
-After screenshots are captured and compared, remove Playwright entirely:
-```bash
-# Remove Playwright browser binaries (macOS + Linux paths)
-rm -rf ~/Library/Caches/ms-playwright 2>/dev/null || true
-rm -rf ~/.cache/ms-playwright 2>/dev/null || true
-# Remove Playwright npm package from project
-npm uninstall playwright 2>/dev/null || true
-```
-
-Note: Keep the screenshot images in artifacts for reference. Only clean up Playwright package and browser binaries.
+- CSS loaded: `Grep('{css-filename}', glob='sections/*.liquid')`
+- Snippets rendered correctly: `Grep('render "{snippet-name}"', glob='sections/*.liquid')`
+- SVG snippets exist: `Glob('snippets/icon-*.liquid')`
 
 ---
 
-## Test Report
+## Step 2 — Functional Validation
 
-Write to `.buildspace/artifacts/{feature-name}/test-report.md`.
+Dispatch the **output-validator** agent:
 
-Read the template from `${CLAUDE_SKILL_DIR}/templates/test-report-template.md` and fill it in with the test results.
+```
+Validate feature: {feature-name}
 
-Save the report. Tell the user:
+Files: [list from execution-log or user-specified]
+PRD: .buildspace/artifacts/{feature-name}/prd.md (if exists)
+Plan: .buildspace/artifacts/{feature-name}/plan.md (if exists)
+
+Check every file for:
+1. Null/blank guards on every setting that outputs HTML
+2. Empty collection handling in loops
+3. Block rendering covers all block types declared in schema
+4. Images have alt text, width, height attributes
+5. Links have valid href
+6. Conditional display works (blank settings hide elements)
+7. Schema settings correctly wired to Liquid output
+
+If PRD exists: verify each requirement — Met / Partially met / Not implemented
+If plan exists: run each test case — Pass / Fail with reason
+```
+
+---
+
+## Step 3 — Screenshot Capture
+
+Run only if `figma-diff-reference.json` exists in the feature folder.
+If it does not exist, skip to Step 4 (visual-only mode).
+
+### Ask for preview URL
+
+Ask the user for the Shopify preview URL (e.g. `http://127.0.0.1:9292`) and storefront password if any.
+
+### Run capture
+
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/capture-screenshots.js \
+  --url "{preview-url}" \
+  --feature "{feature}" \
+  --password "{password-if-any}"
+```
+
+Saves to `.buildspace/artifacts/{feature}/screenshots/`:
+- `code-desktop.png` — rendered at 1440px viewport
+- `code-mobile.png` — rendered at mobileWidth from figma-sections.json
+
+---
+
+## Step 4 — Position Diff + Fix Loop
+
+**This is the accuracy engine. Run for every build from Figma.**
+
+Skip if `figma-diff-reference.json` does not exist (no Figma source for this feature).
+
+### Run desktop diff
+
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/position-diff.js \
+  --url "{preview-url}" \
+  --feature "{feature}"
+```
+
+### Run mobile diff (if mobile frame exists)
+
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/position-diff.js \
+  --url "{preview-url}" \
+  --feature "{feature}" \
+  --mobile
+```
+
+### Read results
+
+Read `diff-results-desktop.json` and `diff-results-mobile.json`.
+
+Each result entry:
+```json
+{ "nodeId": "111:493", "selector": ".hero-banner__body", "status": "FAIL",
+  "failures": ["y: browser=300px figma=272px (off by 28px)"] }
+```
+
+### Fix loop (max 5 iterations)
+
+**Do NOT ask permission to fix. Fix automatically until all pass or 5 iterations are reached.**
+
+```
+Iteration 1:
+  1. Read all FAIL entries from diff results
+  2. For each failure: identify which CSS property/value needs changing
+     - Position offset → padding, margin, gap on parent or sibling
+     - Size mismatch → width, height, min-height on the element
+     - Font-size mismatch → check rem conversion (base 16px)
+     - Font-weight mismatch → check if CSS variable resolves correctly
+     - Color mismatch → check CSS custom property resolution
+  3. Apply targeted fixes to the CSS file
+  4. Re-run capture-screenshots.js
+  5. Re-run position-diff.js (desktop + mobile)
+  6. If all PASS → done
+  7. If still failures → proceed to next iteration
+
+After 5 iterations: stop. Report remaining failures in the test report.
+Do NOT continue iterating. Remaining issues require human inspection.
+```
+
+**Common root causes:**
+
+| Symptom | Likely cause |
+|---------|-------------|
+| All elements offset by same amount | `overflow: hidden` on section wrapper — use `clip-path` instead |
+| Element y off but x correct | Wrong `padding-top` on parent, or missing `margin-top` |
+| Width wrong on text element | Missing `max-width` or `width: 100%` on parent |
+| Font-size mismatch | rem calculation wrong — 32px = 2rem, 14px = 0.875rem |
+| `0 elements found` error | `data-figma-id` missing from Liquid — check execution |
+| Font-weight mismatch | CSS variable not resolving, or wrong fallback |
+
+---
+
+## Step 5 — Visual Comparison
+
+After position diff passes (or max iterations reached), run visual comparison.
+
+Read both pairs of screenshots:
+- `screenshots/figma-desktop.png` vs `screenshots/code-desktop.png`
+- `screenshots/figma-mobile.png` vs `screenshots/code-mobile.png`
+
+Compare across:
+
+| Dimension | What to check |
+|-----------|--------------|
+| Layout & Structure | Positions, proportions, column counts, content order |
+| Spacing | Margins, padding, gaps |
+| Typography | Font rendering, line heights, alignment |
+| Colors | Background, text, borders, accents |
+| Images & Media | Sizing, cropping, positioning |
+| Interactive Elements | Button, link styling |
+
+Rate each: **MATCH** / **MINOR DEVIATION** / **SIGNIFICANT DEVIATION**
+
+For significant deviations not caught by position-diff (e.g. image cropping, overall composition):
+note in the test report but do not attempt to auto-fix — these require human judgment.
+
+Font rendering differences between Figma and browsers are expected and not fixable. Do not flag them.
+
+---
+
+## Step 6 — Cleanup
+
+Remove build-time scaffolding before delivery.
+
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/cleanup-figma-ids.js --theme-path .
+```
+
+This strips all `data-figma-id` and `data-figma-section` attributes from every `.liquid` file.
+
+Verify the attributes are gone:
+```bash
+grep -r "data-figma-id" sections/ snippets/ 2>/dev/null | head -5
+```
+
+If any remain, the regex missed them — report to user.
+
+---
+
+## Step 7 — Generate Report
+
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/generate-report.js {feature}
+```
+
+This auto-fills `report.md` with files built, diff results, and asset summary.
+
+Read the generated `.buildspace/artifacts/{feature}/report.md` and add:
+- **Verdict** (1 line): `DELIVERED` or `NEEDS REVISION — {reason}`
+- **Next steps** (2–3 lines): what the merchant or developer should do next
+
+Do NOT output the full report to conversation. Tell the user:
 - Where the report was saved
-- Verdict only (PASS / NEEDS FIX)
-- If issues: one-line count (e.g., "2 functional issues, 1 visual deviation")
+- Overall verdict
+- Count of remaining diff failures (if any)
+- Count of visual deviations (if any)
 
-**Do NOT output the full report in conversation.**
+---
+
+## Step 8 — Remove Playwright npm Package
+
+Keep the Chromium browser cache (avoids re-downloading ~170MB next time).
+Remove only the npm package from the project:
+
+```bash
+npm uninstall playwright 2>/dev/null || true
+```
+
+Do NOT run `rm -rf ~/Library/Caches/ms-playwright` or `rm -rf ~/.cache/ms-playwright`.
+The browser cache must persist for future test runs.
 
 ---
 
 ## Rules
-- Be thorough — check every requirement, every test case, every edge case
-- Be honest — if the code is good, say PASS. Don't invent issues
-- Visual validation: design intent, not pixel perfection. Font rendering differences are expected
-- Always cleanup Playwright binaries after capture. If install fails, fall back to manual screenshots
+
+- Run position-diff before visual comparison — it catches more with less AI effort
+- Fix loop runs automatically, no permission needed, max 5 iterations
+- Cleanup (remove data-figma-id) always runs before report — never skip
+- Visual comparison: design intent, not pixel perfection. Font rendering ≠ bug.
+- If position-diff reports `0 elements found`, stop immediately — data-figma-id is missing.
+  Check with the developer before continuing.
+- Never fix issues that require changing the design (layout fundamentally different between
+  Figma and what was planned). Report as "design conflict" for human resolution.
+- Keep Playwright browser cache. Only remove npm package after each run.
