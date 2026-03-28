@@ -58,10 +58,10 @@ Node {nodeId} → .{section-name} [section]
 
 ## Assets
 
-### Images (uploaded to Shopify Files)
-| Asset Name | Node ID | CDN Source |
-|------------|---------|------------|
-| `{section-name}-{element}` | `{nodeId}` | [CDN URL in figma-assets.json] |
+### Images
+| Asset Name | Node ID | Viewport |
+|------------|---------|----------|
+| `{section-name}-{element}` | `{nodeId}` | desktop |
 
 ### SVGs (inline snippets)
 | Snippet Name | Node ID | Output Path |

@@ -1,23 +1,24 @@
 ---
 name: figma
 description: >
-  Fetch Figma design via REST API, parse exact design values, create SVG snippets,
+  Fetch Figma design via REST API, parse exact design values, export assets,
   upload images to Shopify. Use before /prd for the Figma-to-code workflow.
   Requires FIGMA_TOKEN, SHOPIFY_STORE_URL, SHOPIFY_ACCESS_TOKEN in .env.
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 ---
 
-# Figma — Design Fetch, Parse, Assets
+# Figma — Design Fetch, Parse, Export, Upload
 
 You are entering the Figma phase. Your job:
 1. Pre-flight the project (package.json, .gitignore, .env)
-2. Fetch the raw Figma design via REST API (3 API calls, 0 AI tokens)
-3. Parse the JSON into a clean `design-context.md` (0 AI tokens)
-4. Create SVG icon snippets from the design
-5. Upload image assets to Shopify Files
+2. Fetch the raw Figma design via REST API (2 API calls, 0 AI tokens)
+3. Parse the JSON into a clean `design-context.md` (0 AI tokens, auto-cleans raw JSON)
+4. Review and fix asset names — make them meaningful
+5. Export SVG snippets and image assets from Figma
+6. Upload image assets to Shopify Files (with dedup)
 
-**Do NOT write any implementation code. Do NOT plan. Only fetch, parse, and organize.**
+**Do NOT write any implementation code. Do NOT plan. Only fetch, parse, export, and upload.**
 
 ---
 
@@ -47,6 +48,8 @@ SHOPIFY_ACCESS_TOKEN=shpat_...
 ```
 
 If any are missing, tell the user exactly which ones and stop.
+
+Note: Figma Personal Access Tokens expire after 90 days maximum. If the token is expired, the user needs to generate a new one at figma.com/developers.
 
 ### Step 2: Ensure package.json exists
 
@@ -90,7 +93,7 @@ Derive a short kebab-case feature name from the URL file name or design name
 
 **Tokens used: 0. Scripts handle all API calls.**
 
-Run `fetch-figma.js` (3 REST API calls upfront, then fully offline):
+Run `fetch-figma.js` (2 REST API calls — node tree + screenshots):
 
 ```bash
 source .env && FIGMA_TOKEN="$FIGMA_TOKEN" node ${CLAUDE_SKILL_DIR}/scripts/fetch-figma.js \
@@ -101,14 +104,13 @@ source .env && FIGMA_TOKEN="$FIGMA_TOKEN" node ${CLAUDE_SKILL_DIR}/scripts/fetch
 ```
 
 This saves to `.buildspace/artifacts/{feature}/`:
-- `figma-full.json` — desktop node tree (AI never reads this)
-- `figma-full-mobile.json` — mobile node tree (if mobile provided)
+- `figma-full.json` — desktop node tree (scripts only, deleted after parse)
+- `figma-full-mobile.json` — mobile node tree (if mobile provided, deleted after parse)
 - `figma-sections.json` — section index with `mobileWidth` from actual Figma frame
-- `figma-images.json` — CDN URL map for all image fills
 - `screenshots/figma-desktop.png` — Figma design screenshot
 - `screenshots/figma-mobile.png` — Figma mobile screenshot (if provided)
 
-If the script fails, check: correct node ID? Token has read access to the file?
+If the script fails, check: correct node ID? Token has read access to the file? Token not expired?
 
 ---
 
@@ -127,84 +129,75 @@ This reads `figma-full.json` locally (zero API calls) and writes:
 - Typography table with exact values: family, px, rem, weight, line-height, letter-spacing, color, node ID
 - Layout: flex-direction, gap, padding, background per frame
 - Layer structure with every node ID and BEM class suggestion
-- Asset lists: images (with CDN URL) and SVGs (with snippet name)
+- Asset lists: images (with viewport) and SVGs (with snippet name)
 - Responsive differences between desktop and mobile frames
 
 **`figma-assets.json`** — Structured IMAGE and SVG asset lists with node IDs.
 
 **`figma-diff-reference.json`** — Expected positions + typography per node ID (used by position-diff.js in /test).
 
-After running, read `design-context.md` and confirm the layer structure looks correct.
+After parsing, the script **auto-deletes** `figma-full.json` and `figma-full-mobile.json` to save disk space. If you need to re-parse, run Phase 1 again first.
 
 ---
 
-## Phase 3 — SVG Snippets [SCRIPT]
+## Phase 2b — Review Asset Names
 
-**Tokens used: 0 for fetching. SVG code goes straight to snippets.**
+Read `figma-assets.json` and `design-context.md` (the Layer Structure section).
 
-If `figma-assets.json` contains SVG entries:
+For each asset, check if the name is meaningful. Figma layers often have generic names like "Frame 47" or "Rectangle 12" — the parse script handles most of these, but review the results.
+
+**Naming conventions:**
+- **Images:** `{section-name}-{purpose}` — e.g., `hero-banner-background`, `hero-banner-product-photo`, `hero-banner-mobile-background`
+- **SVGs:** `icon-{descriptive-name}` — e.g., `icon-star`, `icon-arrow-right`, `icon-close`
+
+If any asset has a generic or unclear name:
+1. Look at the Layer Structure in `design-context.md` to understand what the asset represents
+2. Edit `figma-assets.json` to update the `name` field (and `snippetName` for SVGs)
+3. For images, always use the section name as prefix
+
+**Do NOT rename assets that already have meaningful names from the designer's layer names.**
+
+---
+
+## Phase 3 — Export Assets [SCRIPT]
+
+**Tokens used: 0. Script handles Figma API export and file downloads.**
 
 ```bash
-source .env && FIGMA_TOKEN="$FIGMA_TOKEN" node ${CLAUDE_SKILL_DIR}/scripts/fetch-svgs.js \
+source .env && FIGMA_TOKEN="$FIGMA_TOKEN" node ${CLAUDE_SKILL_DIR}/scripts/export-assets.js \
   {desktopFileKey} \
   {feature} \
   --theme-path .
 ```
 
-This fetches SVG export code from Figma for each SVG node and writes:
-- `snippets/icon-{name}.liquid` — clean SVG code (XML declaration stripped)
+This exports from Figma using the `/v1/images/{key}` endpoint:
+- **SVGs** → downloaded and saved as `snippets/icon-{name}.liquid` (cleaned: XML declaration stripped)
+- **Images** → exported as PNG at 2x scale, saved to `.buildspace/artifacts/{feature}/assets/{name}.png`
 
-After running, verify the snippet files exist and contain valid SVG.
+The script updates `figma-assets.json` with local paths and export status.
 
-If a snippet already exists with the same name, **do not overwrite** — report the conflict to the user.
+If a snippet already exists with the same name, it is **skipped** — not overwritten.
 
 ---
 
-## Phase 4 — Image Upload [SCRIPT]
+## Phase 4 — Upload to Shopify [SCRIPT]
 
-**Tokens used: 0 for download/upload. Scripts handle all file I/O.**
-
-Read `figma-assets.json`. For each IMAGE asset, build `asset-input.json`:
-
-```bash
-# Read the CDN URL from figma-assets.json images[n].cdnUrl
-# Write to .buildspace/artifacts/{feature}/asset-input.json
-```
-
-Write `.buildspace/artifacts/{feature}/asset-input.json`:
-
-```json
-{
-  "section": "{feature}",
-  "assets": [
-    {
-      "name": "{asset.name}",
-      "type": "IMAGE",
-      "upload": true,
-      "url": "{asset.cdnUrl}",
-      "alt": "{human-readable description from layer name}",
-      "viewport": "{asset.viewport}"
-    }
-  ]
-}
-```
-
-Then run:
+**Tokens used: 0. Script handles all Shopify API calls.**
 
 ```bash
 source .env && SHOPIFY_STORE_URL="$SHOPIFY_STORE_URL" SHOPIFY_ACCESS_TOKEN="$SHOPIFY_ACCESS_TOKEN" \
-  node ${CLAUDE_SKILL_DIR}/scripts/process-assets.js \
-  --input .buildspace/artifacts/{feature}/asset-input.json
+  node ${CLAUDE_SKILL_DIR}/scripts/process-assets.js {feature}
 ```
 
-This downloads images from Figma CDN and uploads them to Shopify Files via `stagedUploadsCreate` → presigned URL → `fileCreate`.
+This reads `figma-assets.json` directly (no manual JSON construction needed) and:
+1. **Dedup check** — queries Shopify Files to see if each image already exists. Skips duplicates.
+2. **Upload** — for new images: `stagedUploadsCreate` → presigned URL upload → `fileCreate`
+3. **Writes `asset-manifest.json`** with `shopifyUrl` values for each asset
 
-Read the generated `asset-manifest.json`:
-- `REGISTERED` — uploaded to Shopify, `shopifyUrl` is set
-- `DOWNLOADED` — local only (no Shopify credentials, won't happen since credentials are always present)
-- `FAILED` — report to user, do not silently skip
-
-If an asset CDN URL is null (not found in `figma-images.json`), skip it and tell the user which layer it was.
+Asset statuses in the manifest:
+- `REGISTERED` — newly uploaded to Shopify
+- `ALREADY_EXISTS` — already in Shopify Files, skipped (shopifyUrl still set)
+- `FAILED` — upload failed, report to user
 
 ---
 
@@ -217,13 +210,14 @@ Design context saved → .buildspace/artifacts/{feature}/design-context.md
 
 Fetch complete:
   ✅ figma-desktop.png + figma-mobile.png
-  ✅ figma-full.json parsed → design-context.md
+  ✅ Parsed → design-context.md (raw JSON auto-cleaned)
 
 SVG snippets:
   ✅ snippets/icon-{name}.liquid (×N)
 
 Images uploaded to Shopify:
   ✅ {asset-name} → shopify://shop_images/{file}
+  ↩ {asset-name} → already exists (skipped)
   ⚠  {failed-asset} → FAILED (manual upload needed)
 
 Next step: run /prd to define requirements.
@@ -233,10 +227,11 @@ Next step: run /prd to define requirements.
 
 ## Rules
 
-- Never read `figma-full.json` or `figma-full-mobile.json` directly — they are for scripts only
+- Never read `figma-full.json` directly — it is for scripts only and is auto-deleted after parse
 - Never write implementation code (Liquid, CSS, JS) — that is for /execute
 - Always run `fetch-figma.js` before `parse-figma.js` — order matters
+- Always review asset names in Phase 2b before exporting — meaningful names matter for Shopify Files
 - MCP Figma tools are NOT used in this workflow — REST API only
-- If an image asset has no CDN URL in `figma-images.json`, skip and report — never guess
+- If an image export returns no URL from Figma, report it — the node may be invisible or empty
 - If Shopify upload fails for an asset, continue with the rest and report all failures at the end
 - SVGs go to snippets, not Shopify Files — never reverse this

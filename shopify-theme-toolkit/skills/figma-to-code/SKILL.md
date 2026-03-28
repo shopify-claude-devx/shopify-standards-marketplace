@@ -136,7 +136,7 @@ Check `.buildspace/artifacts/{feature}/asset-manifest.json`. Use `shopifyUrl` va
 
 ### SVGs → inline snippets (from asset-manifest.json)
 
-SVG icons were already written to `snippets/icon-{name}.liquid` by `fetch-svgs.js`.
+SVG icons were already written to `snippets/icon-{name}.liquid` by `export-assets.js`.
 Reference them with `{% render %}`:
 
 ```liquid

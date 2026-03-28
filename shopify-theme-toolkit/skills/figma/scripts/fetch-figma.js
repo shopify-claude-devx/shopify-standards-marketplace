@@ -241,13 +241,6 @@ async function main() {
     }
   }
 
-  const imagesResponse = await figmaGet(`/v1/files/${fileKey}/images`);
-  await writeFile(
-    path.join(artifactDir, 'figma-images.json'),
-    JSON.stringify(imagesResponse, null, 2)
-  );
-  log('Saved figma-images.json');
-
   const summary = {
     feature,
     fileKey,
@@ -258,7 +251,6 @@ async function main() {
       'figma-full.json',
       mobileNodeId ? 'figma-full-mobile.json' : null,
       'figma-sections.json',
-      'figma-images.json',
       'screenshots/figma-desktop.png',
       mobileNodeId ? 'screenshots/figma-mobile.png' : null,
     ].filter(Boolean),

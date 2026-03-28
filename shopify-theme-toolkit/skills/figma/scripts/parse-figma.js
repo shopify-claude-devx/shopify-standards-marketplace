@@ -1,6 +1,6 @@
 'use strict';
 
-const { readFile, writeFile } = require('node:fs/promises');
+const { readFile, writeFile, unlink } = require('node:fs/promises');
 const path = require('node:path');
 
 function log(msg) {
@@ -91,13 +91,18 @@ function extractEffects(effects) {
 }
 
 
-const GENERIC_NAME_RE = /^(frame|rectangle|ellipse|group|component|instance|vector|image|polygon|star|line|boolean-operation|mask|union|subtract|intersect|exclude)\s*\d*$/i;
+// Always-generic Figma auto-names (with or without a trailing number)
+const ALWAYS_GENERIC_RE = /^(frame|rectangle|ellipse|group|component|instance|vector|image|boolean-operation|mask|union|subtract|intersect|exclude)\s*\d*$/i;
+// Shape types that are only generic when followed by a number (bare "star" or "line" can be meaningful icon names)
+const NUMBERED_GENERIC_RE = /^(star|polygon|line)\s+\d+$/i;
 
 function isGenericName(name) {
-  return !name || GENERIC_NAME_RE.test(name.trim());
+  if (!name) return true;
+  const trimmed = name.trim();
+  return ALWAYS_GENERIC_RE.test(trimmed) || NUMBERED_GENERIC_RE.test(trimmed);
 }
 
-function meaningfulName(layerName, { parentName, nodeType, siblingIndex, totalSiblings }) {
+function meaningfulName(layerName, { parentName, grandparentName, nodeType, siblingIndex, totalSiblings }) {
   let base;
 
   if (!isGenericName(layerName)) {
@@ -105,9 +110,16 @@ function meaningfulName(layerName, { parentName, nodeType, siblingIndex, totalSi
   } else if (parentName && !isGenericName(parentName)) {
     base = toKebab(parentName);
     if (totalSiblings > 1) base = `${base}-${siblingIndex + 1}`;
+  } else if (grandparentName && !isGenericName(grandparentName)) {
+    base = toKebab(grandparentName);
+    if (totalSiblings > 1) base = `${base}-${siblingIndex + 1}`;
   } else {
-    const typeLabel = nodeType === 'IMAGE' ? 'image' : 'graphic';
-    base = totalSiblings > 1 ? `${typeLabel}-${siblingIndex + 1}` : typeLabel;
+    // All ancestors are generic — use type-based fallback
+    if (nodeType === 'IMAGE') {
+      base = totalSiblings > 1 ? `background-${siblingIndex + 1}` : 'background';
+    } else {
+      base = totalSiblings > 1 ? `graphic-${siblingIndex + 1}` : 'graphic';
+    }
   }
 
   if (nodeType === 'SVG') {
@@ -156,10 +168,9 @@ function relativeBounds(nodeBox, originBox) {
 
 
 class FigmaParser {
-  constructor(desktopRoot, mobileRoot, imagesMap, sectionName) {
+  constructor(desktopRoot, mobileRoot, sectionName) {
     this.desktop = desktopRoot.document;
     this.mobile = mobileRoot ? mobileRoot.document : null;
-    this.imagesMap = imagesMap;
     this.sectionName = sectionName;
 
     this.originBox = this.desktop.absoluteBoundingBox || { x: 0, y: 0 };
@@ -178,7 +189,7 @@ class FigmaParser {
     return this;
   }
 
-  walkNode(node, depth, parentBem, isRoot = false, parentName = '', siblingIndex = 0, totalSiblings = 1) {
+  walkNode(node, depth, parentBem, isRoot = false, parentName = '', grandparentName = '', siblingIndex = 0, totalSiblings = 1) {
     if (!node || typeof node !== 'object') return;
     const { id: nodeId, name = '', type, children } = node;
     if (!nodeId || !type) return;
@@ -229,7 +240,7 @@ class FigmaParser {
     }
 
     if (isSvgNode(node)) {
-      const iconSlug = meaningfulName(name, { parentName, nodeType: 'SVG', siblingIndex, totalSiblings });
+      const iconSlug = meaningfulName(name, { parentName, grandparentName, nodeType: 'SVG', siblingIndex, totalSiblings });
       const snippetName = uniqueAssetName(`icon-${iconSlug}`);
       this.svgAssets.push({ nodeId, name: snippetName, layerName: name, snippetName });
       this.layerLines.push(`${indent}Node ${nodeId} → {% render '${snippetName}' %} [SVG]`);
@@ -238,10 +249,9 @@ class FigmaParser {
 
     const imageRef = getImageRef(node);
     if (imageRef) {
-      const cdnUrl = this.imagesMap[imageRef] || null;
-      const imgSlug = meaningfulName(name, { parentName, nodeType: 'IMAGE', siblingIndex, totalSiblings });
+      const imgSlug = meaningfulName(name, { parentName, grandparentName, nodeType: 'IMAGE', siblingIndex, totalSiblings });
       const assetName = uniqueAssetName(`${this.sectionName}-${imgSlug}`);
-      this.imageAssets.push({ nodeId, name: assetName, layerName: name, cdnUrl, viewport: 'desktop' });
+      this.imageAssets.push({ nodeId, name: assetName, layerName: name, viewport: 'desktop' });
 
       this.diffNodes[nodeId] = {
         selector: `.${bem}`,
@@ -305,7 +315,7 @@ class FigmaParser {
 
     if (Array.isArray(children)) {
       for (let i = 0; i < children.length; i++) {
-        this.walkNode(children[i], depth + 1, bem, false, name, i, children.length);
+        this.walkNode(children[i], depth + 1, bem, false, name, parentName, i, children.length);
       }
     }
   }
@@ -354,11 +364,31 @@ class FigmaParser {
       }
     }
 
+    // Match children by name instead of array index — handles reordering, hidden layers, and differing child counts
     const dChildren = dNode.children || [];
     const mChildren = mNode.children || [];
-    const len = Math.min(dChildren.length, mChildren.length);
-    for (let i = 0; i < len; i++) {
-      this.compareNodes(dChildren[i], mChildren[i], changes, bem);
+    const mChildMap = new Map();
+    for (const mc of mChildren) {
+      // Skip nulls and only keep the first child with each name (duplicates are common with Figma auto-naming)
+      if (mc && mc.name && !mChildMap.has(mc.name)) {
+        mChildMap.set(mc.name, mc);
+      }
+    }
+
+    // If all children have duplicate/empty names, fall back to index-based matching
+    if (mChildMap.size === 0 && mChildren.length > 0 && dChildren.length > 0) {
+      const len = Math.min(dChildren.length, mChildren.length);
+      for (let i = 0; i < len; i++) {
+        this.compareNodes(dChildren[i], mChildren[i], changes, bem);
+      }
+    } else {
+      for (const dc of dChildren) {
+        if (!dc || !dc.name) continue;
+        const mc = mChildMap.get(dc.name);
+        if (mc) {
+          this.compareNodes(dc, mc, changes, bem);
+        }
+      }
     }
   }
 
@@ -405,7 +435,7 @@ class FigmaParser {
     });
 
     const imgRows = this.imageAssets.map((a) =>
-      `| \`${a.name}\` | \`${a.nodeId}\` | ${a.cdnUrl ? '[CDN URL in figma-assets.json]' : '⚠ not found in figma-images.json'} |`
+      `| \`${a.name}\` | \`${a.nodeId}\` | ${a.viewport} |`
     );
     const svgRows = this.svgAssets.map((a) =>
       `| \`${a.snippetName}\` | \`${a.nodeId}\` | \`snippets/${a.snippetName}.liquid\` |`
@@ -454,9 +484,9 @@ ${this.layerLines.join('\n')}
 
 ## Assets
 
-### Images (uploaded to Shopify Files)
-| Asset Name | Node ID | CDN Source |
-|------------|---------|------------|
+### Images
+| Asset Name | Node ID | Viewport |
+|------------|---------|----------|
 ${imgRows.join('\n') || '| (none) | | |'}
 
 ### SVGs (inline snippets)
@@ -514,20 +544,6 @@ async function main() {
     log('No mobile frame (figma-full-mobile.json not present)');
   }
 
-  const imagesRaw = await readFile(path.join(base, 'figma-images.json'), 'utf-8').catch(() => {
-    throw new Error('figma-images.json not found. Run fetch-figma.js first.');
-  });
-  let imagesData;
-  try {
-    imagesData = JSON.parse(imagesRaw);
-  } catch (err) {
-    throw new Error(`figma-images.json is not valid JSON: ${err.message}. Re-run fetch-figma.js.`);
-  }
-  const imagesMap = (imagesData && typeof imagesData.images === 'object') ? imagesData.images : {};
-  if (Object.keys(imagesMap).length === 0) {
-    log('Note: figma-images.json has no image entries (no image fills in this design, or the design has no rasterized assets)');
-  }
-
   const rootDoc = desktopRoot.document;
   if (!rootDoc.name && !feature) {
     throw new Error('Cannot derive section name: root document has no name and no feature argument provided.');
@@ -535,7 +551,7 @@ async function main() {
   const sectionName = toKebab(rootDoc.name || feature);
   log(`Section: "${sectionName}"`);
 
-  const parser = new FigmaParser(desktopRoot, mobileRoot, imagesMap, sectionName);
+  const parser = new FigmaParser(desktopRoot, mobileRoot, sectionName);
   parser.run();
 
   const designContext = parser.buildDesignContext();
@@ -558,6 +574,14 @@ async function main() {
   };
   await writeFile(path.join(base, 'figma-diff-reference.json'), JSON.stringify(diffOut, null, 2));
   log('Saved figma-diff-reference.json');
+
+  // Auto-delete raw Figma JSON files — they are only needed for parsing
+  await unlink(path.join(base, 'figma-full.json')).catch(() => {});
+  log('Cleaned up figma-full.json');
+  if (mobileRoot) {
+    await unlink(path.join(base, 'figma-full-mobile.json')).catch(() => {});
+    log('Cleaned up figma-full-mobile.json');
+  }
 
   const summary = {
     feature,

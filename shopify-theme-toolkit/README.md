@@ -142,23 +142,25 @@ This plugin is designed to minimize token usage and API costs:
 
 The Figma MCP server is auto-configured via `.mcp.json` when the plugin is installed. No manual setup needed.
 
-`/figma` handles:
-- Fetching desktop + mobile design context via MCP
-- Downloading and renaming assets meaningfully (e.g., `Frame 47` → `hero-banner-background.png`)
-- Uploading assets to Shopify via Admin API (requires `.env` credentials)
-- Extracting design tokens and creating/updating `assets/design-system.css`
-- Saving screenshots for visual validation in `/test`
+`/figma` runs a 5-phase pipeline (0 AI tokens for fetch/parse/export):
+
+1. **Fetch** (`fetch-figma.js`) — 2 REST API calls: node tree + screenshots
+2. **Parse** (`parse-figma.js`) — offline JSON parsing → `design-context.md`, `figma-assets.json`, `figma-diff-reference.json`. Auto-deletes raw JSON.
+3. **Review names** — Claude reviews asset names and renames generics to meaningful names (e.g., `Frame 47` → `hero-banner-background`)
+4. **Export** (`export-assets.js`) — exports SVGs to `snippets/icon-{name}.liquid` and images as PNGs via the Figma export endpoint
+5. **Upload** (`process-assets.js`) — uploads images to Shopify Files with dedup check (skips already-existing files)
 
 ### Shopify Asset Upload
 
 To enable automatic asset upload to Shopify, create a `.env` file in your project root:
 
 ```
+FIGMA_TOKEN=figd_xxxxxxxxxxxxx
 SHOPIFY_STORE_URL=yourstore.myshopify.com
 SHOPIFY_ACCESS_TOKEN=shpat_xxxxxxxxxxxxx
 ```
 
-The token needs `read_files` and `write_files` access scopes. Without credentials, assets are downloaded locally but not uploaded.
+The Shopify token needs `read_files` and `write_files` access scopes. Figma PATs expire after 90 days max — regenerate at figma.com/developers when expired. Without Shopify credentials, images are exported locally but not uploaded.
 
 ### Visual Validation
 

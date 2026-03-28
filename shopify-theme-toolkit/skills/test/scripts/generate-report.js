@@ -140,7 +140,7 @@ ${files.length > 0 ? files.map((f) => `- \`${f}\``).join('\n') : '_See execution
 ## Assets
 
 ### Images (Shopify Files)
-${(assets?.images || []).map((a) => `- \`${a.name}\` — ${a.cdnUrl ? '✅ uploaded' : '⚠ no CDN URL'}`).join('\n') || '_none_'}
+${(assets?.images || []).map((a) => `- \`${a.name}\` — ${a.status === 'EXPORTED' || a.status === 'REGISTERED' || a.status === 'ALREADY_EXISTS' ? '✅' : '⚠ ' + (a.status || 'unknown')}`).join('\n') || '_none_'}
 
 ### SVG Snippets
 ${(assets?.svgs || []).map((a) => `- \`${a.snippetPath || a.snippetName + '.liquid'}\` — ${a.status === 'SNIPPET_CREATED' ? '✅' : '⚠ ' + (a.status || 'unknown')}`).join('\n') || '_none_'}
