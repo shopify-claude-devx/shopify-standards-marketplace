@@ -81,6 +81,7 @@ After each builder returns, record:
 - File path created/modified
 - Whether checklist passed
 - Any conflicts or issues reported
+- **Wrapper selector** (if the builder reports one for a section file)
 
 If a builder reports a conflict or ambiguity:
 - **Plan vs. skill conflict:** Stop and ask the user which to follow
@@ -107,11 +108,31 @@ After all builders complete:
 
 Read the template from `${CLAUDE_SKILL_DIR}/templates/execution-log-template.md` and fill it in with the build results from all builders.
 
-4. **Report to user:**
+4. **Write selectors.json** to `.buildspace/artifacts/{feature-name}/selectors.json`.
+
+Collect all wrapper selectors reported by builders (for section `.liquid` files only). Write a JSON array mapping section names to their CSS selectors:
+
+```json
+[
+  { "name": "hero-banner", "selector": ".hero-banner" },
+  { "name": "features-grid", "selector": ".features-grid" }
+]
+```
+
+The `name` is derived from the section filename (kebab-case, without path or extension).
+The `selector` is the wrapper class reported by the builder (prefixed with `.`).
+
+If no section files were built (e.g., only CSS/JS modifications), skip this step.
+
+This file is used by `/compare` to capture section-level screenshots of the developed page.
+
+5. **Report to user:**
    - Where the execution log was saved
    - Count of files created/modified
    - Builder results summary (all passed / issues found)
-   - Suggest running `/test`
+   - If `selectors.json` was written, mention it
+   - If Figma screenshots exist (`.buildspace/artifacts/{feature}/screenshots/figma-*.png`), suggest running `/compare` for visual comparison
+   - Otherwise suggest running `/test`
 
 **Do NOT output file contents in conversation. The code files and execution log are the source of truth.**
 

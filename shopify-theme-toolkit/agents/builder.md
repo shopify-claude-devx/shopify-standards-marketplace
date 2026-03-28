@@ -59,7 +59,10 @@ File: {path}
 Action: created / modified
 Checklist: all passed / [items fixed]
 Conflicts: none / [what was found]
+Wrapper selector: {.section-wrapper-class or "none"}
 ```
+
+**Wrapper selector:** If the file is a section `.liquid` file, report the outermost wrapper CSS class used (e.g., `.hero-banner`). This is the class on the top-level `<div>` or `<section>` element that wraps the entire section's content. If the file is not a section (CSS, JS, snippet, template), report "none".
 
 ## Rules
 - Build exactly ONE file per invocation
