@@ -63,12 +63,13 @@ If no mobile URL, omit the `--mobile` flag.
 
 The script will:
 1. Parse both Figma URLs to extract file keys and node IDs
-2. Fetch the node tree for both frames
+2. Fetch the node tree for both frames (with component metadata for icon naming)
 3. Identify sections (top-level children of each frame)
 4. Export and download section-level screenshots to `.buildspace/artifacts/{feature-name}/screenshots/`
-5. Walk the tree to find all image fills and vector icons
-6. Download and rename assets to `.buildspace/figmaAssets/` with `{section}-{purpose}.{ext}` names
-7. Save `asset-manifest.json` and `design-context.md` to `.buildspace/artifacts/{feature-name}/`
+5. Walk the tree to find all image fills, icon components, and videos
+6. Download raster images to `.buildspace/figmaAssets/` named `{section}-{suffix}.jpg` where suffix is resolved from ancestor nodes, nearby text labels, or falls back to `image` when no meaningful context is found
+7. Export SVG icons and create Liquid snippets directly in `snippets/icon-{name}.liquid` (names resolved from Figma component metadata, ancestors, or nearby text labels)
+8. Save `asset-manifest.json` and `design-context.md` to `.buildspace/artifacts/{feature-name}/`
 
 If the script fails, report the error clearly. Common issues:
 - Invalid Figma URL format → ask user to check the URL
@@ -86,10 +87,13 @@ After the script completes, read the generated `asset-manifest.json` and present
 ### Sections Found
 [List each section with desktop/mobile screenshot status]
 
-### Assets Downloaded
-- Images: [count] downloaded to .buildspace/figmaAssets/
-- Icons (SVG): [count] downloaded to .buildspace/figmaAssets/
-[List each asset: filename — from "{figma layer name}" in {section}]
+### Images Downloaded
+- [count] images downloaded to .buildspace/figmaAssets/
+[List each: filename — in {section}]
+
+### Icon Snippets Created
+- [count] snippets created in snippets/
+[List each: icon-{name}.liquid — render with {% render 'icon-{name}' %}]
 
 ### Videos (Manual Upload Required)
 [List each video with its suggested filename, or "None found"]
@@ -111,8 +115,9 @@ Read each section screenshot from `.buildspace/artifacts/{feature-name}/screensh
 Tell the user:
 ```
 Design context and assets saved.
-Run /upload-assets to upload assets to Shopify Files before starting development.
-Then run /prd to define requirements.
+- Icon snippets are ready in snippets/ — no upload needed.
+- Run /upload-assets to upload raster images to Shopify Files.
+- Then run /prd to define requirements.
 ```
 
 **Context tip:** You can `/clear` before the next step — all data is in artifacts, not conversation.

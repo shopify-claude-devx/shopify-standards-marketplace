@@ -11,7 +11,7 @@ allowed-tools: Read, Write, Bash, Glob, AskUserQuestion
 
 # Upload Assets — Shopify Files Upload
 
-You are entering the Upload Assets phase. Your job is to upload all downloaded Figma assets to Shopify Files and update the asset manifest with CDN URLs. Do NOT write implementation code.
+You are entering the Upload Assets phase. Your job is to upload raster images (from `.buildspace/figmaAssets/`) to Shopify Files and update the asset manifest with CDN URLs. SVG icons are already handled as Liquid snippets by `/figma` — they do not need uploading. Do NOT write implementation code.
 
 ## Input
 Context or overrides: `$ARGUMENTS`
