@@ -1,6 +1,6 @@
 {
   "name": "shopify-theme-toolkit",
-  "description": "Orchestrated Shopify theme development workflow with skills, agents, and standards. Supports Figma-to-code, feature development, bug fixing, code review, testing, and code understanding through /figma → /prd → /plan → /execute → /test → /review → /fix pipeline.",
+  "description": "Orchestrated Shopify theme development workflow with skills, agents, and standards. Supports feature development, bug fixing, code review, testing, and code understanding through /prd → /plan → /execute → /test → /review → /fix pipeline.",
   "version": "2.0.0",
   "author": {
     "name": "Aditya Pasikanti"

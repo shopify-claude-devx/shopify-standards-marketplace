@@ -27,7 +27,6 @@ Context or overrides: `$ARGUMENTS`
 
 Read from `.buildspace/artifacts/{feature-name}/`:
 - `prd.md` — the requirements (REQUIRED)
-- `design-context.md` — visual context from Figma (if exists)
 - `design-tokens.json` — available design tokens (if exists)
 - `asset-manifest.json` — uploaded assets with shopify:// URLs (if exists)
 
@@ -64,7 +63,7 @@ If the PRD requirements involve Shopify features you're not confident about afte
 - Skip if the codebase analysis + PRD provide enough context
 
 ### Step 4: Design the Solution
-Using the PRD requirements + codebase analysis + design context (if Figma), make every decision:
+Using the PRD requirements + codebase analysis, make every decision:
 
 **For each file to create/modify, decide:**
 

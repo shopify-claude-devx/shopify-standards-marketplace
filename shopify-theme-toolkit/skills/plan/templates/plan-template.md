@@ -44,9 +44,6 @@ this one won.]
 
 **Reuse:** {existing snippets or patterns to use}
 
-**Assets:** (if Figma workflow)
-- {setting-id}: {shopify://shop_images/filename.png}
-
 [Repeat for each file]
 
 ### {template-file-path} (modify)
@@ -81,10 +78,6 @@ this one won.]
 - [ ] [Settings appear correctly]
 - [ ] [Live preview updates on setting change]
 - [ ] [Section addable via "Add section" if preset exists]
-
-### Visual (if Figma workflow)
-- [ ] [Matches desktop Figma screenshot]
-- [ ] [Matches mobile Figma screenshot]
 
 ## Risks
 [Anything that could go wrong, or "None identified"]

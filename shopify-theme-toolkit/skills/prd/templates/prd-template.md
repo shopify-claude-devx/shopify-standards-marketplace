@@ -1,7 +1,7 @@
 # PRD: {Feature Name}
 
 **Goal:** [One sentence — what are we building and why]
-**Source:** [Figma / User requirement]
+**Source:** [User requirement / design reference]
 
 ## What We're Building
 [2-3 sentences describing the feature. What it does, where it lives, what problem it solves.]
@@ -18,11 +18,9 @@
 - [Static content: what is hardcoded or comes from Shopify data]
 
 ## Visual Requirements
-[Only if design-context.md exists from /figma]
 - [Layout: desktop = X, mobile = Y]
-- [Key visual characteristics from the design]
+- [Key visual characteristics]
 - [Design tokens to reference: --fs-xl for heading, etc.]
-- [Assets available: from asset-manifest.json]
 
 ## States & Edge Cases
 - [Empty state: what happens when there's no content?]
@@ -44,6 +42,6 @@
 ## Acceptance Criteria
 - [ ] [Measurable criterion 1]
 - [ ] [Measurable criterion 2]
-- [ ] [Visual fidelity matches Figma — if applicable]
+- [ ] [Visual fidelity matches design reference — if applicable]
 - [ ] [Works in theme editor with live preview]
 - [ ] [Handles all edge cases listed above]

@@ -3,8 +3,7 @@
  * capture-screenshots.js — Capture page screenshots for visual validation
  *
  * Uses Playwright to screenshot the live Shopify preview.
- * Mobile viewport width is read from figma-sections.json (actual Figma frame width),
- * not hardcoded.
+ * Mobile viewport defaults to 390px.
  *
  * Usage:
  *   node capture-screenshots.js --url <preview-url> --feature <feature> [--selectors <file>] [--password <pass>]
@@ -156,15 +155,7 @@ async function main() {
   const outputDir = path.join(base, 'screenshots');
   await mkdir(outputDir, { recursive: true });
 
-  // Read mobileWidth from figma-sections.json
-  let mobileWidth = 390;
-  try {
-    const sectionsRaw = await readFile(path.join(base, 'figma-sections.json'), 'utf-8');
-    const sections = JSON.parse(sectionsRaw);
-    if (sections.mobileWidth) mobileWidth = sections.mobileWidth;
-  } catch {
-    console.error('[capture] figma-sections.json not found — using default mobile width 390px');
-  }
+  const mobileWidth = 390;
 
   const viewports = [
     { name: 'desktop', width: 1440, height: 900 },

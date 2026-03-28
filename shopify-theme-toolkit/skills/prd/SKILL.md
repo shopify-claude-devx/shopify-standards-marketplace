@@ -4,7 +4,7 @@ description: >
   Define requirements clearly before planning or building. Extracts what needs
   to be done, researches Shopify capabilities, challenges user if needed,
   asks clarifying questions. Use as the first step for feature development,
-  or after /figma for design-to-code workflow.
+  Use as the first step for feature development.
 disable-model-invocation: true
 allowed-tools: Read, Write, Glob, Grep, AskUserQuestion, WebSearch, WebFetch
 ---
@@ -24,16 +24,15 @@ The request: `$ARGUMENTS`
 1. Derive a short kebab-case feature name from the request (e.g., `hero-banner`, `product-filtering`, `cart-drawer`)
 2. Use `Glob('.buildspace/artifacts/*/prd.md')` to check for existing features
 3. Create `.buildspace/artifacts/{feature-name}/` if it doesn't exist
-4. If `design-context.md` exists in the folder (from a previous `/figma` run), read it for visual context
-5. If `design-tokens.json` exists, read it for available tokens
-6. If `asset-manifest.json` exists, read it for available assets
+4. If `design-tokens.json` exists, read it for available tokens
+5. If `asset-manifest.json` exists, read it for available assets
 
 ---
 
 ## Process
 
 ### Step 1: Understand the Request
-Read the user's input carefully. If `design-context.md` exists, read it to understand the visual design alongside the request.
+Read the user's input carefully.
 
 Separate what you read into:
 - **Clear requirements** — explicitly stated, no ambiguity
@@ -133,5 +132,5 @@ Tell the user:
 - Research before asking questions — so your questions are informed
 - Challenge with evidence only — never opinion
 - One round of questions — ask everything at once, not drip-fed
-- If Figma design context exists, use it
+- If design context exists, use it
 - If similar code exists in the codebase, point it out

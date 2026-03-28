@@ -47,7 +47,6 @@ For each TODO, determine which skill file(s) the builder needs to read based on 
 | `.css` file | `${CLAUDE_SKILL_DIR}/../css-standards/SKILL.md` |
 | `.js` file | `${CLAUDE_SKILL_DIR}/../js-standards/SKILL.md` |
 | Template `.json` file | `${CLAUDE_SKILL_DIR}/../theme-architecture/SKILL.md` |
-| Figma workflow (any above) | Add `${CLAUDE_SKILL_DIR}/../figma-to-code/SKILL.md` to the above |
 
 ### Step 3: Dispatch Builders Sequentially
 For each TODO in order, dispatch the **builder** agent with a prompt containing:

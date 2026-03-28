@@ -100,7 +100,7 @@ If learnings exist, append to `.claude/patterns-learned.md` in the project direc
 ```markdown
 ### {Brief Title}
 **Type:** Pattern / Mistake & Fix / Convention / Codebase Context / Platform Gotcha
-**Category:** Liquid / Sections / Schema / CSS / JavaScript / Architecture / Figma
+**Category:** Liquid / Sections / Schema / CSS / JavaScript / Architecture
 **Date:** {YYYY-MM-DD}
 
 [2-4 sentences: what was learned, why it matters, when to apply it.]
