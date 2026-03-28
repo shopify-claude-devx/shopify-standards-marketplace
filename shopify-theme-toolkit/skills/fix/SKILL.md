@@ -53,7 +53,7 @@ User describes a bug. You investigate from scratch.
 
 5. **Load relevant skills** using `Skill` tool to understand what the code SHOULD look like:
    - `.liquid` files → `Skill('liquid-standards')`
-   - Section files → also `Skill('section-standards')` + `Skill('section-schema-standards')`
+   - Section files → also `Skill('section-standards')`
    - `.css` files → `Skill('css-standards')`
    - `.js` files → `Skill('js-standards')`
 

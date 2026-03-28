@@ -251,6 +251,6 @@ Validate every file before marking the TODO complete.
 - [ ] Setting labels: Title Case, descriptive
 
 ### Code Standards
-- [ ] All liquid-standards, css-standards, section-standards, section-schema-standards checks pass
+- [ ] All liquid-standards, css-standards, section-standards checks pass
 - [ ] No Tailwind classes in output
 - [ ] No React patterns in output

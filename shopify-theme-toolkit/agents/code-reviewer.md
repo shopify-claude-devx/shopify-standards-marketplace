@@ -3,7 +3,6 @@ name: code-reviewer
 description: Reviews code quality against project standards for readability, maintainability, flexibility, and reusability. Use during review phase to ensure code follows project conventions.
 tools: Read, Grep, Glob
 model: sonnet
-skills: review-checklists
 maxTurns: 20
 ---
 
@@ -19,11 +18,11 @@ You receive:
 Read the execution log to identify which files were created or modified. Then for each file:
 
 1. Read the file
-2. The `review-checklists` skill is pre-loaded with instructions for loading per-file-type checklists. For each file, Read the relevant checklist file as directed by the skill:
-   - `.liquid` files → Read the liquid-standards checklist
-   - Section `.liquid` files → also Read section-standards + section-schema-standards checklists
-   - `.css` files → Read the css-standards checklist
-   - `.js` files → Read the js-standards checklist
+2. Load the relevant per-file-type checklist. For each file, Read the checklist file:
+   - `.liquid` files → Read `${CLAUDE_SKILL_DIR}/../liquid-standards/checklist/rules-and-checklist.md`
+   - Section `.liquid` files → also Read `${CLAUDE_SKILL_DIR}/../section-standards/checklist/rules-and-checklist.md`
+   - `.css` files → Read `${CLAUDE_SKILL_DIR}/../css-standards/checklist/rules-and-checklist.md`
+   - `.js` files → Read `${CLAUDE_SKILL_DIR}/../js-standards/checklist/rules-and-checklist.md`
 3. Use `Grep` to check cross-file concerns:
    - `Grep('render "snippet-name"', glob='**/*.liquid')` — verify new snippets are actually referenced
    - `Grep('"setting-id"', glob='sections/*.liquid')` — verify schema setting IDs don't collide with other sections

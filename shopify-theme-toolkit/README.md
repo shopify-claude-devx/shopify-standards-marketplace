@@ -77,8 +77,7 @@ The Figma MCP server is auto-configured when the plugin is installed (via `.mcp.
 | Skill | Triggers On |
 |-------|------------|
 | `liquid-standards` | Any `.liquid` file |
-| `section-standards` | Section `.liquid` files |
-| `section-schema-standards` | `{% schema %}` blocks |
+| `section-standards` | Section `.liquid` files and `{% schema %}` blocks |
 | `css-standards` | Any `.css` file |
 | `js-standards` | Any `.js` file |
 | `theme-architecture` | File creation and organization |
@@ -89,9 +88,9 @@ The Figma MCP server is auto-configured when the plugin is installed (via `.mcp.
 | Agent | Dispatched By | Model | Skills/Context | Role |
 |-------|--------------|-------|----------------|------|
 | `builder` | `/execute` | opus | Reads relevant skill via Read tool | Builds one file per TODO from plan's File Spec |
-| `codebase-analyzer` | `/plan` | opus | `conventions-reference` (condensed) | Discovers existing patterns, conventions, conflicts |
+| `codebase-analyzer` | `/plan` | opus | None | Discovers existing patterns, conventions, conflicts |
 | `output-validator` | `/test` | opus | None | Validates requirements coverage, edge cases, integration |
-| `code-reviewer` | `/review` | opus | `review-checklists` (condensed) | Reviews code quality against skill checklists |
+| `code-reviewer` | `/review` | opus | None | Reviews code quality against skill checklists |
 
 All agents run on **Opus** for maximum accuracy. Cost is kept low through **context isolation** — each agent starts with a small, focused context (~4K tokens) rather than accumulating a large conversation. The token savings from condensed skills, externalized templates, and per-TODO isolation matter more than model routing.
 
@@ -126,7 +125,7 @@ Add `.buildspace/` to your project's `.gitignore` — artifacts are working file
 This plugin is designed to minimize token usage and API costs:
 
 ### Token Optimization
-- **Condensed agent skills.** `codebase-analyzer` loads a 1,000-token `conventions-reference` instead of all 7 full standards (~11,900 tokens). `code-reviewer` loads `review-checklists` that points to per-file-type checklist files loaded on demand.
+- **Per-file-type checklists.** Agents load only the relevant checklist file for each file type on demand, not all standards at once.
 - **Externalized artifact templates.** Markdown output templates live in `skills/{name}/templates/` and are loaded via Read on demand, not baked into skill system prompts.
 - **Supporting reference files.** `figma-to-code` translation matrices and gotchas live in `reference/` files, loaded only when needed during execution.
 - **Per-file skill loading in /execute.** Only loads the skill relevant to the current file type, never all skills at once.
@@ -183,7 +182,7 @@ They must be invoked using the **Skill tool** before writing any code.
 - **`.liquid` files** → invoke `shopify-theme-toolkit:liquid-standards`
 - **`.js` files** → invoke `shopify-theme-toolkit:js-standards`
 - **CSS / styling** → invoke `shopify-theme-toolkit:css-standards`
-- **Section files** → invoke `shopify-theme-toolkit:section-standards` and `shopify-theme-toolkit:section-schema-standards`
+- **Section files** → invoke `shopify-theme-toolkit:section-standards`
 - **New files / architecture decisions** → invoke `shopify-theme-toolkit:theme-architecture`
 - **Building from Figma designs** → invoke `shopify-theme-toolkit:figma-to-code`
 
@@ -192,7 +191,7 @@ Do not skip this step. The plugin skills have detailed rules and checklists that
 
 ## Theme Check Hook
 
-The plugin includes a PostToolUse hook that auto-runs `shopify theme check` on `.liquid` files after Write/Edit operations. Copy `setup/hooks.json` into your theme project's `.claude/settings.json` to enable it.
+The plugin includes a PostToolUse hook that auto-runs `shopify theme check` on `.liquid` files after Write/Edit operations. Copy `hooks/hooks.json` into your theme project's `.claude/settings.json` to enable it.
 
 Requires Shopify CLI installed (`npm install -g @shopify/cli`).
 

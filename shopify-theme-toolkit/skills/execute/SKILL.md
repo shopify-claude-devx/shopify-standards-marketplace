@@ -43,7 +43,7 @@ For each TODO, determine which skill file(s) the builder needs to read based on 
 | File Type | Skill File Path(s) |
 |---|---|
 | `.liquid` file | `${CLAUDE_SKILL_DIR}/../liquid-standards/SKILL.md` |
-| Section `.liquid` file | `${CLAUDE_SKILL_DIR}/../section-standards/SKILL.md`, `${CLAUDE_SKILL_DIR}/../section-schema-standards/SKILL.md`, `${CLAUDE_SKILL_DIR}/../liquid-standards/SKILL.md` |
+| Section `.liquid` file | `${CLAUDE_SKILL_DIR}/../section-standards/SKILL.md`, `${CLAUDE_SKILL_DIR}/../liquid-standards/SKILL.md` |
 | `.css` file | `${CLAUDE_SKILL_DIR}/../css-standards/SKILL.md` |
 | `.js` file | `${CLAUDE_SKILL_DIR}/../js-standards/SKILL.md` |
 | Template `.json` file | `${CLAUDE_SKILL_DIR}/../theme-architecture/SKILL.md` |
