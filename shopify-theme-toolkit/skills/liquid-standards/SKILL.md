@@ -1,11 +1,7 @@
 ---
 name: liquid-standards
-description: >
-  Liquid coding standards for Shopify themes. Apply when writing, editing, reviewing, or generating
-  any .liquid file — sections, snippets, templates, layouts. Also use when creating any Shopify theme
-  component, building sections, writing snippet logic, or working with Liquid template code, even if
-  the user doesn't explicitly mention Liquid or .liquid files. Covers variable naming, tag style,
-  render vs include, snippet documentation, whitespace control, filters, null checks, and performance.
+description: Liquid standards for Shopify .liquid files — variable naming, tags, render vs include, filters, null checks, whitespace, performance.
+user-invocable: false
 ---
 
 # Liquid Coding Standards

@@ -1,12 +1,7 @@
 ---
 name: theme-architecture
-description: >
-  Shopify theme file structure, naming conventions, and architecture decisions. Apply when creating
-  new files anywhere in the theme, organizing code across directories, deciding where to place
-  sections vs snippets vs assets, reviewing theme structure, or working with JSON templates and
-  layout files. Also use when the user asks about project organization, file naming, or where
-  something should go in the theme. Covers directory layout, kebab-case naming, snippet extraction
-  criteria, section independence, and Online Store 2.0 patterns.
+description: Theme file structure and architecture — directory layout, kebab-case naming, snippet extraction, section independence, Online Store 2.0 patterns.
+user-invocable: false
 ---
 
 # Theme Architecture

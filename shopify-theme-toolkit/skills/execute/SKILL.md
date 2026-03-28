@@ -5,6 +5,8 @@ description: >
   sequential file building, each in an isolated context with relevant
   standards. Use after /plan when the specification is confirmed.
 disable-model-invocation: true
+model: sonnet
+context: fork
 allowed-tools: Read, Write, Glob, Grep, Agent, Bash
 ---
 
@@ -37,22 +39,22 @@ Read `plan.md` and extract:
 - The File Spec for each TODO
 - Any context from the Codebase Context section
 
-### Step 2: Determine Skill Paths per TODO
-For each TODO, determine which skill file(s) the builder needs to read based on the file type:
+### Step 2: Determine File Type per TODO
+For each TODO, identify the file type so the builder knows which preloaded standards to apply:
 
-| File Type | Skill File Path(s) |
+| File Type | Standards to Apply |
 |---|---|
-| `.liquid` file | `${CLAUDE_SKILL_DIR}/../liquid-standards/SKILL.md` |
-| Section `.liquid` file | `${CLAUDE_SKILL_DIR}/../section-standards/SKILL.md`, `${CLAUDE_SKILL_DIR}/../liquid-standards/SKILL.md` |
-| `.css` file | `${CLAUDE_SKILL_DIR}/../css-standards/SKILL.md` |
-| `.js` file | `${CLAUDE_SKILL_DIR}/../js-standards/SKILL.md` |
-| Template `.json` file | `${CLAUDE_SKILL_DIR}/../theme-architecture/SKILL.md` |
+| `.liquid` file | liquid-standards |
+| Section `.liquid` file | section-standards + liquid-standards |
+| `.css` file | css-standards |
+| `.js` file | js-standards |
+| Template `.json` file | theme-architecture |
 
 ### Step 3: Dispatch Builders Sequentially
 For each TODO in order, dispatch the **builder** agent with a prompt containing:
 
 1. **The File Spec** — copy the full File Spec section for this TODO from the plan
-2. **Skill file paths** — list the absolute paths the builder should `Read`
+2. **File type** — tell the builder which of its preloaded standards to apply
 3. **Additional context** — asset-manifest.json path and design-tokens.json path if they exist
 4. **Codebase patterns** — relevant findings from the plan's Codebase Context section
 
@@ -63,10 +65,8 @@ Build the following file from this File Spec.
 ## File Spec
 [paste the File Spec for this TODO from plan.md]
 
-## Standards to Follow
-Read these skill files and follow their rules:
-- [absolute path to skill 1]
-- [absolute path to skill 2]
+## File Type
+Section .liquid file — apply section-standards and liquid-standards checklists.
 
 ## Additional Context
 - Asset manifest: .buildspace/artifacts/{feature-name}/asset-manifest.json

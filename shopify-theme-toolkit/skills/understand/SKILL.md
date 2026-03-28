@@ -5,6 +5,7 @@ description: >
   Explains what code does, how it works, why it's built that way, and all
   connections between files. Use when you need to understand existing code.
 disable-model-invocation: true
+model: sonnet
 allowed-tools: Read, Grep, Glob
 ---
 

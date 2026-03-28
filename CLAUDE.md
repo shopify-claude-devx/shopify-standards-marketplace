@@ -82,7 +82,9 @@ name: agent-id
 description: Agent role
 tools: Read, Grep, Glob
 model: sonnet
-skills: skill-id, skill-id   # optional, pre-loaded into agent context
+skills:                      # optional, pre-loaded into agent context
+  - skill-id
+  - skill-id
 maxTurns: 15
 ---
 ```

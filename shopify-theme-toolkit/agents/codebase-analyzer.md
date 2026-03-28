@@ -3,6 +3,7 @@ name: codebase-analyzer
 description: Analyzes a Shopify theme codebase to inform planning. Understands theme file structure, discovers existing patterns, reusable snippets, naming conventions, and potential conflicts. Use during the plan phase.
 tools: Read, Grep, Glob
 model: sonnet
+effort: medium
 maxTurns: 20
 ---
 

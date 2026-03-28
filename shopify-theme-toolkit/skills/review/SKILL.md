@@ -5,6 +5,7 @@ description: >
   design token usage, cross-file concerns. Works after /execute (pipeline) or
   standalone on any existing code. Auto-captures learnings on pass.
 disable-model-invocation: true
+model: sonnet
 context: fork
 agent: general-purpose
 allowed-tools: Read, Write, Grep, Glob, Agent

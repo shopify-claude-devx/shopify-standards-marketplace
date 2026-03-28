@@ -1,12 +1,7 @@
 ---
 name: css-standards
-description: >
-  CSS and styling standards for Shopify themes. Apply when writing, editing, or generating any CSS
-  file, Tailwind classes in Liquid templates, inline style attributes, or any style-related code.
-  Use whenever the user is working on visual appearance, layout, responsive design, or theming —
-  even if they frame it as a "Liquid" or "section" task, if styling is involved, these standards
-  apply. Covers BEM naming, section scoping, property ordering, responsive breakpoints, CSS
-  variables, dynamic schema values, and CSS loading strategy.
+description: CSS standards for Shopify themes — BEM naming, section scoping, property ordering, responsive breakpoints, variables, loading strategy.
+user-invocable: false
 ---
 
 # CSS Standards

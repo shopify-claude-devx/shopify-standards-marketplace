@@ -6,6 +6,7 @@ description: >
   asks clarifying questions. Use as the first step for feature development,
   Use as the first step for feature development.
 disable-model-invocation: true
+model: sonnet
 allowed-tools: Read, Write, Glob, Grep, AskUserQuestion, WebSearch, WebFetch
 ---
 

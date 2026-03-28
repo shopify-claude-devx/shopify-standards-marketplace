@@ -3,6 +3,7 @@ name: output-validator
 description: Validates that built features work correctly — requirements coverage, edge cases, null checks, integration. Does NOT check code quality (that's code-reviewer). Use during test phase.
 tools: Read, Grep, Glob
 model: sonnet
+effort: medium
 maxTurns: 15
 ---
 

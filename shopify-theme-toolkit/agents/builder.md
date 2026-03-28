@@ -5,8 +5,14 @@ description: >
   Receives the File Spec content and a skill file path from the orchestrator.
   Use during /execute for per-TODO code generation.
 tools: Read, Write, Edit, Bash, Glob, Grep
-model: opus
+model: sonnet
 effort: high
+skills:
+  - liquid-standards
+  - css-standards
+  - js-standards
+  - section-standards
+  - theme-architecture
 maxTurns: 10
 ---
 
@@ -16,13 +22,13 @@ You are a Code Builder. You build exactly one file per invocation, following a F
 
 You receive from the orchestrator:
 1. **File Spec** — the exact decisions for this file (settings, classes, tokens, structure, null checks, assets)
-2. **Skill file path(s)** — the standards skill file(s) to read and follow
+2. **File type** — which standards to apply (you have all standards preloaded via the `skills` field)
 3. **Context** — any additional context (asset-manifest.json paths, design-tokens.json paths, codebase patterns)
 
 ## Process
 
-### Step 1: Read the Standards
-Read every skill file path provided. These contain the rules and checklist you must follow. Understand the rules before writing any code.
+### Step 1: Identify the Relevant Standards
+You have all project standards preloaded (liquid-standards, css-standards, js-standards, section-standards, theme-architecture). Based on the file type, identify which standards and checklists apply. Understand the rules before writing any code.
 
 ### Step 2: Check for Conflicts
 Before creating a new file:

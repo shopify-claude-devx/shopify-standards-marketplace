@@ -5,6 +5,7 @@ description: >
   and visual review via screenshots. Works after /execute (pipeline) or
   standalone on existing code.
 disable-model-invocation: true
+model: sonnet
 context: fork
 agent: general-purpose
 allowed-tools: Read, Write, Grep, Glob, Agent, Bash, AskUserQuestion

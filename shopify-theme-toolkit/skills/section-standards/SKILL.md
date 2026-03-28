@@ -1,11 +1,7 @@
 ---
 name: section-standards
-description: >
-  Shopify section file structure, block rendering patterns, and schema standards. Apply whenever
-  creating, editing, reviewing, or generating any section .liquid file — including file ordering
-  (CSS/HTML/JS/Schema), section wrappers, block rendering via snippets, case/when patterns,
-  section independence, and all {% schema %} conventions (structure order, naming, setting IDs/labels,
-  block patterns, presets).
+description: Section file structure and schema standards — file ordering, wrappers, block rendering, schema conventions, setting IDs, presets.
+user-invocable: false
 ---
 
 # Section Standards
