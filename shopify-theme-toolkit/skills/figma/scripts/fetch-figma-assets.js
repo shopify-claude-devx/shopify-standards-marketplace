@@ -8,7 +8,7 @@
  *     --feature "<feature-name>" --token "<figma-token>"
  *
  * Output:
- *   .buildspace/figmaAssets/                          — downloaded raster images
+ *   .buildspace/figmaAssets/                          — raster images
  *   .buildspace/artifacts/{feature}/screenshots/      — section screenshots
  *   .buildspace/artifacts/{feature}/asset-manifest.json
  *   .buildspace/artifacts/{feature}/design-context.md
@@ -24,175 +24,107 @@ const { mkdir, writeFile } = require('node:fs/promises');
 const path = require('node:path');
 
 const FIGMA_API = 'https://api.figma.com/v1';
-const EXPORT_SCALE = 2;
-const EXPORT_FORMAT = 'png';
-const SVG_FORMAT = 'svg';
 const ICON_MAX_SIZE = 128;
-const TEXT_PROXIMITY_MAX = 500;
-const TEXT_MAX_LENGTH = 40;
 
 const VECTOR_TYPES = new Set([
-  'VECTOR', 'BOOLEAN_OPERATION', 'LINE', 'STAR',
-  'ELLIPSE', 'REGULAR_POLYGON',
+  'VECTOR', 'BOOLEAN_OPERATION', 'LINE', 'STAR', 'ELLIPSE', 'REGULAR_POLYGON',
 ]);
 
-const SECTION_CONTAINER_TYPES = new Set([
+const SECTION_TYPES = new Set([
   'SECTION', 'FRAME', 'GROUP', 'COMPONENT', 'COMPONENT_SET', 'INSTANCE',
 ]);
 
-// --- Argument Parsing ---
+const SKIP_TYPES = new Set(['SECTION', 'CANVAS', 'DOCUMENT']);
+
+const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth'];
+
+// ============================================================
+// CLI
+// ============================================================
 
 function parseArgs() {
-  const args = process.argv.slice(2);
-  const get = (flag) => {
-    const i = args.indexOf(flag);
-    return i !== -1 && i + 1 < args.length ? args[i + 1] : null;
-  };
-
-  const desktop = get('--desktop');
-  const mobile = get('--mobile');
-  const feature = get('--feature');
-  const token = get('--token');
-
+  const a = process.argv.slice(2);
+  const get = (f) => { const i = a.indexOf(f); return i !== -1 && i + 1 < a.length ? a[i + 1] : null; };
+  const desktop = get('--desktop'), mobile = get('--mobile'),
+        feature = get('--feature'), token = get('--token');
   if (!desktop || !feature || !token) {
-    console.error(
-      'Usage: fetch-figma-assets.js --desktop <url> --mobile <url> --feature <name> --token <token>\n' +
-      '  --desktop  (required) Figma frame URL for desktop design\n' +
-      '  --mobile   (optional) Figma frame URL for mobile design\n' +
-      '  --feature  (required) Kebab-case feature name\n' +
-      '  --token    (required) Figma personal access token'
-    );
+    console.error('Usage: fetch-figma-assets.js --desktop <url> [--mobile <url>] --feature <name> --token <token>');
     process.exit(1);
   }
-
   return { desktop, mobile, feature, token };
 }
 
-// --- URL Parsing ---
+// ============================================================
+// Figma URL parsing
+// ============================================================
 
-/**
- * Supported formats:
- *   figma.com/design/:fileKey/:fileName?node-id=:nodeId
- *   figma.com/design/:fileKey/branch/:branchKey/:fileName?node-id=:nodeId
- *   figma.com/file/:fileKey/:fileName?node-id=:nodeId
- */
 function parseFigmaUrl(url) {
-  let parsed;
-  try {
-    parsed = new URL(url);
-  } catch {
-    throw new Error(`Invalid URL: ${url}`);
-  }
-
-  const pathParts = parsed.pathname.split('/').filter(Boolean);
-
+  const parsed = new URL(url);
+  const parts = parsed.pathname.split('/').filter(Boolean);
   let fileKey = null;
-  if (pathParts[0] === 'design' || pathParts[0] === 'file') {
-    if (pathParts[2] === 'branch' && pathParts[3]) {
-      fileKey = pathParts[3]; // branch identifier used as fileKey in API calls
-    } else {
-      fileKey = pathParts[1];
-    }
+  if (['design', 'file'].includes(parts[0])) {
+    fileKey = parts[2] === 'branch' && parts[3] ? parts[3] : parts[1];
   }
-
-  if (!fileKey) {
-    throw new Error(`Could not extract file key from URL: ${url}`);
-  }
-
-  // node-id uses '-' in URL but ':' in API
-  const rawNodeId = parsed.searchParams.get('node-id');
-  if (!rawNodeId) {
-    throw new Error(`No node-id query parameter found in URL: ${url}`);
-  }
-  const nodeId = rawNodeId.replace(/-/g, ':');
-
-  return { fileKey, nodeId };
+  if (!fileKey) throw new Error(`Cannot extract file key: ${url}`);
+  const raw = parsed.searchParams.get('node-id');
+  if (!raw) throw new Error(`No node-id in URL: ${url}`);
+  return { fileKey, nodeId: raw.replace(/-/g, ':') };
 }
 
-// --- HTTP Helpers ---
+// ============================================================
+// HTTP
+// ============================================================
 
 function figmaGet(endpoint, token) {
-  const url = `${FIGMA_API}${endpoint}`;
   return new Promise((resolve, reject) => {
-    const req = https.get(url, {
-      headers: { 'X-FIGMA-TOKEN': token },
-    }, (res) => {
-      if (res.statusCode === 429) {
-        reject(new Error('Figma API rate limit exceeded. Wait a moment and retry.'));
-        return;
-      }
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
+    const req = https.get(`${FIGMA_API}${endpoint}`, { headers: { 'X-FIGMA-TOKEN': token } }, (res) => {
+      let d = '';
+      res.on('data', (c) => { d += c; });
       res.on('end', () => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`Figma API ${res.statusCode}: ${data.slice(0, 300)}`));
-          return;
-        }
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
-          reject(new Error(`Failed to parse Figma API response: ${e.message}`));
-        }
+        if (res.statusCode === 429) return reject(new Error('Figma rate limit. Wait and retry.'));
+        if (res.statusCode !== 200) return reject(new Error(`Figma ${res.statusCode}: ${d.slice(0, 300)}`));
+        try { resolve(JSON.parse(d)); } catch (e) { reject(e); }
       });
     });
     req.on('error', reject);
-    req.setTimeout(30000, () => {
-      req.destroy();
-      reject(new Error(`Figma API timeout: ${endpoint}`));
-    });
+    req.setTimeout(30000, () => { req.destroy(); reject(new Error('Figma timeout')); });
   });
 }
 
-function downloadFile(url, destPath) {
+function download(url, dest) {
   return new Promise((resolve, reject) => {
-    const client = url.startsWith('https') ? https : http;
-    const req = client.get(url, (res) => {
+    const c = url.startsWith('https') ? https : http;
+    c.get(url, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        downloadFile(res.headers.location, destPath).then(resolve).catch(reject);
-        return;
+        return download(res.headers.location, dest).then(resolve, reject);
       }
-      if (res.statusCode !== 200) {
-        reject(new Error(`Download failed (${res.statusCode}): ${url.slice(0, 120)}`));
-        return;
-      }
-      const stream = fs.createWriteStream(destPath);
-      res.pipe(stream);
-      stream.on('finish', () => { stream.close(); resolve(); });
-      stream.on('error', reject);
-    });
-    req.on('error', reject);
-    req.setTimeout(60000, () => {
-      req.destroy();
-      reject(new Error(`Download timeout: ${url.slice(0, 120)}`));
-    });
+      if (res.statusCode !== 200) return reject(new Error(`Download ${res.statusCode}`));
+      const s = fs.createWriteStream(dest);
+      res.pipe(s);
+      s.on('finish', () => { s.close(); resolve(); });
+      s.on('error', reject);
+    }).on('error', reject);
   });
 }
 
 function downloadText(url) {
   return new Promise((resolve, reject) => {
-    const client = url.startsWith('https') ? https : http;
-    const req = client.get(url, (res) => {
+    const c = url.startsWith('https') ? https : http;
+    c.get(url, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        downloadText(res.headers.location).then(resolve).catch(reject);
-        return;
+        return downloadText(res.headers.location).then(resolve, reject);
       }
-      if (res.statusCode !== 200) {
-        reject(new Error(`Download failed (${res.statusCode}): ${url.slice(0, 120)}`));
-        return;
-      }
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => resolve(data));
-    });
-    req.on('error', reject);
-    req.setTimeout(60000, () => {
-      req.destroy();
-      reject(new Error(`Download timeout: ${url.slice(0, 120)}`));
-    });
+      if (res.statusCode !== 200) return reject(new Error(`Download ${res.statusCode}`));
+      let d = '';
+      res.on('data', (chunk) => { d += chunk; });
+      res.on('end', () => resolve(d));
+    }).on('error', reject);
   });
 }
 
-// --- Naming Helpers ---
+// ============================================================
+// Naming — single source of truth
+// ============================================================
 
 function toKebab(str) {
   return str
@@ -202,852 +134,533 @@ function toKebab(str) {
     .toLowerCase();
 }
 
-function isGenericNodeName(kebabName) {
-  if (!kebabName || kebabName.length <= 2) return true;
-
-  if (/^(vector|boolean|boolean-operation|line|ellipse|polygon|star|frame|group|rectangle|component|instance|union|subtract|intersect|exclude|auto-layout|slice|mask|image)(-\d+)?$/.test(kebabName)) {
-    return true;
-  }
-
-  if (/^[a-z]+-\d+$/.test(kebabName)) return true;
-  if (/screen-?shot/.test(kebabName)) return true;
-  if (/\d{5,}/.test(kebabName)) return true;
-  if (/[a-f0-9]{8,}/.test(kebabName) && /[a-f][0-9]|[0-9][a-f]/.test(kebabName)) return true;
-  if (/[a-f0-9]{8}-[a-f0-9]{4}/.test(kebabName)) return true;
-  if (/^(i-?stock|shutterstock|pexels|unsplash|adobe-stock|getty|dreamstime|deposit-?photos|123-?rf)/.test(kebabName)) return true;
-  if (/^(dsc|dcim|dscn|p\d{3,}|img|pic|photo|bitmap|paste|clipboard|untitled|layer)(-|$)/.test(kebabName)) return true;
-  if (/^copy-of-/.test(kebabName) || /-copy(-\d+)?$/.test(kebabName)) return true;
-  if (/^[\d-]+$/.test(kebabName)) return true;
-
+function isGeneric(name) {
+  if (!name || name.length <= 2) return true;
+  if (/^(vector|boolean|boolean-operation|line|ellipse|polygon|star|frame|group|rectangle|component|instance|union|subtract|intersect|exclude|auto-layout|slice|mask|image)(-\d+)?$/.test(name)) return true;
+  if (/^[a-z]+-\d+$/.test(name)) return true;
+  if (/screen-?shot/.test(name)) return true;
+  if (/\d{5,}/.test(name)) return true;
+  if (/[a-f0-9]{8,}/.test(name) && /[a-f]\d|\d[a-f]/.test(name)) return true;
+  if (/[a-f0-9]{8}-[a-f0-9]{4}/.test(name)) return true;
+  if (/^(i-?stock|shutterstock|pexels|unsplash|adobe-stock|getty|dreamstime|deposit-?photos|123-?rf)/.test(name)) return true;
+  if (/^(dsc|dcim|dscn|p\d{3,}|img|pic|photo|bitmap|paste|clipboard|untitled|layer)(-|$)/.test(name)) return true;
+  if (/^copy-of-/.test(name) || /-copy(-\d+)?$/.test(name)) return true;
+  if (/^[\d-]+$/.test(name)) return true;
   return false;
 }
 
-function isVariantSyntax(name) {
-  return /=/.test(name) && /,/.test(name);
+/** A name is usable as a suffix if it's not generic AND not redundant with the section prefix. */
+function isUsable(name, sectionKey) {
+  if (!name || isGeneric(name)) return false;
+  if (name === sectionKey) return false;
+  if (name.startsWith(sectionKey + '-')) return false;
+  if (sectionKey.startsWith(name + '-')) return false;
+  return true;
 }
 
-function deduplicateName(name, existingNames) {
-  if (!existingNames.has(name)) {
-    existingNames.add(name);
-    return name;
-  }
-  let counter = 2;
-  while (existingNames.has(`${name}-${counter}`)) {
-    counter++;
-  }
-  const unique = `${name}-${counter}`;
-  existingNames.add(unique);
-  return unique;
+function isVariantSyntax(name) { return /=/.test(name) && /,/.test(name); }
+
+function stripIconAffix(name) {
+  if (!name) return null;
+  const k = toKebab(name).replace(/^icon-/, '').replace(/-icon$/, '');
+  return k && k.length > 1 ? k : null;
 }
 
-// --- Icon Naming ---
-
-function cleanIconName(name) {
-  let kebab = typeof name === 'string' ? toKebab(name) : name;
-  // Strip "icon" prefix/suffix — we add icon- in the snippet filename
-  kebab = kebab.replace(/^icon-/, '').replace(/-icon$/, '');
-  if (!kebab || kebab.length <= 1) return null;
-  return kebab;
-}
-
-function findNearestText(iconBounds, textNodes) {
-  let closest = null;
-  let minDist = TEXT_PROXIMITY_MAX;
-
-  const cx = iconBounds.x + iconBounds.width / 2;
-  const cy = iconBounds.y + iconBounds.height / 2;
-
-  for (const text of textNodes) {
-    if (!text.bounds || !text.characters) continue;
-    const tx = text.bounds.x + text.bounds.width / 2;
-    const ty = text.bounds.y + text.bounds.height / 2;
-    const dist = Math.hypot(tx - cx, ty - cy);
-    if (dist < minDist && text.characters.length <= TEXT_MAX_LENGTH) {
-      minDist = dist;
-      closest = text.characters;
-    }
+/**
+ * Walk a candidate list and return the first usable name.
+ * Candidates are raw strings (will be kebab-cased).
+ */
+function firstUsable(candidates, sectionKey) {
+  for (const raw of candidates) {
+    if (!raw) continue;
+    const k = toKebab(raw);
+    if (isUsable(k, sectionKey)) return k;
   }
-
-  return closest;
-}
-
-function deduplicateIconName(name, usedNames, sectionName) {
-  if (!usedNames.has(name)) {
-    usedNames.add(name);
-    return name;
-  }
-
-  // Only try section prefix if it's different from the name itself
-  const section = toKebab(sectionName);
-  if (section !== name && !name.startsWith(section + '-')) {
-    const withSection = `${section}-${name}`;
-    if (!usedNames.has(withSection)) {
-      usedNames.add(withSection);
-      return withSection;
-    }
-  }
-
-  // This name genuinely collides — caller should have provided a unique name.
-  // Return null to signal the caller to use fallback numbering.
   return null;
 }
 
-// --- Image Naming ---
+// ============================================================
+// Asset name resolution
+// ============================================================
 
-function resolveImageSuffix(fill, textNodes) {
-  // Strategy 1: The node's own name
-  const ownName = toKebab(fill.nodeName);
-  if (!isGenericNodeName(ownName)) return ownName;
+/**
+ * Resolve a meaningful name for an image fill.
+ * Returns a usable suffix string or null.
+ */
+function resolveImageName(fill, textNodes) {
+  const sec = toKebab(fill.sectionName);
 
-  // Strategy 2: Walk ancestors (bottom-up, skip the section itself)
+  // 1. Node name, then ancestors bottom-up
+  const candidates = [fill.nodeName];
   if (fill.ancestors) {
     for (let i = fill.ancestors.length - 1; i >= 0; i--) {
-      const anc = fill.ancestors[i];
-      if (anc.type === 'SECTION' || anc.type === 'CANVAS' || anc.type === 'DOCUMENT') continue;
-      const ancName = toKebab(anc.name);
-      if (!isGenericNodeName(ancName)) return ancName;
+      const a = fill.ancestors[i];
+      if (SKIP_TYPES.has(a.type)) continue;
+      candidates.push(a.name);
     }
   }
+  const fromTree = firstUsable(candidates, sec);
+  if (fromTree) return fromTree;
 
-  // Strategy 3: Nearest TEXT sibling
-  if (fill.bounds && textNodes.length > 0) {
-    const sectionTexts = textNodes.filter((t) => t.sectionName === fill.sectionName);
-    const nearest = findNearestText(fill.bounds, sectionTexts);
-    if (nearest) return toKebab(nearest);
+  // 2. Nearest text label
+  return nearestText(fill.bounds, sec, textNodes);
+}
+
+/**
+ * Resolve a meaningful name for an icon.
+ * Uses component metadata, ancestors, then exclusive text claiming.
+ * Returns a usable name string or null.
+ */
+function resolveIconName(icon, comps, compSets, textNodes, claimed) {
+  const sec = toKebab(icon.sectionName);
+
+  // 1. Component metadata (highest confidence)
+  const compCandidates = componentCandidates(icon, comps, compSets);
+  for (const raw of compCandidates) {
+    const k = stripIconAffix(raw);
+    if (k && isUsable(k, sec)) return k;
   }
 
-  // No meaningful suffix found
+  // 2. Node name + ancestors
+  const treeCandidates = [icon.nodeName];
+  if (icon.ancestors) {
+    for (let i = icon.ancestors.length - 1; i >= 0; i--) {
+      const a = icon.ancestors[i];
+      if (SKIP_TYPES.has(a.type)) continue;
+      treeCandidates.push(a.name);
+    }
+  }
+  for (const raw of treeCandidates) {
+    const k = stripIconAffix(raw);
+    if (k && isUsable(k, sec)) return k;
+  }
+
+  // 3. Nearest unclaimed text
+  return nearestUnclaimedText(icon.bounds, sec, textNodes, claimed);
+}
+
+function componentCandidates(icon, comps, compSets) {
+  const out = [];
+  const ids = [icon.componentId, icon.nodeType === 'COMPONENT' ? icon.nodeId : null].filter(Boolean);
+  for (const id of ids) {
+    const comp = comps[id];
+    if (!comp) continue;
+    if (comp.componentSetId && compSets[comp.componentSetId]) {
+      out.push(compSets[comp.componentSetId].name);
+    }
+    if (!isVariantSyntax(comp.name)) out.push(comp.name);
+    if (comp.description) out.push(comp.description.split(/[.\n]/)[0]);
+  }
+  return out;
+}
+
+function nearestText(bounds, sectionKey, textNodes) {
+  if (!bounds || !textNodes.length) return null;
+  const cx = bounds.x + bounds.width / 2, cy = bounds.y + bounds.height / 2;
+  let best = null, bestDist = 500;
+  for (const t of textNodes) {
+    if (!t.bounds || !t.characters || t.characters.length > 40) continue;
+    if (t.sectionName && toKebab(t.sectionName) !== sectionKey) continue;
+    const dist = Math.hypot(t.bounds.x + t.bounds.width / 2 - cx, t.bounds.y + t.bounds.height / 2 - cy);
+    if (dist < bestDist) { bestDist = dist; best = t.characters; }
+  }
+  if (!best) return null;
+  const k = toKebab(best);
+  return isUsable(k, sectionKey) ? k : null;
+}
+
+function nearestUnclaimedText(bounds, sectionKey, textNodes, claimed) {
+  if (!bounds || !textNodes.length) return null;
+  const cx = bounds.x + bounds.width / 2, cy = bounds.y + bounds.height / 2;
+  let best = null, bestDist = 500;
+  for (const t of textNodes) {
+    if (!t.bounds || !t.characters || t.characters.length > 40) continue;
+    if (t.sectionName && toKebab(t.sectionName) !== sectionKey) continue;
+    if (claimed.has(t.characters)) continue;
+    const dist = Math.hypot(t.bounds.x + t.bounds.width / 2 - cx, t.bounds.y + t.bounds.height / 2 - cy);
+    if (dist < bestDist) { bestDist = dist; best = t.characters; }
+  }
+  if (!best) return null;
+  const k = toKebab(best);
+  if (isUsable(k, sectionKey)) { claimed.add(best); return k; }
   return null;
 }
 
-function resolveIconNameExclusive(icon, componentsMap, componentSetsMap, textNodes, claimedTexts) {
-  // Strategies 1-4 from resolveIconName (component metadata, ancestors)
-  // These don't need exclusivity — each icon has its own component/ancestors
+// ============================================================
+// Deduplication
+// ============================================================
 
-  // Strategy 1: INSTANCE → source component
-  if (icon.componentId && componentsMap[icon.componentId]) {
-    const comp = componentsMap[icon.componentId];
-    if (comp.componentSetId && componentSetsMap[comp.componentSetId]) {
-      const setName = toKebab(componentSetsMap[comp.componentSetId].name);
-      if (!isGenericNodeName(setName)) return cleanIconName(setName);
-    }
-    if (!isVariantSyntax(comp.name)) {
-      const compName = toKebab(comp.name);
-      if (!isGenericNodeName(compName)) return cleanIconName(compName);
-    }
-    if (comp.description) {
-      const desc = toKebab(comp.description.split(/[.\n]/)[0]);
-      if (!isGenericNodeName(desc) && desc.length > 2) return cleanIconName(desc);
-    }
-  }
-
-  // Strategy 2: COMPONENT → components map
-  if (icon.nodeType === 'COMPONENT' && componentsMap[icon.nodeId]) {
-    const comp = componentsMap[icon.nodeId];
-    if (comp.componentSetId && componentSetsMap[comp.componentSetId]) {
-      const setName = toKebab(componentSetsMap[comp.componentSetId].name);
-      if (!isGenericNodeName(setName)) return cleanIconName(setName);
-    }
-    const compName = toKebab(comp.name);
-    if (!isGenericNodeName(compName)) return cleanIconName(compName);
-  }
-
-  // Strategy 3: Node's own name
-  const ownName = toKebab(icon.nodeName);
-  if (!isGenericNodeName(ownName)) return cleanIconName(ownName);
-
-  // Strategy 4: Walk ancestors
-  for (let i = icon.ancestors.length - 1; i >= 0; i--) {
-    const anc = icon.ancestors[i];
-    if (anc.type === 'SECTION' || anc.type === 'CANVAS' || anc.type === 'DOCUMENT') continue;
-    const ancName = toKebab(anc.name);
-    if (!isGenericNodeName(ancName)) return cleanIconName(ancName);
-  }
-
-  // Strategy 5: Nearest UNCLAIMED text
-  if (icon.bounds && textNodes.length > 0) {
-    const sectionTexts = textNodes.filter((t) => t.sectionName === icon.sectionName);
-    const nearest = findNearestUnclaimedText(icon.bounds, sectionTexts, claimedTexts);
-    if (nearest) {
-      claimedTexts.add(nearest);
-      return cleanIconName(nearest);
-    }
-  }
-
-  return null;
+function dedupSimple(name, used) {
+  if (!used.has(name)) { used.add(name); return name; }
+  let i = 2;
+  while (used.has(`${name}-${i}`)) i++;
+  const u = `${name}-${i}`;
+  used.add(u);
+  return u;
 }
 
-function findNearestUnclaimedText(iconBounds, textNodes, claimedTexts) {
-  let closest = null;
-  let minDist = TEXT_PROXIMITY_MAX;
-
-  const cx = iconBounds.x + iconBounds.width / 2;
-  const cy = iconBounds.y + iconBounds.height / 2;
-
-  for (const text of textNodes) {
-    if (!text.bounds || !text.characters) continue;
-    if (claimedTexts.has(text.characters)) continue;
-    const tx = text.bounds.x + text.bounds.width / 2;
-    const ty = text.bounds.y + text.bounds.height / 2;
-    const dist = Math.hypot(tx - cx, ty - cy);
-    if (dist < minDist && text.characters.length <= TEXT_MAX_LENGTH) {
-      minDist = dist;
-      closest = text.characters;
-    }
+function dedupIcon(name, used, sectionKey) {
+  if (!used.has(name)) { used.add(name); return name; }
+  // Try section prefix only if it adds info
+  if (name !== sectionKey && !name.startsWith(sectionKey + '-')) {
+    const with_sec = `${sectionKey}-${name}`;
+    if (!used.has(with_sec)) { used.add(with_sec); return with_sec; }
   }
-
-  return closest;
+  return null; // caller uses position fallback
 }
 
-function getPositionLabel(index, total) {
-  if (total <= 6) {
-    const ordinals = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth'];
-    return ordinals[index - 1] || `pos-${index}`;
-  }
-  return `pos-${index}`;
+// ============================================================
+// Tree walking
+// ============================================================
+
+function identifySections(frame) {
+  return (frame.children || [])
+    .filter((c) => SECTION_TYPES.has(c.type) && c.visible !== false)
+    .map((c) => ({ id: c.id, name: c.name, type: c.type, bounds: c.absoluteBoundingBox }));
 }
 
-// --- Tree Walking ---
-
-function identifySections(frameNode) {
-  if (!frameNode.children || frameNode.children.length === 0) {
-    return [];
-  }
-
-  return frameNode.children
-    .filter((child) => SECTION_CONTAINER_TYPES.has(child.type) && child.visible !== false)
-    .map((child) => ({
-      id: child.id,
-      name: child.name,
-      type: child.type,
-      bounds: child.absoluteBoundingBox || null,
-    }));
-}
-
-function hasVectorDescendant(node) {
+function hasVectors(node) {
   if (VECTOR_TYPES.has(node.type)) return true;
-  if (node.children) {
-    return node.children.some((child) => hasVectorDescendant(child));
-  }
-  return false;
+  return (node.children || []).some(hasVectors);
 }
 
-function walkForAssets(node, sectionName, ancestors, results) {
+function walk(node, section, ancestors, out) {
   if (!node || node.visible === false) return;
+  const path = [...ancestors, { id: node.id, name: node.name, type: node.type }];
 
-  const currentAncestors = [...ancestors, { id: node.id, name: node.name, type: node.type }];
-
-  // Collect image fills and videos
-  const fills = node.fills || [];
-  for (const fill of fills) {
+  // Image fills + videos
+  for (const fill of node.fills || []) {
     if (fill.type === 'IMAGE' && fill.imageRef && fill.visible !== false) {
-      results.imageFills.push({
-        imageRef: fill.imageRef,
-        nodeId: node.id,
-        nodeName: node.name,
-        sectionName,
-        ancestors: currentAncestors,
-        bounds: node.absoluteBoundingBox,
-      });
+      out.images.push({ imageRef: fill.imageRef, nodeName: node.name, sectionName: section, ancestors: path, bounds: node.absoluteBoundingBox });
     }
     if (fill.type === 'VIDEO') {
-      results.videos.push({
-        nodeId: node.id,
-        nodeName: node.name,
-        sectionName,
-      });
+      out.videos.push({ nodeName: node.name, sectionName: section });
     }
   }
 
-  // Check if this node is an icon container
-  const bounds = node.absoluteBoundingBox;
-  const isIconSized = bounds && bounds.width <= ICON_MAX_SIZE && bounds.height <= ICON_MAX_SIZE;
-
-  if (isIconSized) {
-    // COMPONENT/INSTANCE that's icon-sized → collect as icon, stop recursing
-    if (node.type === 'COMPONENT' || node.type === 'INSTANCE') {
-      results.icons.push({
-        nodeId: node.id,
-        nodeName: node.name,
-        nodeType: node.type,
-        sectionName,
-        ancestors: currentAncestors,
-        componentId: node.componentId || null,
-        bounds,
-      });
+  // Icon detection
+  const b = node.absoluteBoundingBox;
+  if (b && b.width <= ICON_MAX_SIZE && b.height <= ICON_MAX_SIZE) {
+    if (['COMPONENT', 'INSTANCE'].includes(node.type)) {
+      out.icons.push({ nodeId: node.id, nodeName: node.name, nodeType: node.type, sectionName: section, ancestors: path, componentId: node.componentId || null, bounds: b });
+      return; // complete icon — don't recurse
+    }
+    if (['FRAME', 'GROUP'].includes(node.type) && hasVectors(node)) {
+      out.icons.push({ nodeId: node.id, nodeName: node.name, nodeType: node.type, sectionName: section, ancestors: path, componentId: null, bounds: b });
       return;
     }
-
-    // FRAME/GROUP that's icon-sized and contains vectors → collect as icon
-    if ((node.type === 'FRAME' || node.type === 'GROUP') && hasVectorDescendant(node)) {
-      results.icons.push({
-        nodeId: node.id,
-        nodeName: node.name,
-        nodeType: node.type,
-        sectionName,
-        ancestors: currentAncestors,
-        componentId: null,
-        bounds,
-      });
-      return;
-    }
-
-    // Standalone vector node → collect as icon
     if (VECTOR_TYPES.has(node.type)) {
-      results.icons.push({
-        nodeId: node.id,
-        nodeName: node.name,
-        nodeType: node.type,
-        sectionName,
-        ancestors: currentAncestors,
-        componentId: null,
-        bounds,
-      });
+      out.icons.push({ nodeId: node.id, nodeName: node.name, nodeType: node.type, sectionName: section, ancestors: path, componentId: null, bounds: b });
       return;
     }
   }
 
-  // Collect TEXT nodes for nearby-label resolution
+  // Text nodes (for nearby-label resolution)
   if (node.type === 'TEXT' && node.characters) {
-    results.textNodes.push({
-      characters: node.characters,
-      bounds: node.absoluteBoundingBox,
-      sectionName,
-    });
+    out.texts.push({ characters: node.characters, bounds: node.absoluteBoundingBox, sectionName: section });
   }
 
-  if (node.children) {
-    for (const child of node.children) {
-      walkForAssets(child, sectionName, currentAncestors, results);
-    }
-  }
+  for (const child of node.children || []) walk(child, section, path, out);
 }
 
-function collectAssets(frameNode) {
-  const results = { imageFills: [], icons: [], videos: [], textNodes: [] };
-  const sections = identifySections(frameNode);
-
-  for (const section of sections) {
-    const sectionNode = frameNode.children.find((c) => c.id === section.id);
-    if (sectionNode) {
-      walkForAssets(sectionNode, section.name, [], results);
-    }
+function collectAll(frame) {
+  const out = { images: [], icons: [], videos: [], texts: [] };
+  for (const sec of identifySections(frame)) {
+    const node = frame.children.find((c) => c.id === sec.id);
+    if (node) walk(node, sec.name, [], out);
   }
-
-  return results;
+  return out;
 }
 
-// --- Figma API Operations ---
+// ============================================================
+// Figma API
+// ============================================================
 
-async function fetchNodeTree(fileKey, nodeId, token) {
-  const encodedId = encodeURIComponent(nodeId);
-  const data = await figmaGet(`/files/${fileKey}/nodes?ids=${encodedId}`, token);
-
-  const nodeData = data.nodes[nodeId];
-  if (!nodeData || !nodeData.document) {
-    throw new Error(`Node ${nodeId} not found in file ${fileKey}. Check the URL and permissions.`);
-  }
-
-  return {
-    document: nodeData.document,
-    components: nodeData.components || {},
-    componentSets: nodeData.componentSets || {},
-  };
+async function fetchTree(fileKey, nodeId, token) {
+  const data = await figmaGet(`/files/${fileKey}/nodes?ids=${encodeURIComponent(nodeId)}`, token);
+  const n = data.nodes[nodeId];
+  if (!n?.document) throw new Error(`Node ${nodeId} not found in ${fileKey}`);
+  return { document: n.document, components: n.components || {}, componentSets: n.componentSets || {} };
 }
 
-async function exportNodes(fileKey, nodeIds, format, scale, token) {
-  if (nodeIds.length === 0) return {};
-
-  const ids = nodeIds.join(',');
-  const data = await figmaGet(
-    `/images/${fileKey}?ids=${encodeURIComponent(ids)}&format=${format}&scale=${scale}`,
-    token
-  );
-
-  if (data.err) {
-    throw new Error(`Figma image export error: ${data.err}`);
-  }
-
+async function exportNodes(fileKey, ids, format, scale, token) {
+  if (!ids.length) return {};
+  const data = await figmaGet(`/images/${fileKey}?ids=${encodeURIComponent(ids.join(','))}&format=${format}&scale=${scale}`, token);
+  if (data.err) throw new Error(`Export error: ${data.err}`);
   return data.images || {};
 }
 
-async function fetchImageFills(fileKey, token) {
+async function fetchFills(fileKey, token) {
   const data = await figmaGet(`/files/${fileKey}/images`, token);
-  if (data.error) {
-    console.error(`[figma] Warning: could not fetch image fills: ${data.status}`);
-    return {};
-  }
   return data.meta?.images || {};
 }
 
-// --- Main ---
+// ============================================================
+// Dedup helpers for merging desktop + mobile
+// ============================================================
+
+function dedup(arr, key) {
+  const seen = new Set();
+  return arr.filter((item) => {
+    const k = item[key];
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+// ============================================================
+// Main
+// ============================================================
 
 async function main() {
   const { desktop, mobile, feature, token } = parseArgs();
+  const artDir = path.resolve(`.buildspace/artifacts/${feature}`);
+  const shotDir = path.join(artDir, 'screenshots');
+  const imgDir = path.resolve('.buildspace/figmaAssets');
+  const snipDir = path.resolve('snippets');
+  await mkdir(shotDir, { recursive: true });
+  await mkdir(imgDir, { recursive: true });
+  await mkdir(snipDir, { recursive: true });
 
-  const artifactDir = path.resolve(`.buildspace/artifacts/${feature}`);
-  const screenshotDir = path.join(artifactDir, 'screenshots');
-  const assetDir = path.resolve('.buildspace/figmaAssets');
-  const snippetDir = path.resolve('snippets');
+  const dp = parseFigmaUrl(desktop);
+  const mp = mobile ? parseFigmaUrl(mobile) : null;
+  console.error(`[figma] Desktop: ${dp.fileKey} / ${dp.nodeId}`);
+  if (mp) console.error(`[figma] Mobile:  ${mp.fileKey} / ${mp.nodeId}`);
 
-  await mkdir(screenshotDir, { recursive: true });
-  await mkdir(assetDir, { recursive: true });
-  await mkdir(snippetDir, { recursive: true });
-
-  const desktopParsed = parseFigmaUrl(desktop);
-  const mobileParsed = mobile ? parseFigmaUrl(mobile) : null;
-
-  console.error(`[figma] Desktop: file=${desktopParsed.fileKey} node=${desktopParsed.nodeId}`);
-  if (mobileParsed) {
-    console.error(`[figma] Mobile:  file=${mobileParsed.fileKey} node=${mobileParsed.nodeId}`);
-  } else {
-    console.error('[figma] Mobile:  not provided — responsive inferred from desktop only');
-  }
-
-  // --- Fetch Node Trees (with component metadata) ---
-
-  console.error('[figma] Fetching desktop node tree...');
-  const desktopResult = await fetchNodeTree(desktopParsed.fileKey, desktopParsed.nodeId, token);
-  const desktopTree = desktopResult.document;
-  let componentsMap = { ...desktopResult.components };
-  let componentSetsMap = { ...desktopResult.componentSets };
-
+  // Fetch trees
+  console.error('[figma] Fetching desktop tree...');
+  const dr = await fetchTree(dp.fileKey, dp.nodeId, token);
+  let comps = { ...dr.components }, sets = { ...dr.componentSets };
   let mobileTree = null;
-  if (mobileParsed) {
-    console.error('[figma] Fetching mobile node tree...');
-    const mobileResult = await fetchNodeTree(mobileParsed.fileKey, mobileParsed.nodeId, token);
-    mobileTree = mobileResult.document;
-    componentsMap = { ...componentsMap, ...mobileResult.components };
-    componentSetsMap = { ...componentSetsMap, ...mobileResult.componentSets };
+  if (mp) {
+    console.error('[figma] Fetching mobile tree...');
+    const mr = await fetchTree(mp.fileKey, mp.nodeId, token);
+    mobileTree = mr.document;
+    Object.assign(comps, mr.components);
+    Object.assign(sets, mr.componentSets);
   }
 
-  // --- Identify Sections ---
+  // Sections
+  const dSections = identifySections(dr.document);
+  const mSections = mobileTree ? identifySections(mobileTree) : [];
+  console.error(`[figma] Sections: ${dSections.map((s) => s.name).join(', ')}`);
+  if (!dSections.length) throw new Error('No sections found in desktop frame.');
 
-  const desktopSections = identifySections(desktopTree);
-  const mobileSections = mobileTree ? identifySections(mobileTree) : [];
+  // Section screenshots
+  console.error('[figma] Exporting section screenshots...');
+  const dShots = await exportNodes(dp.fileKey, dSections.map((s) => s.id), 'png', 2, token);
+  const mShots = mp && mSections.length ? await exportNodes(mp.fileKey, mSections.map((s) => s.id), 'png', 2, token) : {};
 
-  console.error(`[figma] Desktop sections: ${desktopSections.map((s) => s.name).join(', ')}`);
-  if (mobileSections.length > 0) {
-    console.error(`[figma] Mobile sections:  ${mobileSections.map((s) => s.name).join(', ')}`);
-  }
-
-  if (desktopSections.length === 0) {
-    throw new Error('No sections found in desktop frame. Ensure the frame has child layers.');
-  }
-
-  // --- Export Section Screenshots ---
-
-  console.error('[figma] Exporting desktop section screenshots...');
-  const desktopSectionIds = desktopSections.map((s) => s.id);
-  const desktopScreenshots = await exportNodes(
-    desktopParsed.fileKey, desktopSectionIds, EXPORT_FORMAT, EXPORT_SCALE, token
-  );
-
-  let mobileScreenshots = {};
-  if (mobileParsed && mobileSections.length > 0) {
-    console.error('[figma] Exporting mobile section screenshots...');
-    const mobileSectionIds = mobileSections.map((s) => s.id);
-    mobileScreenshots = await exportNodes(
-      mobileParsed.fileKey, mobileSectionIds, EXPORT_FORMAT, EXPORT_SCALE, token
-    );
-  }
-
-  const screenshotManifest = [];
-
-  for (const section of desktopSections) {
-    const url = desktopScreenshots[section.id];
-    if (!url) {
-      console.error(`[figma] Warning: no screenshot for desktop section "${section.name}"`);
-      continue;
-    }
-    const filename = `figma-${toKebab(section.name)}-desktop.png`;
-    const filepath = path.join(screenshotDir, filename);
-    console.error(`[figma] Downloading: ${filename}`);
-    await downloadFile(url, filepath);
-    screenshotManifest.push({
-      section: section.name,
-      viewport: 'desktop',
-      filename,
-      path: path.relative('.', filepath),
-    });
-  }
-
-  for (const section of mobileSections) {
-    const url = mobileScreenshots[section.id];
-    if (!url) {
-      console.error(`[figma] Warning: no screenshot for mobile section "${section.name}"`);
-      continue;
-    }
-    const filename = `figma-${toKebab(section.name)}-mobile.png`;
-    const filepath = path.join(screenshotDir, filename);
-    console.error(`[figma] Downloading: ${filename}`);
-    await downloadFile(url, filepath);
-    screenshotManifest.push({
-      section: section.name,
-      viewport: 'mobile',
-      filename,
-      path: path.relative('.', filepath),
-    });
-  }
-
-  // --- Collect Assets From Tree ---
-
-  console.error('[figma] Scanning desktop tree for assets...');
-  const desktopAssets = collectAssets(desktopTree);
-
-  let mobileAssets = { imageFills: [], icons: [], videos: [], textNodes: [] };
-  if (mobileTree) {
-    console.error('[figma] Scanning mobile tree for assets...');
-    mobileAssets = collectAssets(mobileTree);
-  }
-
-  // Deduplicate image fills by imageRef
-  const seenImageRefs = new Map();
-  const allImageFills = [...desktopAssets.imageFills, ...mobileAssets.imageFills];
-  const uniqueImageFills = [];
-  for (const fill of allImageFills) {
-    if (!seenImageRefs.has(fill.imageRef)) {
-      seenImageRefs.set(fill.imageRef, fill);
-      uniqueImageFills.push(fill);
+  const shotManifest = [];
+  for (const [sections, shots, vp, fk] of [[dSections, dShots, 'desktop'], [mSections, mShots, 'mobile']]) {
+    for (const sec of sections) {
+      const url = shots[sec.id];
+      if (!url) continue;
+      const fname = `figma-${toKebab(sec.name)}-${vp}.png`;
+      const fp = path.join(shotDir, fname);
+      console.error(`[figma] ${fname}`);
+      await download(url, fp);
+      shotManifest.push({ section: sec.name, viewport: vp, filename: fname, path: path.relative('.', fp) });
     }
   }
 
-  // Deduplicate icons by nodeId
-  const seenIconIds = new Set();
-  const allIcons = [...desktopAssets.icons, ...mobileAssets.icons];
-  const uniqueIcons = [];
-  for (const icon of allIcons) {
-    if (!seenIconIds.has(icon.nodeId)) {
-      seenIconIds.add(icon.nodeId);
-      uniqueIcons.push(icon);
-    }
-  }
+  // Collect assets
+  console.error('[figma] Scanning trees...');
+  const da = collectAll(dr.document);
+  const ma = mobileTree ? collectAll(mobileTree) : { images: [], icons: [], videos: [], texts: [] };
 
-  // Merge text nodes for nearby-label resolution
-  const allTextNodes = [...desktopAssets.textNodes, ...mobileAssets.textNodes];
+  const images = dedup([...da.images, ...ma.images], 'imageRef');
+  const icons = dedup([...da.icons, ...ma.icons], 'nodeId');
+  const videos = dedup([...da.videos, ...ma.videos], 'nodeName');
+  const texts = [...da.texts, ...ma.texts];
 
-  // Deduplicate videos
-  const seenVideoIds = new Set();
-  const allVideos = [...desktopAssets.videos, ...mobileAssets.videos];
-  const uniqueVideos = [];
-  for (const vid of allVideos) {
-    if (!seenVideoIds.has(vid.nodeId)) {
-      seenVideoIds.add(vid.nodeId);
-      uniqueVideos.push(vid);
-    }
-  }
+  console.error(`[figma] Found: ${images.length} images, ${icons.length} icons, ${videos.length} videos`);
 
-  console.error(`[figma] Found: ${uniqueImageFills.length} images, ${uniqueIcons.length} icons, ${uniqueVideos.length} videos`);
-
-  // --- Download Images ---
-  // Named {section}-{suffix}.jpg where suffix comes from ancestor/context resolution
-  // Falls back to {section}-image.jpg (numbered when multiple unnamed per section)
+  // --- Download images ---
 
   const assetManifest = [];
-  const usedImageNames = new Set();
+  if (images.length) {
+    console.error('[figma] Fetching image URLs...');
+    const keys = new Set([dp.fileKey]);
+    if (mp) keys.add(mp.fileKey);
+    let urlMap = {};
+    for (const k of keys) Object.assign(urlMap, await fetchFills(k, token));
 
-  if (uniqueImageFills.length > 0) {
-    console.error('[figma] Fetching image fill URLs...');
-    const fileKeys = new Set();
-    fileKeys.add(desktopParsed.fileKey);
-    if (mobileParsed) fileKeys.add(mobileParsed.fileKey);
-
-    let fillUrlMap = {};
-    for (const fk of fileKeys) {
-      const fills = await fetchImageFills(fk, token);
-      fillUrlMap = { ...fillUrlMap, ...fills };
-    }
-
-    // Count unresolvable images per section for fallback numbering
-    const fallbackCountBySection = {};
-    const fallbackIndexBySection = {};
-    for (const fill of uniqueImageFills) {
-      const suffix = resolveImageSuffix(fill, allTextNodes);
-      if (!suffix) {
-        const key = toKebab(fill.sectionName);
-        fallbackCountBySection[key] = (fallbackCountBySection[key] || 0) + 1;
+    // Count images with no meaningful name per section (for fallback numbering)
+    const fallbackCount = {}, fallbackIdx = {};
+    for (const img of images) {
+      if (!resolveImageName(img, texts)) {
+        const sk = toKebab(img.sectionName);
+        fallbackCount[sk] = (fallbackCount[sk] || 0) + 1;
       }
     }
 
-    for (const fill of uniqueImageFills) {
-      const downloadUrl = fillUrlMap[fill.imageRef];
-      if (!downloadUrl) {
-        console.error(`[figma] Warning: no URL for imageRef "${fill.imageRef}" in "${fill.nodeName}"`);
-        continue;
-      }
+    const usedNames = new Set();
+    for (const img of images) {
+      const url = urlMap[img.imageRef];
+      if (!url) { console.error(`[figma] Warning: no URL for "${img.nodeName}"`); continue; }
 
-      const sectionKey = toKebab(fill.sectionName);
-      const suffix = resolveImageSuffix(fill, allTextNodes);
-
-      let baseName;
+      const sk = toKebab(img.sectionName);
+      const suffix = resolveImageName(img, texts);
+      let base;
       if (suffix) {
-        baseName = `${sectionKey}-${suffix}`;
+        base = `${sk}-${suffix}`;
       } else {
-        const idx = fallbackIndexBySection[sectionKey] || 0;
-        fallbackIndexBySection[sectionKey] = idx + 1;
-        const num = fallbackCountBySection[sectionKey] > 1 ? `-${idx + 1}` : '';
-        baseName = `${sectionKey}-image${num}`;
+        const idx = fallbackIdx[sk] || 0;
+        fallbackIdx[sk] = idx + 1;
+        const num = fallbackCount[sk] > 1 ? `-${idx + 1}` : '';
+        base = `${sk}-image${num}`;
       }
 
-      const name = deduplicateName(baseName, usedImageNames);
-      const filename = `${name}.jpg`;
-      const filepath = path.join(assetDir, filename);
-
-      console.error(`[figma] Downloading image: ${filename}`);
+      const name = dedupSimple(base, usedNames);
+      const fname = `${name}.jpg`;
+      const fp = path.join(imgDir, fname);
+      console.error(`[figma] ${fname}`);
       try {
-        await downloadFile(downloadUrl, filepath);
-        assetManifest.push({
-          file: filename,
-          path: path.relative('.', filepath),
-          type: 'image',
-          section: sectionKey,
-          figmaNodeName: fill.nodeName,
-          shopifyUrl: null,
-        });
-      } catch (err) {
-        console.error(`[figma] Failed to download "${filename}": ${err.message}`);
-      }
+        await download(url, fp);
+        assetManifest.push({ file: fname, path: path.relative('.', fp), type: 'image', section: sk, figmaNodeName: img.nodeName, shopifyUrl: null });
+      } catch (e) { console.error(`[figma] Failed: ${fname} — ${e.message}`); }
     }
   }
 
-  // --- Create Icon Snippets ---
-  // SVG icons become snippets/icon-{name}.liquid
+  // --- Create icon snippets ---
 
   const snippetManifest = [];
-
-  if (uniqueIcons.length > 0) {
-    console.error('[figma] Exporting icons as SVG...');
-
-    // Group icons by source file key
-    const desktopIconIds = uniqueIcons
-      .filter((ic) => desktopAssets.icons.some((di) => di.nodeId === ic.nodeId))
-      .map((ic) => ic.nodeId);
-    const mobileOnlyIconIds = uniqueIcons
-      .filter((ic) => !desktopAssets.icons.some((di) => di.nodeId === ic.nodeId))
-      .map((ic) => ic.nodeId);
-
+  if (icons.length) {
+    console.error('[figma] Exporting SVGs...');
+    const dIds = icons.filter((ic) => da.icons.some((d) => d.nodeId === ic.nodeId)).map((ic) => ic.nodeId);
+    const mIds = icons.filter((ic) => !da.icons.some((d) => d.nodeId === ic.nodeId)).map((ic) => ic.nodeId);
     let svgUrls = {};
-    if (desktopIconIds.length > 0) {
-      const urls = await exportNodes(desktopParsed.fileKey, desktopIconIds, SVG_FORMAT, 1, token);
-      svgUrls = { ...svgUrls, ...urls };
-    }
-    if (mobileParsed && mobileOnlyIconIds.length > 0) {
-      const urls = await exportNodes(mobileParsed.fileKey, mobileOnlyIconIds, SVG_FORMAT, 1, token);
-      svgUrls = { ...svgUrls, ...urls };
+    if (dIds.length) Object.assign(svgUrls, await exportNodes(dp.fileKey, dIds, 'svg', 1, token));
+    if (mp && mIds.length) Object.assign(svgUrls, await exportNodes(mp.fileKey, mIds, 'svg', 1, token));
+
+    // Pass 1: resolve names with exclusive text claiming
+    const claimed = new Set();
+    const entries = [];
+    for (const icon of icons) {
+      const url = svgUrls[icon.nodeId];
+      if (!url) { console.error(`[figma] Warning: no SVG for "${icon.nodeName}"`); continue; }
+      const name = resolveIconName(icon, comps, sets, texts, claimed);
+      entries.push({ icon, url, name });
     }
 
-    // Pass 1: Resolve names for all icons, each icon claims its nearest text exclusively
-    const claimedTexts = new Set();
-    const iconEntries = [];
+    // Pass 2: deduplicate, position fallback for collisions
+    const usedNames = new Set();
+    for (const entry of entries) {
+      const sec = toKebab(entry.icon.sectionName);
+      let final;
 
-    for (const icon of uniqueIcons) {
-      const svgUrl = svgUrls[icon.nodeId];
-      if (!svgUrl) {
-        console.error(`[figma] Warning: no SVG URL for icon "${icon.nodeName}"`);
-        continue;
+      if (entry.name) {
+        final = dedupIcon(entry.name, usedNames, sec);
       }
 
-      let resolvedName = resolveIconNameExclusive(
-        icon, componentsMap, componentSetsMap, allTextNodes, claimedTexts
-      );
-      if (!resolvedName) resolvedName = toKebab(icon.sectionName);
-
-      iconEntries.push({ icon, svgUrl, resolvedName });
-    }
-
-    // Pass 2: Deduplicate — if dedup returns null, try harder with position context
-    const usedIconNames = new Set();
-
-    for (const entry of iconEntries) {
-      let finalName = deduplicateIconName(entry.resolvedName, usedIconNames, entry.icon.sectionName);
-
-      if (!finalName) {
-        // Name collided even after section prefix — use position within section
-        const sectionIcons = iconEntries.filter(
-          (e) => toKebab(e.icon.sectionName) === toKebab(entry.icon.sectionName)
-        );
-        const posIndex = sectionIcons.indexOf(entry) + 1;
-        const posName = getPositionLabel(posIndex, sectionIcons.length);
-        const candidate = `${entry.resolvedName}-${posName}`;
-        finalName = candidate;
-        usedIconNames.add(finalName);
+      if (!final) {
+        // Position fallback: ordinal within section
+        const sectionEntries = entries.filter((e) => toKebab(e.icon.sectionName) === sec);
+        const pos = sectionEntries.indexOf(entry);
+        const label = pos < ORDINALS.length ? ORDINALS[pos] : `pos-${pos + 1}`;
+        final = `${sec}-${label}`;
+        usedNames.add(final);
       }
 
-      const snippetFilename = `icon-${finalName}.liquid`;
-      const snippetPath = path.join(snippetDir, snippetFilename);
-
-      console.error(`[figma] Creating snippet: ${snippetFilename}`);
+      const fname = `icon-${final}.liquid`;
+      const fp = path.join(snipDir, fname);
+      console.error(`[figma] ${fname}`);
       try {
-        const svgContent = await downloadText(entry.svgUrl);
-        await writeFile(snippetPath, svgContent);
-
-        snippetManifest.push({
-          file: snippetFilename,
-          path: path.relative('.', snippetPath),
-          type: 'snippet',
-          section: toKebab(entry.icon.sectionName),
-          figmaNodeName: entry.icon.nodeName,
-          renderTag: `{% render '${snippetFilename.replace('.liquid', '')}' %}`,
-        });
-      } catch (err) {
-        console.error(`[figma] Failed to create snippet "${snippetFilename}": ${err.message}`);
-      }
+        await writeFile(fp, await downloadText(entry.url));
+        snippetManifest.push({ file: fname, path: path.relative('.', fp), type: 'snippet', section: sec, figmaNodeName: entry.icon.nodeName, renderTag: `{% render '${fname.replace('.liquid', '')}' %}` });
+      } catch (e) { console.error(`[figma] Failed: ${fname} — ${e.message}`); }
     }
   }
 
-  // --- Build Video List ---
+  // --- Videos ---
 
-  const videoList = uniqueVideos.map((vid) => ({
-    name: `${toKebab(vid.sectionName)}-${toKebab(vid.nodeName)}.mp4`,
-    figmaNodeName: vid.nodeName,
-    section: toKebab(vid.sectionName),
+  const videoList = videos.map((v) => ({
+    name: `${toKebab(v.sectionName)}-video.mp4`,
+    figmaNodeName: v.nodeName,
+    section: toKebab(v.sectionName),
     note: 'Upload manually to Shopify Files',
   }));
 
-  // --- Build Section Info ---
+  // --- Section info ---
 
-  const sectionInfo = desktopSections.map((ds) => {
-    const mobileMatch = mobileSections.find(
-      (ms) => toKebab(ms.name) === toKebab(ds.name)
-    );
-    return {
-      name: ds.name,
-      kebabName: toKebab(ds.name),
-      type: ds.type,
-      desktopBounds: ds.bounds,
-      mobileBounds: mobileMatch?.bounds || null,
-      hasMobileVariant: !!mobileMatch,
-    };
+  const sectionInfo = dSections.map((ds) => {
+    const mob = mSections.find((ms) => toKebab(ms.name) === toKebab(ds.name));
+    return { name: ds.name, kebabName: toKebab(ds.name), type: ds.type, desktopBounds: ds.bounds, mobileBounds: mob?.bounds || null, hasMobileVariant: !!mob };
   });
 
-  // --- Write Outputs ---
+  // --- Write outputs ---
 
   const manifest = {
-    feature,
-    timestamp: new Date().toISOString(),
-    desktopUrl: desktop,
-    mobileUrl: mobile || null,
-    sections: sectionInfo,
-    screenshots: screenshotManifest,
-    assets: assetManifest,
-    snippets: snippetManifest,
-    videos: videoList,
+    feature, timestamp: new Date().toISOString(),
+    desktopUrl: desktop, mobileUrl: mobile || null,
+    sections: sectionInfo, screenshots: shotManifest,
+    assets: assetManifest, snippets: snippetManifest, videos: videoList,
   };
 
-  const manifestPath = path.join(artifactDir, 'asset-manifest.json');
-  await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
-  console.error(`[figma] Saved asset-manifest.json (${assetManifest.length} images, ${snippetManifest.length} snippets, ${videoList.length} videos)`);
+  await writeFile(path.join(artDir, 'asset-manifest.json'), JSON.stringify(manifest, null, 2));
+  await writeFile(path.join(artDir, 'design-context.md'), buildContext(manifest, sectionInfo, shotManifest));
+  console.error(`[figma] Done: ${assetManifest.length} images, ${snippetManifest.length} snippets, ${videoList.length} videos`);
 
-  const designContext = buildDesignContext(manifest, sectionInfo, screenshotManifest);
-  const contextPath = path.join(artifactDir, 'design-context.md');
-  await writeFile(contextPath, designContext);
-  console.error(`[figma] Saved design-context.md`);
-
-  console.log(JSON.stringify(manifest, null, 2));
+  // stdout for skill to read
+  process.stdout.write(JSON.stringify(manifest, null, 2));
 }
 
-// --- Design Context Builder ---
+// ============================================================
+// Design context markdown
+// ============================================================
 
-function buildDesignContext(manifest, sections, screenshots) {
-  const lines = [];
-
-  lines.push(`# Design Context: ${manifest.feature}`);
-  lines.push('');
-  lines.push('## Sections');
-  lines.push('');
-
-  for (const section of sections) {
-    lines.push(`### ${section.name}`);
-    lines.push('');
-
-    const desktopShot = screenshots.find(
-      (s) => s.viewport === 'desktop' && toKebab(s.section) === section.kebabName
-    );
-    if (desktopShot) {
-      lines.push(`**Desktop:** \`${desktopShot.path}\``);
-    }
-
-    const mobileShot = screenshots.find(
-      (s) => s.viewport === 'mobile' && toKebab(s.section) === section.kebabName
-    );
-    if (mobileShot) {
-      lines.push(`**Mobile:** \`${mobileShot.path}\``);
-    } else if (!section.hasMobileVariant) {
-      lines.push('**Mobile:** No mobile frame provided — responsive styles inferred from desktop');
-    }
-
-    if (section.desktopBounds) {
-      const db = section.desktopBounds;
-      lines.push(`**Desktop size:** ${db.width}x${db.height}px`);
-    }
-    if (section.mobileBounds) {
-      const mb = section.mobileBounds;
-      lines.push(`**Mobile size:** ${mb.width}x${mb.height}px`);
-    }
-
-    lines.push('');
+function buildContext(manifest, sections, shots) {
+  const L = [];
+  L.push(`# Design Context: ${manifest.feature}\n`);
+  L.push('## Sections\n');
+  for (const s of sections) {
+    L.push(`### ${s.name}\n`);
+    const ds = shots.find((x) => x.viewport === 'desktop' && toKebab(x.section) === s.kebabName);
+    const ms = shots.find((x) => x.viewport === 'mobile' && toKebab(x.section) === s.kebabName);
+    if (ds) L.push(`**Desktop:** \`${ds.path}\``);
+    if (ms) L.push(`**Mobile:** \`${ms.path}\``);
+    else if (!s.hasMobileVariant) L.push('**Mobile:** Inferred from desktop');
+    if (s.desktopBounds) L.push(`**Desktop size:** ${s.desktopBounds.width}x${s.desktopBounds.height}px`);
+    if (s.mobileBounds) L.push(`**Mobile size:** ${s.mobileBounds.width}x${s.mobileBounds.height}px`);
+    L.push('');
   }
 
-  lines.push('## Images');
-  lines.push('');
-
-  if (manifest.assets.length === 0) {
-    lines.push('No raster images found in the design.');
-  } else {
-    const bySection = {};
-    for (const asset of manifest.assets) {
-      if (!bySection[asset.section]) bySection[asset.section] = [];
-      bySection[asset.section].push(asset);
-    }
-
-    for (const [section, assets] of Object.entries(bySection)) {
-      lines.push(`### ${section}`);
-      lines.push('');
-      lines.push('| File | Shopify URL |');
-      lines.push('|------|-------------|');
-      for (const a of assets) {
-        lines.push(`| \`${a.file}\` | ${a.shopifyUrl || 'pending upload'} |`);
-      }
-      lines.push('');
+  L.push('## Images\n');
+  if (!manifest.assets.length) { L.push('None.\n'); }
+  else {
+    const byS = {};
+    for (const a of manifest.assets) (byS[a.section] ||= []).push(a);
+    for (const [sec, assets] of Object.entries(byS)) {
+      L.push(`### ${sec}\n`);
+      L.push('| File | Shopify URL |');
+      L.push('|------|-------------|');
+      for (const a of assets) L.push(`| \`${a.file}\` | ${a.shopifyUrl || 'pending upload'} |`);
+      L.push('');
     }
   }
 
-  lines.push('## Icon Snippets');
-  lines.push('');
-
-  if (manifest.snippets.length === 0) {
-    lines.push('No SVG icons found in the design.');
-  } else {
-    lines.push('| Snippet | Section | Render Tag |');
-    lines.push('|---------|---------|------------|');
-    for (const s of manifest.snippets) {
-      lines.push(`| \`${s.file}\` | ${s.section} | \`${s.renderTag}\` |`);
-    }
-    lines.push('');
+  L.push('## Icon Snippets\n');
+  if (!manifest.snippets.length) { L.push('None.\n'); }
+  else {
+    L.push('| Snippet | Section | Render Tag |');
+    L.push('|---------|---------|------------|');
+    for (const s of manifest.snippets) L.push(`| \`${s.file}\` | ${s.section} | \`${s.renderTag}\` |`);
+    L.push('');
   }
 
-  if (manifest.videos.length > 0) {
-    lines.push('## Videos (Manual Upload Required)');
-    lines.push('');
-    for (const vid of manifest.videos) {
-      lines.push(`- **${vid.name}** — from "${vid.figmaNodeName}" in ${vid.section} section`);
-    }
-    lines.push('');
+  if (manifest.videos.length) {
+    L.push('## Videos (Manual Upload Required)\n');
+    for (const v of manifest.videos) L.push(`- **${v.name}** — "${v.figmaNodeName}" in ${v.section}`);
+    L.push('');
   }
 
-  lines.push('## Source');
-  lines.push('');
-  lines.push(`- **Desktop:** ${manifest.desktopUrl}`);
-  if (manifest.mobileUrl) {
-    lines.push(`- **Mobile:** ${manifest.mobileUrl}`);
-  }
-  lines.push(`- **Fetched:** ${manifest.timestamp}`);
-  lines.push('');
-
-  return lines.join('\n');
+  L.push('## Source\n');
+  L.push(`- **Desktop:** ${manifest.desktopUrl}`);
+  if (manifest.mobileUrl) L.push(`- **Mobile:** ${manifest.mobileUrl}`);
+  L.push(`- **Fetched:** ${manifest.timestamp}\n`);
+  return L.join('\n');
 }
 
-main().catch((err) => {
-  console.error(`[figma] Fatal: ${err.message}`);
-  process.exit(1);
-});
+main().catch((e) => { console.error(`[figma] Fatal: ${e.message}`); process.exit(1); });
