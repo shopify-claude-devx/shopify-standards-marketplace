@@ -286,7 +286,7 @@ async function main() {
     }
 
     const section = assets.sectionName || assets.feature || feature;
-    const images = (assets.images || []).filter((a) => a.status === 'EXPORTED' && a.localPath);
+    const images = (assets.images || []).filter((a) => a.status === 'DOWNLOADED' && a.localPath);
 
     log(`Section: ${section}`);
     log(`Uploadable images: ${images.length}`);

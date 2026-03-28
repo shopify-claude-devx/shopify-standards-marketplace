@@ -228,52 +228,42 @@ async function exportSvgs(fileKey, assets, snippetsDir) {
 }
 
 
-async function exportImages(fileKey, assets, assetsDir) {
-  const images = assets.images || [];
-  if (images.length === 0) {
-    log('No image assets — skipping image export');
-    return { exported: [], failed: [] };
+async function downloadImages(assets, assetsDir) {
+  const images = (assets.images || []).filter((a) => a.cdnUrl);
+  const noSource = (assets.images || []).filter((a) => !a.cdnUrl);
+
+  if (noSource.length > 0) {
+    for (const img of noSource) {
+      log(`⚠ No source URL for "${img.name}" (${img.nodeId}) — image fill not found in figma-images.json`);
+      img.status = 'FAILED';
+      img.error = 'No source URL — imageRef not found in figma-images.json';
+    }
   }
 
-  log(`${images.length} image(s) to export`);
+  if (images.length === 0) {
+    log('No downloadable image assets');
+    return { downloaded: [], failed: noSource.map((a) => a.name) };
+  }
+
+  log(`${images.length} image(s) to download from source`);
   await mkdir(assetsDir, { recursive: true });
 
-  const nodeIds = images.map((img) => img.nodeId).join(',');
-  const imgResponse = await figmaGet(
-    `/v1/images/${fileKey}?ids=${encodeURIComponent(nodeIds)}&format=png&scale=2`
-  );
-  if (!imgResponse || typeof imgResponse.images !== 'object' || imgResponse.images === null) {
-    throw new Error(
-      'Figma API returned unexpected structure for image export (missing "images" object).'
-    );
-  }
-  const imgUrls = imgResponse.images;
-
-  const exported = [];
-  const failed = [];
+  const downloaded = [];
+  const failed = noSource.map((a) => a.name);
 
   for (const imgAsset of images) {
-    const exportUrl = imgUrls?.[imgAsset.nodeId];
-
-    if (!exportUrl) {
-      log(`✗ No export URL for "${imgAsset.name}" (${imgAsset.nodeId})`);
-      imgAsset.status = 'FAILED';
-      imgAsset.error = 'No export URL returned by Figma — node may be invisible or empty';
-      failed.push(imgAsset.name);
-      continue;
-    }
-
     try {
+      // Detect extension from CDN URL content-type, default to png
       const filename = `${imgAsset.name}.png`;
       const localPath = path.join(assetsDir, filename);
 
-      log(`Exporting ${imgAsset.name}...`);
-      await downloadBinary(exportUrl, localPath);
+      log(`Downloading ${imgAsset.name}...`);
+      await downloadBinary(imgAsset.cdnUrl, localPath);
 
       imgAsset.localPath = path.relative(process.cwd(), localPath);
       imgAsset.filename = filename;
-      imgAsset.status = 'EXPORTED';
-      exported.push({ name: imgAsset.name, filename, localPath: imgAsset.localPath });
+      imgAsset.status = 'DOWNLOADED';
+      downloaded.push({ name: imgAsset.name, filename, localPath: imgAsset.localPath });
       log(`✅ ${filename}`);
     } catch (err) {
       log(`✗ Failed "${imgAsset.name}": ${err.message}`);
@@ -283,7 +273,7 @@ async function exportImages(fileKey, assets, assetsDir) {
     }
   }
 
-  return { exported, failed };
+  return { downloaded, failed };
 }
 
 
@@ -309,7 +299,7 @@ async function main() {
   }
 
   const svgResult = await exportSvgs(fileKey, assets, snippetsDir);
-  const imgResult = await exportImages(fileKey, assets, assetsDir);
+  const imgResult = await downloadImages(assets, assetsDir);
 
   await writeFile(path.join(base, 'figma-assets.json'), JSON.stringify(assets, null, 2));
   log('Updated figma-assets.json with export results');
@@ -317,10 +307,10 @@ async function main() {
   const summary = {
     feature,
     svgs: { created: svgResult.created.length, failed: svgResult.failed.length },
-    images: { exported: imgResult.exported.length, failed: imgResult.failed.length },
+    images: { downloaded: imgResult.downloaded.length, failed: imgResult.failed.length },
   };
 
-  log(`Done. SVGs: ${svgResult.created.length} created, ${svgResult.failed.length} failed. Images: ${imgResult.exported.length} exported, ${imgResult.failed.length} failed.`);
+  log(`Done. SVGs: ${svgResult.created.length} created, ${svgResult.failed.length} failed. Images: ${imgResult.downloaded.length} downloaded, ${imgResult.failed.length} failed.`);
   console.log(JSON.stringify(summary));
 }
 

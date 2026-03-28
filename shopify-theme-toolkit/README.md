@@ -144,10 +144,10 @@ The Figma MCP server is auto-configured via `.mcp.json` when the plugin is insta
 
 `/figma` runs a 5-phase pipeline (0 AI tokens for fetch/parse/export):
 
-1. **Fetch** (`fetch-figma.js`) — 2 REST API calls: node tree + screenshots
+1. **Fetch** (`fetch-figma.js`) — 3 REST API calls: node tree, section screenshots, image fill sources
 2. **Parse** (`parse-figma.js`) — offline JSON parsing → `design-context.md`, `figma-assets.json`, `figma-diff-reference.json`. Auto-deletes raw JSON.
 3. **Review names** — Claude reviews asset names and renames generics to meaningful names (e.g., `Frame 47` → `hero-banner-background`)
-4. **Export** (`export-assets.js`) — exports SVGs to `snippets/icon-{name}.liquid` and images as PNGs via the Figma export endpoint
+4. **Export** (`export-assets.js`) — exports SVGs via Figma export endpoint to `snippets/icon-{name}.liquid`, downloads source images from CDN
 5. **Upload** (`process-assets.js`) — uploads images to Shopify Files with dedup check (skips already-existing files)
 
 ### Shopify Asset Upload

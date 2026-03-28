@@ -93,7 +93,7 @@ Derive a short kebab-case feature name from the URL file name or design name
 
 **Tokens used: 0. Scripts handle all API calls.**
 
-Run `fetch-figma.js` (2 REST API calls — node tree + screenshots):
+Run `fetch-figma.js` (3 REST API calls — node tree, screenshots, image fill sources):
 
 ```bash
 source .env && FIGMA_TOKEN="$FIGMA_TOKEN" node ${CLAUDE_SKILL_DIR}/scripts/fetch-figma.js \
@@ -107,10 +107,13 @@ This saves to `.buildspace/artifacts/{feature}/`:
 - `figma-full.json` — desktop node tree (scripts only, deleted after parse)
 - `figma-full-mobile.json` — mobile node tree (if mobile provided, deleted after parse)
 - `figma-sections.json` — section index with `mobileWidth` from actual Figma frame
-- `screenshots/figma-desktop.png` — Figma design screenshot
-- `screenshots/figma-mobile.png` — Figma mobile screenshot (if provided)
+- `figma-images.json` — image fill source URLs (deleted after parse)
+- `screenshots/{section-name}-desktop.png` — section screenshot from Figma
+- `screenshots/{section-name}-mobile.png` — section mobile screenshot (if provided)
 
-If the script fails, check: correct node ID? Token has read access to the file? Token not expired?
+Screenshots are named after the section (e.g., `hero-banner-desktop.png`), not generic names.
+
+If the script fails, check: correct node ID? Token has read access to the file? Token not expired (90-day max)?
 
 ---
 
@@ -170,11 +173,11 @@ source .env && FIGMA_TOKEN="$FIGMA_TOKEN" node ${CLAUDE_SKILL_DIR}/scripts/expor
   --theme-path .
 ```
 
-This exports from Figma using the `/v1/images/{key}` endpoint:
-- **SVGs** → downloaded and saved as `snippets/icon-{name}.liquid` (cleaned: XML declaration stripped)
-- **Images** → exported as PNG at 2x scale, saved to `.buildspace/artifacts/{feature}/assets/{name}.png`
+This handles two types of assets:
+- **SVGs** → exported via Figma `/v1/images/{key}?format=svg` endpoint, saved as `snippets/icon-{name}.liquid` (cleaned: XML declaration stripped)
+- **Images** → downloaded from source CDN URLs (the raw uploaded images, not rendered exports), saved to `.buildspace/artifacts/{feature}/assets/{name}.png`
 
-The script updates `figma-assets.json` with local paths and export status.
+The script updates `figma-assets.json` with local paths and download status.
 
 If a snippet already exists with the same name, it is **skipped** — not overwritten.
 
@@ -195,9 +198,9 @@ This reads `figma-assets.json` directly (no manual JSON construction needed) and
 3. **Writes `asset-manifest.json`** with `shopifyUrl` values for each asset
 
 Asset statuses in the manifest:
-- `REGISTERED` — newly uploaded to Shopify
+- `REGISTERED` — newly uploaded to Shopify, `shopifyUrl` is set
 - `ALREADY_EXISTS` — already in Shopify Files, skipped (shopifyUrl still set)
-- `FAILED` — upload failed, report to user
+- `FAILED` — upload failed, report to user which assets and why
 
 ---
 
@@ -209,7 +212,7 @@ Print a summary — do NOT dump file contents to conversation:
 Design context saved → .buildspace/artifacts/{feature}/design-context.md
 
 Fetch complete:
-  ✅ figma-desktop.png + figma-mobile.png
+  ✅ screenshots/{section-name}-desktop.png + {section-name}-mobile.png
   ✅ Parsed → design-context.md (raw JSON auto-cleaned)
 
 SVG snippets:
@@ -232,6 +235,8 @@ Next step: run /prd to define requirements.
 - Always run `fetch-figma.js` before `parse-figma.js` — order matters
 - Always review asset names in Phase 2b before exporting — meaningful names matter for Shopify Files
 - MCP Figma tools are NOT used in this workflow — REST API only
-- If an image export returns no URL from Figma, report it — the node may be invisible or empty
+- Images are downloaded from source CDN URLs (raw uploads) — NOT rendered via the export endpoint. The export endpoint renders nodes with all their children, producing screenshots instead of usable images.
+- Image source URLs expire after 14 days — run export-assets.js promptly after fetch+parse
 - If Shopify upload fails for an asset, continue with the rest and report all failures at the end
 - SVGs go to snippets, not Shopify Files — never reverse this
+- Screenshots are section-wise, stored in `screenshots/` with section name prefix

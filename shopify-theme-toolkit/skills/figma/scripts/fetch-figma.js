@@ -215,6 +215,10 @@ async function main() {
   );
   log('Saved figma-sections.json');
 
+  // Section screenshots — named after the section, not generic "figma-desktop/mobile"
+  const sectionSlug = (desktopNode.document.name || feature)
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
   const screenshotResponse = await figmaGet(
     `/v1/images/${fileKey}?ids=${encodeURIComponent(nodeIds)}&format=png&scale=2`
   );
@@ -225,9 +229,11 @@ async function main() {
 
   const desktopShotUrl = screenshotUrls[desktopNodeId];
   if (desktopShotUrl) {
-    log('Downloading figma-desktop.png...');
+    log(`Downloading ${sectionSlug}-desktop.png...`);
+    await downloadBinary(desktopShotUrl, path.join(screenshotsDir, `${sectionSlug}-desktop.png`));
+    // Also save as figma-desktop.png for backward compat with position-diff.js / test skill
     await downloadBinary(desktopShotUrl, path.join(screenshotsDir, 'figma-desktop.png'));
-    log('Saved screenshots/figma-desktop.png');
+    log(`Saved screenshots/${sectionSlug}-desktop.png`);
   } else {
     log('Warning: no desktop screenshot URL returned');
   }
@@ -235,11 +241,20 @@ async function main() {
   if (mobileNodeId) {
     const mobileShotUrl = screenshotUrls[mobileNodeId];
     if (mobileShotUrl) {
-      log('Downloading figma-mobile.png...');
+      log(`Downloading ${sectionSlug}-mobile.png...`);
+      await downloadBinary(mobileShotUrl, path.join(screenshotsDir, `${sectionSlug}-mobile.png`));
       await downloadBinary(mobileShotUrl, path.join(screenshotsDir, 'figma-mobile.png'));
-      log('Saved screenshots/figma-mobile.png');
+      log(`Saved screenshots/${sectionSlug}-mobile.png`);
     }
   }
+
+  // Image fill source URLs — raw uploaded images, not rendered exports
+  const imagesResponse = await figmaGet(`/v1/files/${fileKey}/images`);
+  await writeFile(
+    path.join(artifactDir, 'figma-images.json'),
+    JSON.stringify(imagesResponse, null, 2)
+  );
+  log('Saved figma-images.json');
 
   const summary = {
     feature,
@@ -247,12 +262,14 @@ async function main() {
     desktopNodeId,
     mobileNodeId: mobileNodeId || null,
     mobileWidth,
+    sectionSlug,
     files: [
       'figma-full.json',
       mobileNodeId ? 'figma-full-mobile.json' : null,
       'figma-sections.json',
-      'screenshots/figma-desktop.png',
-      mobileNodeId ? 'screenshots/figma-mobile.png' : null,
+      'figma-images.json',
+      `screenshots/${sectionSlug}-desktop.png`,
+      mobileNodeId ? `screenshots/${sectionSlug}-mobile.png` : null,
     ].filter(Boolean),
   };
 

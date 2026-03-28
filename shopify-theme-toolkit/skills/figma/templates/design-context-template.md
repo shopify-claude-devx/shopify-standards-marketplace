@@ -59,9 +59,9 @@ Node {nodeId} → .{section-name} [section]
 ## Assets
 
 ### Images
-| Asset Name | Node ID | Viewport |
-|------------|---------|----------|
-| `{section-name}-{element}` | `{nodeId}` | desktop |
+| Asset Name | Node ID | Source | Viewport |
+|------------|---------|--------|----------|
+| `{section-name}-{element}` | `{nodeId}` | ✅ source resolved | desktop |
 
 ### SVGs (inline snippets)
 | Snippet Name | Node ID | Output Path |

@@ -168,9 +168,10 @@ function relativeBounds(nodeBox, originBox) {
 
 
 class FigmaParser {
-  constructor(desktopRoot, mobileRoot, sectionName) {
+  constructor(desktopRoot, mobileRoot, imagesMap, sectionName) {
     this.desktop = desktopRoot.document;
     this.mobile = mobileRoot ? mobileRoot.document : null;
+    this.imagesMap = imagesMap;
     this.sectionName = sectionName;
 
     this.originBox = this.desktop.absoluteBoundingBox || { x: 0, y: 0 };
@@ -249,9 +250,10 @@ class FigmaParser {
 
     const imageRef = getImageRef(node);
     if (imageRef) {
+      const cdnUrl = this.imagesMap[imageRef] || null;
       const imgSlug = meaningfulName(name, { parentName, grandparentName, nodeType: 'IMAGE', siblingIndex, totalSiblings });
       const assetName = uniqueAssetName(`${this.sectionName}-${imgSlug}`);
-      this.imageAssets.push({ nodeId, name: assetName, layerName: name, viewport: 'desktop' });
+      this.imageAssets.push({ nodeId, name: assetName, layerName: name, cdnUrl, viewport: 'desktop' });
 
       this.diffNodes[nodeId] = {
         selector: `.${bem}`,
@@ -435,7 +437,7 @@ class FigmaParser {
     });
 
     const imgRows = this.imageAssets.map((a) =>
-      `| \`${a.name}\` | \`${a.nodeId}\` | ${a.viewport} |`
+      `| \`${a.name}\` | \`${a.nodeId}\` | ${a.cdnUrl ? '✅ source resolved' : '⚠ no source image'} | ${a.viewport} |`
     );
     const svgRows = this.svgAssets.map((a) =>
       `| \`${a.snippetName}\` | \`${a.nodeId}\` | \`snippets/${a.snippetName}.liquid\` |`
@@ -485,8 +487,8 @@ ${this.layerLines.join('\n')}
 ## Assets
 
 ### Images
-| Asset Name | Node ID | Viewport |
-|------------|---------|----------|
+| Asset Name | Node ID | Source | Viewport |
+|------------|---------|--------|----------|
 ${imgRows.join('\n') || '| (none) | | |'}
 
 ### SVGs (inline snippets)
@@ -544,6 +546,17 @@ async function main() {
     log('No mobile frame (figma-full-mobile.json not present)');
   }
 
+  // Load image fill source URLs — maps imageRef keys to CDN download URLs
+  let imagesMap = {};
+  try {
+    const imagesRaw = await readFile(path.join(base, 'figma-images.json'), 'utf-8');
+    const imagesData = JSON.parse(imagesRaw);
+    imagesMap = (imagesData && typeof imagesData.images === 'object') ? imagesData.images : {};
+    log(`Image fill sources: ${Object.keys(imagesMap).length} entries`);
+  } catch {
+    log('Warning: figma-images.json not found or invalid — image source URLs will be empty');
+  }
+
   const rootDoc = desktopRoot.document;
   if (!rootDoc.name && !feature) {
     throw new Error('Cannot derive section name: root document has no name and no feature argument provided.');
@@ -551,7 +564,7 @@ async function main() {
   const sectionName = toKebab(rootDoc.name || feature);
   log(`Section: "${sectionName}"`);
 
-  const parser = new FigmaParser(desktopRoot, mobileRoot, sectionName);
+  const parser = new FigmaParser(desktopRoot, mobileRoot, imagesMap, sectionName);
   parser.run();
 
   const designContext = parser.buildDesignContext();
@@ -577,7 +590,8 @@ async function main() {
 
   // Auto-delete raw Figma JSON files — they are only needed for parsing
   await unlink(path.join(base, 'figma-full.json')).catch(() => {});
-  log('Cleaned up figma-full.json');
+  await unlink(path.join(base, 'figma-images.json')).catch(() => {});
+  log('Cleaned up figma-full.json + figma-images.json');
   if (mobileRoot) {
     await unlink(path.join(base, 'figma-full-mobile.json')).catch(() => {});
     log('Cleaned up figma-full-mobile.json');
