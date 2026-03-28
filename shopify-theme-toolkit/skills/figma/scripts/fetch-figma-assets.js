@@ -28,8 +28,8 @@ const EXPORT_SCALE = 2;
 const EXPORT_FORMAT = 'png';
 const SVG_FORMAT = 'svg';
 const ICON_MAX_SIZE = 128;
-const TEXT_PROXIMITY_MAX = 200;
-const TEXT_MAX_LENGTH = 30;
+const TEXT_PROXIMITY_MAX = 500;
+const TEXT_MAX_LENGTH = 40;
 
 const VECTOR_TYPES = new Set([
   'VECTOR', 'BOOLEAN_OPERATION', 'LINE', 'STAR',
@@ -242,63 +242,6 @@ function deduplicateName(name, existingNames) {
 
 // --- Icon Naming ---
 
-function resolveIconName(icon, componentsMap, componentSetsMap, textNodes) {
-  // Strategy 1: INSTANCE → resolve source component via components map
-  if (icon.componentId && componentsMap[icon.componentId]) {
-    const comp = componentsMap[icon.componentId];
-
-    if (comp.componentSetId && componentSetsMap[comp.componentSetId]) {
-      const setName = toKebab(componentSetsMap[comp.componentSetId].name);
-      if (!isGenericNodeName(setName)) return cleanIconName(setName);
-    }
-
-    if (!isVariantSyntax(comp.name)) {
-      const compName = toKebab(comp.name);
-      if (!isGenericNodeName(compName)) return cleanIconName(compName);
-    }
-
-    if (comp.description) {
-      const desc = toKebab(comp.description.split(/[.\n]/)[0]);
-      if (!isGenericNodeName(desc) && desc.length > 2) return cleanIconName(desc);
-    }
-  }
-
-  // Strategy 2: COMPONENT node → look up in components map by node ID
-  if (icon.nodeType === 'COMPONENT' && componentsMap[icon.nodeId]) {
-    const comp = componentsMap[icon.nodeId];
-
-    if (comp.componentSetId && componentSetsMap[comp.componentSetId]) {
-      const setName = toKebab(componentSetsMap[comp.componentSetId].name);
-      if (!isGenericNodeName(setName)) return cleanIconName(setName);
-    }
-
-    const compName = toKebab(comp.name);
-    if (!isGenericNodeName(compName)) return cleanIconName(compName);
-  }
-
-  // Strategy 3: The collected node's own name
-  const ownName = toKebab(icon.nodeName);
-  if (!isGenericNodeName(ownName)) return cleanIconName(ownName);
-
-  // Strategy 4: Walk ancestors (bottom-up) for nearest meaningful name
-  for (let i = icon.ancestors.length - 1; i >= 0; i--) {
-    const anc = icon.ancestors[i];
-    if (anc.type === 'SECTION' || anc.type === 'CANVAS' || anc.type === 'DOCUMENT') continue;
-    const ancName = toKebab(anc.name);
-    if (!isGenericNodeName(ancName)) return cleanIconName(ancName);
-  }
-
-  // Strategy 5: Find nearest TEXT sibling by spatial proximity
-  if (icon.bounds && textNodes.length > 0) {
-    const sectionTexts = textNodes.filter((t) => t.sectionName === icon.sectionName);
-    const nearest = findNearestText(icon.bounds, sectionTexts);
-    if (nearest) return cleanIconName(nearest);
-  }
-
-  // Strategy 6: Section context (last resort)
-  return toKebab(icon.sectionName);
-}
-
 function cleanIconName(name) {
   let kebab = typeof name === 'string' ? toKebab(name) : name;
   // Strip "icon" prefix/suffix — we add icon- in the snippet filename
@@ -333,18 +276,20 @@ function deduplicateIconName(name, usedNames, sectionName) {
     usedNames.add(name);
     return name;
   }
-  // Differentiate with section name
-  const withSection = `${toKebab(sectionName)}-${name}`;
-  if (!usedNames.has(withSection)) {
-    usedNames.add(withSection);
-    return withSection;
+
+  // Only try section prefix if it's different from the name itself
+  const section = toKebab(sectionName);
+  if (section !== name && !name.startsWith(section + '-')) {
+    const withSection = `${section}-${name}`;
+    if (!usedNames.has(withSection)) {
+      usedNames.add(withSection);
+      return withSection;
+    }
   }
-  // Extremely rare: same icon name, same section — add more context
-  let counter = 2;
-  while (usedNames.has(`${withSection}-v${counter}`)) counter++;
-  const unique = `${withSection}-v${counter}`;
-  usedNames.add(unique);
-  return unique;
+
+  // This name genuinely collides — caller should have provided a unique name.
+  // Return null to signal the caller to use fallback numbering.
+  return null;
 }
 
 // --- Image Naming ---
@@ -373,6 +318,93 @@ function resolveImageSuffix(fill, textNodes) {
 
   // No meaningful suffix found
   return null;
+}
+
+function resolveIconNameExclusive(icon, componentsMap, componentSetsMap, textNodes, claimedTexts) {
+  // Strategies 1-4 from resolveIconName (component metadata, ancestors)
+  // These don't need exclusivity — each icon has its own component/ancestors
+
+  // Strategy 1: INSTANCE → source component
+  if (icon.componentId && componentsMap[icon.componentId]) {
+    const comp = componentsMap[icon.componentId];
+    if (comp.componentSetId && componentSetsMap[comp.componentSetId]) {
+      const setName = toKebab(componentSetsMap[comp.componentSetId].name);
+      if (!isGenericNodeName(setName)) return cleanIconName(setName);
+    }
+    if (!isVariantSyntax(comp.name)) {
+      const compName = toKebab(comp.name);
+      if (!isGenericNodeName(compName)) return cleanIconName(compName);
+    }
+    if (comp.description) {
+      const desc = toKebab(comp.description.split(/[.\n]/)[0]);
+      if (!isGenericNodeName(desc) && desc.length > 2) return cleanIconName(desc);
+    }
+  }
+
+  // Strategy 2: COMPONENT → components map
+  if (icon.nodeType === 'COMPONENT' && componentsMap[icon.nodeId]) {
+    const comp = componentsMap[icon.nodeId];
+    if (comp.componentSetId && componentSetsMap[comp.componentSetId]) {
+      const setName = toKebab(componentSetsMap[comp.componentSetId].name);
+      if (!isGenericNodeName(setName)) return cleanIconName(setName);
+    }
+    const compName = toKebab(comp.name);
+    if (!isGenericNodeName(compName)) return cleanIconName(compName);
+  }
+
+  // Strategy 3: Node's own name
+  const ownName = toKebab(icon.nodeName);
+  if (!isGenericNodeName(ownName)) return cleanIconName(ownName);
+
+  // Strategy 4: Walk ancestors
+  for (let i = icon.ancestors.length - 1; i >= 0; i--) {
+    const anc = icon.ancestors[i];
+    if (anc.type === 'SECTION' || anc.type === 'CANVAS' || anc.type === 'DOCUMENT') continue;
+    const ancName = toKebab(anc.name);
+    if (!isGenericNodeName(ancName)) return cleanIconName(ancName);
+  }
+
+  // Strategy 5: Nearest UNCLAIMED text
+  if (icon.bounds && textNodes.length > 0) {
+    const sectionTexts = textNodes.filter((t) => t.sectionName === icon.sectionName);
+    const nearest = findNearestUnclaimedText(icon.bounds, sectionTexts, claimedTexts);
+    if (nearest) {
+      claimedTexts.add(nearest);
+      return cleanIconName(nearest);
+    }
+  }
+
+  return null;
+}
+
+function findNearestUnclaimedText(iconBounds, textNodes, claimedTexts) {
+  let closest = null;
+  let minDist = TEXT_PROXIMITY_MAX;
+
+  const cx = iconBounds.x + iconBounds.width / 2;
+  const cy = iconBounds.y + iconBounds.height / 2;
+
+  for (const text of textNodes) {
+    if (!text.bounds || !text.characters) continue;
+    if (claimedTexts.has(text.characters)) continue;
+    const tx = text.bounds.x + text.bounds.width / 2;
+    const ty = text.bounds.y + text.bounds.height / 2;
+    const dist = Math.hypot(tx - cx, ty - cy);
+    if (dist < minDist && text.characters.length <= TEXT_MAX_LENGTH) {
+      minDist = dist;
+      closest = text.characters;
+    }
+  }
+
+  return closest;
+}
+
+function getPositionLabel(index, total) {
+  if (total <= 6) {
+    const ordinals = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth'];
+    return ordinals[index - 1] || `pos-${index}`;
+  }
+  return `pos-${index}`;
 }
 
 // --- Tree Walking ---
@@ -804,7 +836,9 @@ async function main() {
       svgUrls = { ...svgUrls, ...urls };
     }
 
-    const usedIconNames = new Set();
+    // Pass 1: Resolve names for all icons, each icon claims its nearest text exclusively
+    const claimedTexts = new Set();
+    const iconEntries = [];
 
     for (const icon of uniqueIcons) {
       const svgUrl = svgUrls[icon.nodeId];
@@ -813,24 +847,46 @@ async function main() {
         continue;
       }
 
-      let resolvedName = resolveIconName(icon, componentsMap, componentSetsMap, allTextNodes);
+      let resolvedName = resolveIconNameExclusive(
+        icon, componentsMap, componentSetsMap, allTextNodes, claimedTexts
+      );
       if (!resolvedName) resolvedName = toKebab(icon.sectionName);
 
-      const uniqueName = deduplicateIconName(resolvedName, usedIconNames, icon.sectionName);
-      const snippetFilename = `icon-${uniqueName}.liquid`;
+      iconEntries.push({ icon, svgUrl, resolvedName });
+    }
+
+    // Pass 2: Deduplicate — if dedup returns null, try harder with position context
+    const usedIconNames = new Set();
+
+    for (const entry of iconEntries) {
+      let finalName = deduplicateIconName(entry.resolvedName, usedIconNames, entry.icon.sectionName);
+
+      if (!finalName) {
+        // Name collided even after section prefix — use position within section
+        const sectionIcons = iconEntries.filter(
+          (e) => toKebab(e.icon.sectionName) === toKebab(entry.icon.sectionName)
+        );
+        const posIndex = sectionIcons.indexOf(entry) + 1;
+        const posName = getPositionLabel(posIndex, sectionIcons.length);
+        const candidate = `${entry.resolvedName}-${posName}`;
+        finalName = candidate;
+        usedIconNames.add(finalName);
+      }
+
+      const snippetFilename = `icon-${finalName}.liquid`;
       const snippetPath = path.join(snippetDir, snippetFilename);
 
       console.error(`[figma] Creating snippet: ${snippetFilename}`);
       try {
-        const svgContent = await downloadText(svgUrl);
+        const svgContent = await downloadText(entry.svgUrl);
         await writeFile(snippetPath, svgContent);
 
         snippetManifest.push({
           file: snippetFilename,
           path: path.relative('.', snippetPath),
           type: 'snippet',
-          section: toKebab(icon.sectionName),
-          figmaNodeName: icon.nodeName,
+          section: toKebab(entry.icon.sectionName),
+          figmaNodeName: entry.icon.nodeName,
           renderTag: `{% render '${snippetFilename.replace('.liquid', '')}' %}`,
         });
       } catch (err) {
