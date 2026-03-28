@@ -1,6 +1,7 @@
 ---
 name: prompt-architect
 description: Convert rough, unstructured prompts into well-structured, actionable prompts. Use this skill when the user provides a messy, brain-dump style prompt and wants it converted into a clear, organized prompt with proper sections, criteria, and specificity. Triggers on phrases like "structure this prompt", "make this a proper prompt", "convert this to a prompt", "clean up this prompt", "create a prompt for this", "generate a prompt", or when the user shares a rough idea and asks for a structured prompt output.
+allowed-tools: Write
 ---
 
 # Prompt Architect
@@ -21,7 +22,13 @@ Transform rough, unstructured user inputs into well-structured, actionable promp
 - If the user references a tool/doc/concept, preserve it exactly as stated
 - Do not expand acronyms or rename things unless the user explicitly clarifies
 
-### 3. Preserve the User's Voice
+### 3. No File Reading
+- NEVER read files from the codebase, project, or filesystem to gather context
+- Work ONLY with what the user provides in the conversation
+- If the user mentions a file or reference, use their description of it — do not open it
+- The only file operation allowed is WRITING the final structured prompt
+
+### 4. Preserve the User's Voice
 - Keep the user's terminology, project names, and phrasing
 - Do not replace their words with synonyms or "better" alternatives
 - The structured prompt should feel like THEIR prompt, just organized
@@ -134,8 +141,22 @@ Before presenting the structured prompt, verify:
 
 ## Output
 
-Deliver the structured prompt as a clean markdown file. No preamble. No explanation. Just the prompt ready to be used.
+ALWAYS save the structured prompt as a markdown file. Never present it inline only.
 
-If the prompt is complex (multiple dimensions, external references, multi-stage workflows), save it as a `.md` file.
+### File Naming
+- Derive the filename from the feature/task name the user described
+- Use kebab-case: `feature-name.md`
+- Examples:
+  - User says "assess my shopify theme toolkit plugin" → `shopify-theme-toolkit-assessment.md`
+  - User says "create a prompt for onboarding flow" → `onboarding-flow.md`
+  - User says "structure this for API migration" → `api-migration.md`
+- If the feature name is unclear, ASK the user what to name the file
 
-If the prompt is simple (single task, few criteria), present it inline in chat.
+### File Content
+- The file contains ONLY the structured prompt — no preamble, no meta-commentary
+- Start directly with the `# Title`
+- End after the last section — no closing remarks
+
+### After Saving
+- Confirm the file was created with the filename and path
+- Do not explain what you did or summarize the prompt back — the user can read the file
