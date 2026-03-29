@@ -36,8 +36,6 @@ const SECTION_TYPES = new Set([
 
 const SKIP_TYPES = new Set(['SECTION', 'CANVAS', 'DOCUMENT']);
 
-const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth'];
-
 // ============================================================
 // CLI
 // ============================================================
@@ -123,7 +121,7 @@ function downloadText(url) {
 }
 
 // ============================================================
-// Naming — single source of truth
+// Naming utilities
 // ============================================================
 
 function toKebab(str) {
@@ -134,179 +132,50 @@ function toKebab(str) {
     .toLowerCase();
 }
 
-function isGeneric(name) {
-  if (!name || name.length <= 2) return true;
-  if (/^(vector|boolean|boolean-operation|line|ellipse|polygon|star|frame|group|rectangle|component|instance|union|subtract|intersect|exclude|auto-layout|slice|mask|image)(-\d+)?$/.test(name)) return true;
-  if (/^[a-z]+-\d+$/.test(name)) return true;
-  if (/screen-?shot/.test(name)) return true;
-  if (/\d{5,}/.test(name)) return true;
-  if (/[a-f0-9]{8,}/.test(name) && /[a-f]\d|\d[a-f]/.test(name)) return true;
-  if (/[a-f0-9]{8}-[a-f0-9]{4}/.test(name)) return true;
-  if (/^(i-?stock|shutterstock|pexels|unsplash|adobe-stock|getty|dreamstime|deposit-?photos|123-?rf)/.test(name)) return true;
-  if (/^(dsc|dcim|dscn|p\d{3,}|img|pic|photo|bitmap|paste|clipboard|untitled|layer)(-|$)/.test(name)) return true;
-  if (/^copy-of-/.test(name) || /-copy(-\d+)?$/.test(name)) return true;
-  if (/^[\d-]+$/.test(name)) return true;
-  return false;
-}
+/**
+ * Find the N nearest text nodes in the same section.
+ * Returns array of text strings (top N by distance).
+ */
+function nearestTextsForAsset(bounds, sectionName, texts, limit = 3) {
+  if (!bounds || !texts.length) return [];
+  const cx = bounds.x + bounds.width / 2;
+  const cy = bounds.y + bounds.height / 2;
+  const sectionKey = toKebab(sectionName);
 
-/** A name is usable as a suffix if it's not generic AND not redundant with the section prefix. */
-function isUsable(name, sectionKey) {
-  if (!name || isGeneric(name)) return false;
-  if (name === sectionKey) return false;
-  if (name.startsWith(sectionKey + '-')) return false;
-  if (sectionKey.startsWith(name + '-')) return false;
-  return true;
-}
+  const candidates = [];
+  for (const t of texts) {
+    if (!t.bounds || !t.characters) continue;
+    if (t.characters.length > 60) continue; // Skip long text
+    if (toKebab(t.sectionName) !== sectionKey) continue; // Same section only
+    const dist = Math.hypot(
+      t.bounds.x + t.bounds.width / 2 - cx,
+      t.bounds.y + t.bounds.height / 2 - cy
+    );
+    if (dist > 600) continue; // Max 600px distance
+    candidates.push({ text: t.characters, dist });
+  }
 
-function isVariantSyntax(name) { return /=/.test(name) && /,/.test(name); }
-
-function stripIconAffix(name) {
-  if (!name) return null;
-  const k = toKebab(name).replace(/^icon-/, '').replace(/-icon$/, '');
-  return k && k.length > 1 ? k : null;
+  candidates.sort((a, b) => a.dist - b.dist);
+  return candidates.slice(0, limit).map(c => c.text);
 }
 
 /**
- * Walk a candidate list and return the first usable name.
- * Candidates are raw strings (will be kebab-cased).
+ * Extract component name from component metadata.
+ * Returns the best single name string or null.
  */
-function firstUsable(candidates, sectionKey) {
-  for (const raw of candidates) {
-    if (!raw) continue;
-    const k = toKebab(raw);
-    if (isUsable(k, sectionKey)) return k;
-  }
-  return null;
-}
-
-// ============================================================
-// Asset name resolution
-// ============================================================
-
-/**
- * Resolve a meaningful name for an image fill.
- * Returns a usable suffix string or null.
- */
-function resolveImageName(fill, textNodes) {
-  const sec = toKebab(fill.sectionName);
-
-  // 1. Node name, then ancestors bottom-up
-  const candidates = [fill.nodeName];
-  if (fill.ancestors) {
-    for (let i = fill.ancestors.length - 1; i >= 0; i--) {
-      const a = fill.ancestors[i];
-      if (SKIP_TYPES.has(a.type)) continue;
-      candidates.push(a.name);
-    }
-  }
-  const fromTree = firstUsable(candidates, sec);
-  if (fromTree) return fromTree;
-
-  // 2. Nearest text label
-  return nearestText(fill.bounds, sec, textNodes);
-}
-
-/**
- * Resolve a meaningful name for an icon.
- * Uses component metadata, ancestors, then exclusive text claiming.
- * Returns a usable name string or null.
- */
-function resolveIconName(icon, comps, compSets, textNodes, claimed) {
-  const sec = toKebab(icon.sectionName);
-
-  // 1. Component metadata (highest confidence)
-  const compCandidates = componentCandidates(icon, comps, compSets);
-  for (const raw of compCandidates) {
-    const k = stripIconAffix(raw);
-    if (k && isUsable(k, sec)) return k;
-  }
-
-  // 2. Node name + ancestors
-  const treeCandidates = [icon.nodeName];
-  if (icon.ancestors) {
-    for (let i = icon.ancestors.length - 1; i >= 0; i--) {
-      const a = icon.ancestors[i];
-      if (SKIP_TYPES.has(a.type)) continue;
-      treeCandidates.push(a.name);
-    }
-  }
-  for (const raw of treeCandidates) {
-    const k = stripIconAffix(raw);
-    if (k && isUsable(k, sec)) return k;
-  }
-
-  // 3. Nearest unclaimed text
-  return nearestUnclaimedText(icon.bounds, sec, textNodes, claimed);
-}
-
-function componentCandidates(icon, comps, compSets) {
-  const out = [];
+function getComponentName(icon, comps, compSets) {
   const ids = [icon.componentId, icon.nodeType === 'COMPONENT' ? icon.nodeId : null].filter(Boolean);
   for (const id of ids) {
     const comp = comps[id];
     if (!comp) continue;
+    // Prefer component set name
     if (comp.componentSetId && compSets[comp.componentSetId]) {
-      out.push(compSets[comp.componentSetId].name);
+      return compSets[comp.componentSetId].name;
     }
-    if (!isVariantSyntax(comp.name)) out.push(comp.name);
-    if (comp.description) out.push(comp.description.split(/[.\n]/)[0]);
+    // Then component name if not variant syntax
+    if (comp.name && !/[=,]/.test(comp.name)) return comp.name;
   }
-  return out;
-}
-
-function nearestText(bounds, sectionKey, textNodes) {
-  if (!bounds || !textNodes.length) return null;
-  const cx = bounds.x + bounds.width / 2, cy = bounds.y + bounds.height / 2;
-  let best = null, bestDist = 500;
-  for (const t of textNodes) {
-    if (!t.bounds || !t.characters || t.characters.length > 40) continue;
-    if (t.sectionName && toKebab(t.sectionName) !== sectionKey) continue;
-    const dist = Math.hypot(t.bounds.x + t.bounds.width / 2 - cx, t.bounds.y + t.bounds.height / 2 - cy);
-    if (dist < bestDist) { bestDist = dist; best = t.characters; }
-  }
-  if (!best) return null;
-  const k = toKebab(best);
-  return isUsable(k, sectionKey) ? k : null;
-}
-
-function nearestUnclaimedText(bounds, sectionKey, textNodes, claimed) {
-  if (!bounds || !textNodes.length) return null;
-  const cx = bounds.x + bounds.width / 2, cy = bounds.y + bounds.height / 2;
-  let best = null, bestDist = 500;
-  for (const t of textNodes) {
-    if (!t.bounds || !t.characters || t.characters.length > 40) continue;
-    if (t.sectionName && toKebab(t.sectionName) !== sectionKey) continue;
-    if (claimed.has(t.characters)) continue;
-    const dist = Math.hypot(t.bounds.x + t.bounds.width / 2 - cx, t.bounds.y + t.bounds.height / 2 - cy);
-    if (dist < bestDist) { bestDist = dist; best = t.characters; }
-  }
-  if (!best) return null;
-  const k = toKebab(best);
-  if (isUsable(k, sectionKey)) { claimed.add(best); return k; }
   return null;
-}
-
-// ============================================================
-// Deduplication
-// ============================================================
-
-function dedupSimple(name, used) {
-  if (!used.has(name)) { used.add(name); return name; }
-  let i = 2;
-  while (used.has(`${name}-${i}`)) i++;
-  const u = `${name}-${i}`;
-  used.add(u);
-  return u;
-}
-
-function dedupIcon(name, used, sectionKey) {
-  if (!used.has(name)) { used.add(name); return name; }
-  // Try section prefix only if it adds info
-  if (name !== sectionKey && !name.startsWith(sectionKey + '-')) {
-    const with_sec = `${sectionKey}-${name}`;
-    if (!used.has(with_sec)) { used.add(with_sec); return with_sec; }
-  }
-  return null; // caller uses position fallback
 }
 
 // ============================================================
@@ -324,14 +193,14 @@ function hasVectors(node) {
   return (node.children || []).some(hasVectors);
 }
 
-function walk(node, section, ancestors, out) {
+function walk(node, section, ancestors, sectionBounds, out) {
   if (!node || node.visible === false) return;
   const path = [...ancestors, { id: node.id, name: node.name, type: node.type }];
 
   // Image fills + videos
   for (const fill of node.fills || []) {
     if (fill.type === 'IMAGE' && fill.imageRef && fill.visible !== false) {
-      out.images.push({ imageRef: fill.imageRef, nodeName: node.name, sectionName: section, ancestors: path, bounds: node.absoluteBoundingBox });
+      out.images.push({ imageRef: fill.imageRef, nodeName: node.name, sectionName: section, ancestors: path, bounds: node.absoluteBoundingBox, sectionBounds });
     }
     if (fill.type === 'VIDEO') {
       out.videos.push({ nodeName: node.name, sectionName: section });
@@ -360,14 +229,14 @@ function walk(node, section, ancestors, out) {
     out.texts.push({ characters: node.characters, bounds: node.absoluteBoundingBox, sectionName: section });
   }
 
-  for (const child of node.children || []) walk(child, section, path, out);
+  for (const child of node.children || []) walk(child, section, path, sectionBounds, out);
 }
 
 function collectAll(frame) {
   const out = { images: [], icons: [], videos: [], texts: [] };
   for (const sec of identifySections(frame)) {
     const node = frame.children.find((c) => c.id === sec.id);
-    if (node) walk(node, sec.name, [], out);
+    if (node) walk(node, sec.name, [], sec.bounds, out);
   }
   return out;
 }
@@ -487,47 +356,55 @@ async function main() {
     let urlMap = {};
     for (const k of keys) Object.assign(urlMap, await fetchFills(k, token));
 
-    // Count images with no meaningful name per section (for fallback numbering)
-    const fallbackCount = {}, fallbackIdx = {};
-    for (const img of images) {
-      if (!resolveImageName(img, texts)) {
-        const sk = toKebab(img.sectionName);
-        fallbackCount[sk] = (fallbackCount[sk] || 0) + 1;
-      }
-    }
+    // Index per section for temp naming
+    const indexPerSection = {};
 
-    const usedNames = new Set();
     for (const img of images) {
       const url = urlMap[img.imageRef];
       if (!url) { console.error(`[figma] Warning: no URL for "${img.nodeName}"`); continue; }
 
       const sk = toKebab(img.sectionName);
-      const suffix = resolveImageName(img, texts);
-      let base;
-      if (suffix) {
-        base = `${sk}-${suffix}`;
-      } else {
-        const idx = fallbackIdx[sk] || 0;
-        fallbackIdx[sk] = idx + 1;
-        const num = fallbackCount[sk] > 1 ? `-${idx + 1}` : '';
-        base = `${sk}-image${num}`;
-      }
+      const idx = indexPerSection[sk] || 0;
+      indexPerSection[sk] = idx + 1;
 
-      const name = dedupSimple(base, usedNames);
-      const fname = `${name}.jpg`;
+      // Temp name
+      const tempName = `${sk}-${idx}`;
+      const fname = `${tempName}.jpg`;
       const fp = path.join(imgDir, fname);
       console.error(`[figma] ${fname}`);
+
       try {
         await download(url, fp);
-        assetManifest.push({ file: fname, path: path.relative('.', fp), type: 'image', section: sk, figmaNodeName: img.nodeName, shopifyUrl: null });
+
+        // Collect ancestor names only
+        const ancestorNames = (img.ancestors || []).map(a => a.name);
+
+        // Collect nearby text labels
+        const nearbyTexts = nearestTextsForAsset(img.bounds, img.sectionName, texts, 3);
+
+        assetManifest.push({
+          tempFile: fname,
+          file: null,
+          path: path.relative('.', fp),
+          type: 'image',
+          section: sk,
+          ancestors: ancestorNames,
+          nearbyTexts,
+          sectionBounds: img.sectionBounds,
+          bounds: img.bounds,
+          figmaNodeName: img.nodeName,
+          shopifyUrl: null
+        });
       } catch (e) { console.error(`[figma] Failed: ${fname} — ${e.message}`); }
     }
   }
 
-  // --- Create icon snippets ---
+  // --- Save SVGs to temp location (not snippets yet) ---
 
   const snippetManifest = [];
+  const svgTempDir = path.join(imgDir, 'svg-temp');
   if (icons.length) {
+    await mkdir(svgTempDir, { recursive: true });
     console.error('[figma] Exporting SVGs...');
     const dIds = icons.filter((ic) => da.icons.some((d) => d.nodeId === ic.nodeId)).map((ic) => ic.nodeId);
     const mIds = icons.filter((ic) => !da.icons.some((d) => d.nodeId === ic.nodeId)).map((ic) => ic.nodeId);
@@ -535,42 +412,49 @@ async function main() {
     if (dIds.length) Object.assign(svgUrls, await exportNodes(dp.fileKey, dIds, 'svg', 1, token));
     if (mp && mIds.length) Object.assign(svgUrls, await exportNodes(mp.fileKey, mIds, 'svg', 1, token));
 
-    // Pass 1: resolve names with exclusive text claiming
-    const claimed = new Set();
-    const entries = [];
+    // Index per section for temp naming
+    const indexPerSection = {};
+
     for (const icon of icons) {
       const url = svgUrls[icon.nodeId];
       if (!url) { console.error(`[figma] Warning: no SVG for "${icon.nodeName}"`); continue; }
-      const name = resolveIconName(icon, comps, sets, texts, claimed);
-      entries.push({ icon, url, name });
-    }
 
-    // Pass 2: deduplicate, position fallback for collisions
-    const usedNames = new Set();
-    for (const entry of entries) {
-      const sec = toKebab(entry.icon.sectionName);
-      let final;
+      const sec = toKebab(icon.sectionName);
+      const idx = indexPerSection[sec] || 0;
+      indexPerSection[sec] = idx + 1;
 
-      if (entry.name) {
-        final = dedupIcon(entry.name, usedNames, sec);
-      }
+      // Temp name (use sanitized nodeId for uniqueness)
+      const tempName = `svg-temp-${idx}-${icon.nodeId.replace(/:/g, '-')}.svg`;
+      const fp = path.join(svgTempDir, tempName);
+      console.error(`[figma] ${tempName}`);
 
-      if (!final) {
-        // Position fallback: ordinal within section
-        const sectionEntries = entries.filter((e) => toKebab(e.icon.sectionName) === sec);
-        const pos = sectionEntries.indexOf(entry);
-        const label = pos < ORDINALS.length ? ORDINALS[pos] : `pos-${pos + 1}`;
-        final = `${sec}-${label}`;
-        usedNames.add(final);
-      }
-
-      const fname = `icon-${final}.liquid`;
-      const fp = path.join(snipDir, fname);
-      console.error(`[figma] ${fname}`);
       try {
-        await writeFile(fp, await downloadText(entry.url));
-        snippetManifest.push({ file: fname, path: path.relative('.', fp), type: 'snippet', section: sec, figmaNodeName: entry.icon.nodeName, renderTag: `{% render '${fname.replace('.liquid', '')}' %}` });
-      } catch (e) { console.error(`[figma] Failed: ${fname} — ${e.message}`); }
+        const svgContent = await downloadText(url);
+        await writeFile(fp, svgContent);
+
+        // Collect ancestor names only
+        const ancestorNames = (icon.ancestors || []).map(a => a.name);
+
+        // Collect nearby text labels
+        const nearbyTexts = nearestTextsForAsset(icon.bounds, icon.sectionName, texts, 3);
+
+        // Get component name if available
+        const componentName = getComponentName(icon, comps, sets);
+
+        snippetManifest.push({
+          tempFile: path.relative('.', fp),
+          file: null,
+          path: null,
+          type: 'snippet',
+          section: sec,
+          figmaNodeName: icon.nodeName,
+          componentName,
+          ancestors: ancestorNames,
+          nearbyTexts,
+          bounds: icon.bounds,
+          renderTag: null
+        });
+      } catch (e) { console.error(`[figma] Failed: ${tempName} — ${e.message}`); }
     }
   }
 
@@ -636,7 +520,10 @@ function buildContext(manifest, sections, shots) {
       L.push(`### ${sec}\n`);
       L.push('| File | Shopify URL |');
       L.push('|------|-------------|');
-      for (const a of assets) L.push(`| \`${a.file}\` | ${a.shopifyUrl || 'pending upload'} |`);
+      for (const a of assets) {
+        const fname = a.file || a.tempFile;
+        L.push(`| \`${fname}\` | ${a.shopifyUrl || 'pending naming & upload'} |`);
+      }
       L.push('');
     }
   }
@@ -644,9 +531,13 @@ function buildContext(manifest, sections, shots) {
   L.push('## Icon Snippets\n');
   if (!manifest.snippets.length) { L.push('None.\n'); }
   else {
-    L.push('| Snippet | Section | Render Tag |');
-    L.push('|---------|---------|------------|');
-    for (const s of manifest.snippets) L.push(`| \`${s.file}\` | ${s.section} | \`${s.renderTag}\` |`);
+    L.push('| Snippet | Section | Status |');
+    L.push('|---------|---------|--------|');
+    for (const s of manifest.snippets) {
+      const fname = s.file || `(pending) ${s.tempFile}`;
+      const status = s.file ? 'ready' : 'pending naming';
+      L.push(`| \`${fname}\` | ${s.section} | ${status} |`);
+    }
     L.push('');
   }
 

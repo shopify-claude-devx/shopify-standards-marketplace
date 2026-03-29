@@ -67,9 +67,10 @@ The script will:
 3. Identify sections (top-level children of each frame)
 4. Export and download section-level screenshots to `.buildspace/artifacts/{feature-name}/screenshots/`
 5. Walk the tree to find all image fills, icon components, and videos
-6. Download raster images to `.buildspace/figmaAssets/` named `{section}-{suffix}.jpg` where suffix is resolved from ancestor nodes, nearby text labels, or falls back to `image` when no meaningful context is found
-7. Export SVG icons and create Liquid snippets directly in `snippets/icon-{name}.liquid` (names resolved from Figma component metadata, ancestors, or nearby text labels)
-8. Save `asset-manifest.json` and `design-context.md` to `.buildspace/artifacts/{feature-name}/`
+6. Download raster images to `.buildspace/figmaAssets/` with temp names `{section}-{index}.jpg` (naming deferred to Step 3b)
+7. Export SVGs and save to `.buildspace/figmaAssets/svg-temp/` with temp names (naming deferred to Step 3b)
+8. Enrich manifest with metadata: ancestors, nearby text labels, bounds, component info (used in Step 3b for AI naming)
+9. Save `asset-manifest.json` and `design-context.md` to `.buildspace/artifacts/{feature-name}/`
 
 If the script fails, report the error clearly. Common issues:
 - Invalid Figma URL format → ask user to check the URL
@@ -77,19 +78,74 @@ If the script fails, report the error clearly. Common issues:
 - 429 error → rate limited, wait and retry
 - No sections found → the frame might be flat (no child layers)
 
+## Step 3b: AI Asset Naming
+
+Read the generated `asset-manifest.json`. For each image and SVG, determine meaningful names using the provided metadata context.
+
+### Image Naming
+
+**Format:** `{section}-{container-title}-{image-identity}.jpg`
+- If no useful container-title: `{section}-{image-identity}.jpg`
+
+For each entry in `assets`:
+1. Read the image file visually at `entry.path`
+2. Determine `{image-identity}` from this vocabulary ONLY:
+   - `background` | `thumbnail` | `headshot` | `avatar` | `screenshot` | `illustration` | `logo` | `banner` | `product-shot` | `lifestyle` | `photo`
+3. Determine `{container-title}` from `entry.nearbyTexts` and `entry.ancestors` — pick the most specific, meaningful label (person's name, feature heading, product name, etc.)
+   - Skip generic labels: Card, Block, Frame, Group, Image, Container, Wrapper, Section, etc.
+4. **Anti-duplicate rule:** If `{container-title}` equals the section name or is a substring of it, omit the `{container-title}` part entirely.
+5. Build the kebab-case name, then apply the consecutive word deduplication rule (below)
+6. Handle collisions by appending `-2`, `-3`, etc.
+
+### SVG / Icon Naming
+
+**Format:** `icon-{meaning}.liquid` — maximum 2 words in the meaning (2 kebab segments max)
+
+For each entry in `snippets`:
+1. Read the SVG file content at `entry.tempFile`
+2. From the SVG structure + `entry.figmaNodeName` + `entry.componentName`, determine what the icon represents
+3. Use directional and functional icon terms where applicable:
+   - Directional: `arrow-right`, `arrow-left`, `chevron-down`, `chevron-up`
+   - Action: `check`, `close`, `menu`, `hamburger`, `plus`, `minus`, `search`
+   - Object: `cart`, `heart`, `star`, `user`, `user-profile`, `share`
+   - Social: `social-instagram`, `social-facebook`, `social-twitter`
+   - Media: `play`, `pause`, `volume`, `mute`
+   - Other: identify the icon's purpose in 1-2 words
+4. Never exceed 2 kebab segments (e.g., `icon-arrow-right` OK, `icon-chevron-down-double` NOT OK)
+5. Apply consecutive word deduplication rule (below)
+6. Handle collisions by appending `-2`, `-3`, etc.
+
+### Anti-Consecutive-Duplicate Word Rule (applies to ALL asset names)
+
+After building any name, collapse consecutive repeated words (token deduplication):
+
+Examples:
+- `hero-banner-banner-background` → `hero-banner-background` (remove second "banner")
+- `icon-check-check` → `icon-check` (remove second "check")
+- `team-card-card-headshot` → `team-card-headshot` (remove second "card")
+
+Algorithm: Split the final name by `-`, iterate through tokens, and skip any token that equals the previous token. Rejoin with `-`.
+
+### Execution
+
+After determining all final names in a single pass:
+
+1. **Rename images:** Use Bash `mv` command to rename each file from `{tempFile}` to the final name
+2. **Write SVG snippets:** For each icon in `snippets`, read `entry.tempFile`, write the SVG content to `snippets/icon-{final-name}.liquid`
+3. **Update manifest:** For each asset entry, set `file` and `path` to the final values; for snippets also set `renderTag` to `{% render 'icon-{final-name}' %}`; clear `tempFile` field
+4. **Write manifest:** Update `.buildspace/artifacts/{feature-name}/asset-manifest.json` with the final manifest
+5. **Present summary:** Confirm to the user that naming is complete
+
 ## Step 4: Present Results
 
-After the script completes, read the generated `asset-manifest.json` and present a summary:
+After Step 3b completes, read the updated `asset-manifest.json` and present a summary:
 
 ```
-## Figma Design Fetched: {feature-name}
+## Asset Naming Complete: {feature-name}
 
-### Sections Found
-[List each section with desktop/mobile screenshot status]
-
-### Images Downloaded
-- [count] images downloaded to .buildspace/figmaAssets/
-[List each: filename — in {section}]
+### Images Renamed
+- [count] images renamed with semantic names
+[List each: final-filename — context in {section}]
 
 ### Icon Snippets Created
 - [count] snippets created in snippets/
@@ -98,10 +154,12 @@ After the script completes, read the generated `asset-manifest.json` and present
 ### Videos (Manual Upload Required)
 [List each video with its suggested filename, or "None found"]
 
-### Artifacts Saved
-- `.buildspace/artifacts/{feature-name}/asset-manifest.json`
-- `.buildspace/artifacts/{feature-name}/design-context.md`
+### Artifacts Ready
+- `.buildspace/artifacts/{feature-name}/asset-manifest.json` — updated with final names
+- `.buildspace/artifacts/{feature-name}/design-context.md` — ready for reference
 - `.buildspace/artifacts/{feature-name}/screenshots/` — [count] section screenshots
+- `.buildspace/figmaAssets/` — [count] semantic-named images
+- `snippets/` — [count] icon snippets ready to use
 ```
 
 ## Step 5: Review Section Screenshots
@@ -114,13 +172,14 @@ Read each section screenshot from `.buildspace/artifacts/{feature-name}/screensh
 
 Tell the user:
 ```
-Design context and assets saved.
-- Icon snippets are ready in snippets/ — no upload needed.
-- Run /upload-assets to upload raster images to Shopify Files.
-- Then run /prd to define requirements.
+Design fetching and naming complete.
+- Raster images are renamed and ready in .buildspace/figmaAssets/ (names follow the {section}-{container}-{type} pattern)
+- Icon snippets are created and ready in snippets/ (no upload needed)
+- Run /upload-assets to upload raster images to Shopify Files
+- Then run /prd to define requirements
 ```
 
-**Context tip:** You can `/clear` before the next step — all data is in artifacts, not conversation.
+**Context tip:** You can `/clear` before the next step — all data is in artifacts and files, not conversation.
 
 ---
 
