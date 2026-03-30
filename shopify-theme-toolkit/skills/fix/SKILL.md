@@ -4,7 +4,6 @@ description: >
   Fix bugs and issues with full Root Cause Analysis. Never patches symptoms.
   Always finds and fixes the root cause across all instances. Works after
   /test or /review (pipeline), or standalone for any bug report.
-disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, WebSearch, WebFetch
 ---
 
