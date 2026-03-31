@@ -21,7 +21,7 @@ const { execSync } = require('node:child_process');
 const { mkdir, readFile, writeFile } = require('node:fs/promises');
 const path = require('node:path');
 
-const WAIT_OPTIONS = { waitUntil: 'networkidle', timeout: 30000 };
+const WAIT_OPTIONS = { waitUntil: 'domcontentloaded', timeout: 60000 };
 
 // ── Args ─────────────────────────────────────────────────────────
 
@@ -72,7 +72,7 @@ async function handlePassword(page, password) {
       const btn = await page.$('button[type="submit"]');
       if (btn) {
         await btn.click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
       }
     }
   } catch {

@@ -25,7 +25,7 @@ const VIEWPORTS = [
   { name: 'mobile', width: 390, height: 844 },
 ];
 
-const NAV_OPTIONS = { waitUntil: 'networkidle', timeout: 30000 };
+const NAV_OPTIONS = { waitUntil: 'domcontentloaded', timeout: 60000 };
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -74,7 +74,7 @@ async function handlePassword(page, password) {
       const btn = await page.$('button[type="submit"]');
       if (btn) {
         await btn.click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
       }
     }
   } catch {
