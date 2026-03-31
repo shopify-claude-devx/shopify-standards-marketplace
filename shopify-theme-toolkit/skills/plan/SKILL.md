@@ -43,8 +43,6 @@ Use `Glob` and `Grep` for quick context:
 - `Glob('snippets/*.liquid')` — reusable snippets
 - `Glob('assets/*.css')` + `Glob('assets/*.js')` — asset files
 - `Glob('templates/*.json')` — templates
-- `Grep('design-system', glob='assets/*.css')` — check if design-system.css exists
-
 Then dispatch the **codebase-analyzer** agent:
 
 > Analyze this Shopify theme codebase to inform planning for: [one-line task description from PRD]
@@ -70,13 +68,12 @@ Using the PRD requirements + codebase analysis, make every decision:
 1. **File path** — following codebase naming conventions discovered by agent
 2. **Schema settings** — exact IDs, types, labels, groups (following agent's reported schema patterns)
 3. **CSS classes** — exact BEM class names (following agent's reported CSS conventions)
-4. **Design tokens** — which `var(--token)` to use from design-system.css (never hardcode values that exist as tokens)
-5. **Block types** — if section has repeatable content, exact block type names and their settings
-6. **Null checks** — which settings need blank/empty guards
-7. **Design values** — exact colors, font sizes, spacing, and layout from design-context.md
-8. **CSS loading strategy** — preload (above fold) or lazy load (below fold)
-9. **JS approach** — none, DOMContentLoaded, or Web Component (and why)
-10. **Existing code to reuse** — snippets, patterns, utilities found by agent
+4. **Block types** — if section has repeatable content, exact block type names and their settings
+5. **Null checks** — which settings need blank/empty guards
+6. **Design values** — exact colors, font sizes, spacing, and layout from design-context.md
+7. **CSS loading strategy** — preload (above fold) or lazy load (below fold)
+8. **JS approach** — none, DOMContentLoaded, or Web Component (and why)
+9. **Existing code to reuse** — snippets, patterns, utilities found by agent
 
 **When the plan references an existing codebase pattern:** Include a brief note like "Follow wrapper pattern from testimonials.liquid — uses `data-section-id` attribute." This is pointing to a reference, not writing code.
 

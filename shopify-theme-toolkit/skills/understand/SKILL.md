@@ -120,7 +120,6 @@ reaches JS, what DOM changes it makes]
 [Which other parts of the theme are connected:
 - Uses shared snippet: {name} (also used by {other sections})
 - Referenced in: {templates}
-- CSS variables from: design-system.css
 - Global settings used: {settings}]
 
 **Non-obvious things:**

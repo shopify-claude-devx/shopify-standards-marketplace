@@ -55,20 +55,7 @@ Identify all files to review (from execution-log or user input). Then dispatch t
 
 The agent has all coding skills preloaded — it knows the project standards.
 
-### 2. Design Token Check
-
-After the agent returns, check for design token usage yourself:
-
-Read `assets/design-system.css` (if it exists) to get the list of available tokens.
-
-For each CSS file in the review scope, use `Grep` to find hardcoded values that should use tokens:
-- Hardcoded font sizes → should use `var(--fs-*)`
-- Hardcoded colors → should use `var(--color-*)`
-- Hardcoded spacing that matches token values → should use `var(--gap-*)` or `var(--section-py-*)`
-
-This is only a finding if `design-system.css` exists AND the hardcoded value matches an available token.
-
-### 3. Cross-File Concerns
+### 2. Cross-File Concerns
 
 Check with `Grep` and `Glob`:
 - **Unused snippets:** For each snippet created, verify it's actually rendered somewhere
