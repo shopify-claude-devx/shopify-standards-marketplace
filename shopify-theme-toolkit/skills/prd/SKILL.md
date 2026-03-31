@@ -26,7 +26,7 @@ The request: `$ARGUMENTS`
 2. Use `Glob('.buildspace/artifacts/*/prd.md')` to check for existing features
 3. Create `.buildspace/artifacts/{feature-name}/` if it doesn't exist
 4. If `design-tokens.json` exists, read it for available tokens
-5. If `asset-manifest.json` exists, read it for available assets
+5. If `design-context.md` exists, read it for design specifications
 
 ---
 

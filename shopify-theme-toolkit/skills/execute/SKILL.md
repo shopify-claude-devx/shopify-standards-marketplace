@@ -26,8 +26,7 @@ Context or overrides: `$ARGUMENTS`
 Read `.buildspace/artifacts/{feature-name}/plan.md` as your primary input.
 
 Also read if they exist in the same folder:
-- `asset-manifest.json` — for shopify:// URLs
-- `design-tokens.json` — for reference on available tokens
+- `design-context.md` — for design specifications (typography, colors, spacing, layout)
 
 ---
 
@@ -55,7 +54,7 @@ For each TODO in order, dispatch the **builder** agent with a prompt containing:
 
 1. **The File Spec** — copy the full File Spec section for this TODO from the plan
 2. **File type** — tell the builder which of its preloaded standards to apply
-3. **Additional context** — asset-manifest.json path and design-tokens.json path if they exist
+3. **Additional context** — design-context.md path if it exists
 4. **Codebase patterns** — relevant findings from the plan's Codebase Context section
 
 Example dispatch prompt:
@@ -69,8 +68,7 @@ Build the following file from this File Spec.
 Section .liquid file — apply section-standards and liquid-standards checklists.
 
 ## Additional Context
-- Asset manifest: .buildspace/artifacts/{feature-name}/asset-manifest.json
-- Design tokens: .buildspace/artifacts/{feature-name}/design-tokens.json
+- Design context: .buildspace/artifacts/{feature-name}/design-context.md
 - Codebase patterns: [relevant patterns from plan's Codebase Context]
 ```
 

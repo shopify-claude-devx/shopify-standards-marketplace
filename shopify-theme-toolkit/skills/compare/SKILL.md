@@ -25,14 +25,14 @@ Context or overrides: `$ARGUMENTS`
 
 ## Artifact Resolution
 
-1. Check `.buildspace/artifacts/` for feature folders containing both `asset-manifest.json` (from /figma) and `selectors.json` (from /execute)
+1. Check `.buildspace/artifacts/` for feature folders containing both `design-context.md` (from /figma) and `selectors.json` (from /execute)
 2. If one folder exists → use it
 3. If multiple → ask the user which feature to compare
-4. If `asset-manifest.json` is missing → tell user to run `/figma` first
+4. If `design-context.md` is missing → tell user to run `/figma` first
 5. If `selectors.json` is missing → tell user to run `/execute` first (it generates the selector mapping)
 
 Read from `.buildspace/artifacts/{feature-name}/`:
-- `asset-manifest.json` — for section names and Figma screenshot paths
+- `design-context.md` — for section names and design specifications
 - `selectors.json` — for section-to-CSS-selector mapping
 - `execution-log.md` — for list of files built (context for /fix)
 
@@ -40,7 +40,7 @@ Read from `.buildspace/artifacts/{feature-name}/`:
 
 ## Step 1: Determine Comparison Scope
 
-Read `selectors.json` and `asset-manifest.json` to determine which sections to compare.
+Read `selectors.json` and `design-context.md` to determine which sections to compare.
 
 **Full page build:** Compare all sections listed in selectors.json that have matching Figma screenshots.
 

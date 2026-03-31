@@ -28,7 +28,7 @@ Context or overrides: `$ARGUMENTS`
 Read from `.buildspace/artifacts/{feature-name}/`:
 - `prd.md` — the requirements (REQUIRED)
 - `design-tokens.json` — available design tokens (if exists)
-- `asset-manifest.json` — uploaded assets with shopify:// URLs (if exists)
+- `design-context.md` — design specs: typography, colors, spacing, layout (if exists)
 
 ---
 
@@ -73,7 +73,7 @@ Using the PRD requirements + codebase analysis, make every decision:
 4. **Design tokens** — which `var(--token)` to use from design-system.css (never hardcode values that exist as tokens)
 5. **Block types** — if section has repeatable content, exact block type names and their settings
 6. **Null checks** — which settings need blank/empty guards
-7. **Asset references** — exact `shopify://` URLs from asset-manifest.json
+7. **Design values** — exact colors, font sizes, spacing, and layout from design-context.md
 8. **CSS loading strategy** — preload (above fold) or lazy load (below fold)
 9. **JS approach** — none, DOMContentLoaded, or Web Component (and why)
 10. **Existing code to reuse** — snippets, patterns, utilities found by agent
@@ -100,7 +100,7 @@ Save the plan to the artifact file. Then tell the user:
 
 ## Rules
 - Zero creative decisions for /execute — if /execute has to decide, the plan failed
-- Reference design tokens and asset-manifest — never hardcode values or use placeholder URLs
+- Reference design-context.md for exact design values — never guess colors, sizes, or spacing when the design context specifies them
 - Follow codebase conventions discovered by the agent, not generic standards
 - If the task is too large (>8 files), suggest breaking into smaller plans
 - Test cases must be specific and verifiable — "works correctly" is not a test case

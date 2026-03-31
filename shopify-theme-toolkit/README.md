@@ -1,6 +1,6 @@
 # Shopify Theme Toolkit
 
-A Claude Code plugin for orchestrated Shopify theme development. Supports feature development, bug fixing, code review, testing, and code understanding through an artifact-based workflow. Version 2.0.0.
+A Claude Code plugin for orchestrated Shopify theme development. Supports feature development, bug fixing, code review, testing, and code understanding through an artifact-based workflow. Version 2.1.0.
 
 **Author:** Aditya Pasikanti
 
@@ -29,15 +29,19 @@ Restart Claude Code and type `/shopify-theme-toolkit:prd` — if it responds, th
 ### Full Pipeline (Feature Development)
 
 ```
-/prd → /plan → /execute → /test → /review → /fix (if needed)
+/figma → /prd → /plan → /execute → /compare → /test → /review → /fix (if needed)
 ```
+
+Start with `/figma` when building from a Figma design. Skip it if working from text requirements only.
 
 ### Standalone Commands
 
 ```
+/figma       — Extract design context from Figma (via MCP)
 /fix         — Bug fixing with Root Cause Analysis
 /review      — Code review against project standards
 /test        — Code validation + optional visual review
+/compare     — Visual comparison of code vs Figma screenshots
 /research    — Shopify topic research
 /understand  — Deep code explanation
 ```
@@ -46,10 +50,12 @@ Restart Claude Code and type `/shopify-theme-toolkit:prd` — if it responds, th
 
 | Use Case | Entry Point | Flow |
 |----------|-------------|------|
+| Figma → Feature | `/figma` | /figma → /prd → /plan → /execute → /compare → /fix |
 | Feature Development | `/prd` | /prd → /plan → /execute → /test → /review → /fix |
 | Bug Fixing | `/fix` | standalone with RCA |
 | Code Review | `/review` | standalone against skill checklists |
 | Testing | `/test` | standalone with optional visual review |
+| Visual Comparison | `/compare` | standalone after /execute when Figma screenshots exist |
 | Research | `/research` | standalone web search |
 | Understand Code | `/understand` | standalone deep trace |
 
@@ -59,6 +65,7 @@ Restart Claude Code and type `/shopify-theme-toolkit:prd` — if it responds, th
 
 | Skill | Purpose | Input Artifact | Output Artifact |
 |-------|---------|----------------|-----------------|
+| `/figma` | Extract design context from Figma via MCP | Figma URL(s) | `design-context.md` + screenshots |
 | `/prd` | Define requirements, research, challenge user | User request | `prd.md` |
 | `/plan` | Technical specification with per-file decisions | `prd.md` | `plan.md` |
 | `/execute` | Implement plan TODO by TODO | `plan.md` | code files + `execution-log.md` |
@@ -95,12 +102,17 @@ Restart Claude Code and type `/shopify-theme-toolkit:prd` — if it responds, th
 .buildspace/
   artifacts/
     {feature-name}/
+      design-context.md      ← /figma output (structured design specs)
       prd.md                 ← /prd output
       plan.md                ← /plan output
       execution-log.md       ← /execute output
-      screenshots/           ← /test output
-        code-desktop.png
-        code-mobile.png
+      selectors.json         ← /execute output (section→CSS selector map)
+      screenshots/           ← /figma + /compare + /test output
+        figma-{section}-desktop.png
+        figma-{section}-mobile.png
+        code-{section}-desktop.png
+        code-{section}-mobile.png
+      comparison-report.md   ← /compare output
       review-report.md       ← /review output
       fix-log.md             ← /fix output
 ```
@@ -154,5 +166,7 @@ Requires Shopify CLI installed (`npm install -g @shopify/cli`).
 | What | Required? | Install |
 |---|---|---|
 | Claude Code | Yes | `npm install -g @anthropic-ai/claude-code` |
+| Figma MCP Server | For /figma skill | `claude mcp add --transport http figma https://mcp.figma.com/mcp` |
+| Figma Pro+ plan | For /figma skill | Free plan = 6 calls/month; Pro = 200/day |
 | Shopify CLI | For theme check hook | `npm install -g @shopify/cli` |
 | Node.js 18+ | For test screenshot capture | nodejs.org |

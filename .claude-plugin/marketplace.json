@@ -17,7 +17,7 @@
       "name": "shopify-theme-toolkit",
       "source": "./shopify-theme-toolkit",
       "description": "Shopify theme development plugin with workflow orchestration — skills, commands, and agents for Liquid, CSS, JS, schema, and section standards",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "author": {
         "name": "Aditya Pasikanti"
       },
