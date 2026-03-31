@@ -32,25 +32,32 @@ Context or overrides: `$ARGUMENTS`
 5. If `selectors.json` is missing → tell user to run `/execute` first (it generates the selector mapping)
 
 Read from `.buildspace/artifacts/{feature-name}/`:
-- `design-context.md` — for section names and design specifications
-- `selectors.json` — for section-to-CSS-selector mapping
+- `sections.json` — canonical section names from `/figma` (the naming authority)
+- `selectors.json` — section-to-CSS-selector mapping (names must match sections.json)
+- `design-context.md` — for design specifications
 - `execution-log.md` — for list of files built (context for /fix)
 
 ---
 
 ## Step 1: Determine Comparison Scope
 
-Read `selectors.json` and `design-context.md` to determine which sections to compare.
+Read `sections.json`, `selectors.json`, and `design-context.md` to determine which sections to compare.
+
+**Matching logic:** For each entry in `selectors.json`, find the matching entry in `sections.json` by `name`. This gives you:
+- The CSS selector (from selectors.json) → used to capture the code screenshot
+- The Figma screenshot paths (from sections.json) → the reference to compare against
+
+If a name in selectors.json has no match in sections.json, flag it as a naming mismatch and skip.
 
 **Full page build:** Compare all sections listed in selectors.json that have matching Figma screenshots.
 
 **Single section build:** If only one section was built (one entry in selectors.json), compare only that section.
 
-For each section, verify that Figma screenshots exist:
-- `.buildspace/artifacts/{feature-name}/screenshots/figma-{section-name}-desktop.png`
-- `.buildspace/artifacts/{feature-name}/screenshots/figma-{section-name}-mobile.png` (if mobile frame was provided)
+For each matched section, verify that Figma screenshots exist on disk:
+- `.buildspace/artifacts/{feature-name}/screenshots/figma-{name}-desktop.png`
+- `.buildspace/artifacts/{feature-name}/screenshots/figma-{name}-mobile.png` (if mobile was captured)
 
-If a Figma screenshot is missing for a section, skip that section and note it.
+If a Figma screenshot file is missing for a section, skip that section and note it.
 
 ---
 

@@ -27,6 +27,7 @@ Read `.buildspace/artifacts/{feature-name}/plan.md` as your primary input.
 
 Also read if they exist in the same folder:
 - `design-context.md` — for design specifications (typography, colors, spacing, layout)
+- `sections.json` — canonical section names from `/figma` (used to align selectors.json naming for `/compare`)
 
 ---
 
@@ -112,12 +113,15 @@ Collect all wrapper selectors reported by builders (for section `.liquid` files 
 
 ```json
 [
-  { "name": "hero-banner", "selector": ".hero-banner" },
-  { "name": "features-grid", "selector": ".features-grid" }
+  { "name": "banner", "selector": ".loyalty-banner" },
+  { "name": "tiers", "selector": ".loyalty-tiers" }
 ]
 ```
 
-The `name` is derived from the section filename (kebab-case, without path or extension).
+**Critical — name alignment for `/compare`:**
+- If `sections.json` exists (from `/figma`), the `name` field in selectors.json **MUST match** the `name` field in sections.json for each corresponding section. This is how `/compare` pairs Figma screenshots (`figma-{name}-desktop.png`) with code screenshots (`code-{name}-desktop.png`).
+- If `sections.json` does not exist, derive `name` from the section filename (kebab-case, without path or extension).
+
 The `selector` is the wrapper class reported by the builder (prefixed with `.`).
 
 If no section files were built (e.g., only CSS/JS modifications), skip this step.
