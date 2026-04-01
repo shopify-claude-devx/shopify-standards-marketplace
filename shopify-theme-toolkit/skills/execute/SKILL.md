@@ -75,7 +75,11 @@ Section .liquid file — apply section-standards and liquid-standards checklists
 ```
 
 **Image assets in template JSONs:**
-If `assets-manifest.json` exists, pass the relevant assets to builders working on **template `.json` files**. When the template JSON references a section that has matching assets in the manifest (matched by `section` field), the builder should use the asset file paths from `figmaAssets/` as default image values in the section schema settings. For example, if `assets-manifest.json` contains `{"name": "hero-image-1", "section": "hero", "file": "figmaAssets/hero-image-1.jpg"}`, the builder should reference that image path in the template JSON's section settings where an image is expected, instead of leaving it empty or using a placeholder.
+If `assets-manifest.json` exists, pass the relevant assets to builders working on **template `.json` files**. When the template JSON references a section that has matching assets in the manifest (matched by `section` field), the builder should use the **`shopifyRef`** field as the image value in section settings. This uses Shopify's internal reference format: `shopify://shop_images/{filename}`. For example, if `assets-manifest.json` contains `{"name": "hero-image-1", "section": "hero", "shopifyRef": "shopify://shop_images/hero-image-1.jpg"}`, the builder should set the image value like:
+```json
+"image": "shopify://shop_images/hero-image-1.jpg"
+```
+If `shopifyRef` is not present for an asset, fall back to the local file path from `figmaAssets/`.
 
 **Wait for each builder to complete before dispatching the next.** TODOs may have dependencies (template JSON references section files).
 

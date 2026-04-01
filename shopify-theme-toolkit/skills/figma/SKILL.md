@@ -243,7 +243,110 @@ If zero images found, note it and move on — not all designs have image fills.
 
 ---
 
-## Step 6: Write design-context.md
+## Step 6: Upload Assets to Shopify
+
+> **Why?** Template JSON `image_picker` settings need Shopify-hosted file URLs.
+> Uploading assets to Shopify Files (Settings > Files) ensures images are CDN-backed
+> and available when the theme is deployed — no manual upload step for the merchant.
+
+### 6a: Check Shopify credentials
+
+```bash
+echo "SHOPIFY_STORE=${SHOPIFY_STORE:+set}" "SHOPIFY_ADMIN_TOKEN=${SHOPIFY_ADMIN_TOKEN:+set}"
+```
+
+If either is not set, tell the user:
+```
+Shopify credentials are required to upload assets to your store.
+
+1. Go to your Shopify admin: Settings > Apps and sales channels > Develop apps
+2. Click "Create an app" (or use an existing dev app)
+3. Under "Configuration" > "Admin API integration", enable these scopes:
+   - write_files
+   - read_files
+4. Click "Install app" and copy the Admin API access token
+5. Add to your .env file:
+
+   SHOPIFY_STORE=your-store.myshopify.com
+   SHOPIFY_ADMIN_TOKEN=shpat_xxxxx
+```
+
+If `assets-manifest.json` is empty (no image assets were downloaded in Step 5), skip this step entirely and move to Step 7.
+
+### 6b: Confirm assets with user
+
+Present the downloaded assets for review before uploading:
+- List each asset: name, section, file path
+- Use the `Read` tool to show image thumbnails inline
+
+Then ask the user:
+```
+These [N] image assets will be uploaded to your Shopify store's Files (Settings > Files).
+Confirm to proceed, or let me know if you'd like to exclude any.
+```
+
+Wait for the user's response:
+- **User confirms** → proceed to 6c
+- **User excludes assets** → remove those entries from `assets-manifest.json`, then proceed
+- **User declines** → skip upload entirely, move to Step 7
+
+### 6c: Run upload script
+
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/upload-shopify-assets.js \
+  --feature "{feature}"
+```
+
+The script:
+1. Reads `assets-manifest.json`
+2. Skips entries that already have `shopifyUrl` (safe to re-run)
+3. Calls `stagedUploadsCreate` to get presigned upload URLs (batches of 3)
+4. Uploads files via multipart POST to the staged targets
+5. Calls `fileCreate` to register files in Shopify
+6. Polls until files reach `READY` status
+7. Outputs the updated manifest JSON to stdout
+
+### 6d: Update manifest
+
+Capture the script's stdout to a **temp file first**, then replace the manifest. Do NOT redirect stdout directly to `assets-manifest.json` — the script reads that same file, so a direct redirect would truncate it before the script can read it.
+
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/upload-shopify-assets.js \
+  --feature "{feature}" > /tmp/assets-manifest-updated.json
+# Only replace if the script succeeded (exit code 0)
+cp /tmp/assets-manifest-updated.json .buildspace/artifacts/{feature}/assets-manifest.json
+```
+
+Alternatively, capture the stdout in the conversation and use the Write tool to save the updated manifest. Logs are written to stderr, JSON manifest to stdout — do not mix them with `2>&1`.
+
+The updated entries now include Shopify fields:
+```json
+{
+  "name": "hero-image-1",
+  "section": "hero",
+  "file": "figmaAssets/hero-image-1.jpg",
+  "imageRef": "abc123def",
+  "sourceNode": "49:382",
+  "sourceNodeName": "Hero Photo",
+  "shopifyUrl": "https://cdn.shopify.com/s/files/1/xxxx/files/hero-image-1.jpg",
+  "shopifyFileId": "gid://shopify/MediaImage/12345",
+  "shopifyRef": "shopify://shop_images/hero-image-1.jpg"
+}
+```
+
+- `shopifyUrl` — full CDN URL (for previews, debugging)
+- `shopifyRef` — Shopify internal reference (for template JSON `image` values)
+
+### 6e: Report
+
+Tell the user:
+- How many assets were uploaded successfully (with CDN URLs)
+- Any failures and their errors
+- If some files are still processing, note their `shopifyFileId` for manual check
+
+---
+
+## Step 7: Write design-context.md
 
 Assemble all MCP data into `.buildspace/artifacts/{feature}/design-context.md`:
 
@@ -293,9 +396,9 @@ Assemble all MCP data into `.buildspace/artifacts/{feature}/design-context.md`:
 ## Image Assets
 See `assets-manifest.json` for full details.
 
-| Asset | Section | File |
-|-------|---------|------|
-| {name} | {section} | {file path} |
+| Asset | Section | File | Shopify URL |
+|-------|---------|------|-------------|
+| {name} | {section} | {file path} | {shopifyUrl or "—"} |
 ```
 
 Fill every table with the actual values from the MCP response. Do not leave placeholders. If a value was not available from the MCP, omit the row rather than guessing.
@@ -304,7 +407,7 @@ For the Image Assets table, read `assets-manifest.json` and list each saved asse
 
 ---
 
-## Step 7: Present & Hand Off
+## Step 8: Present & Hand Off
 
 Show the user:
 1. Number of sections found
@@ -318,8 +421,8 @@ Design context extracted and saved.
 - .buildspace/artifacts/{feature}/design-context.md — structured design specs
 - .buildspace/artifacts/{feature}/sections.json — canonical section names (used by /execute and /compare)
 - .buildspace/artifacts/{feature}/screenshots/ — visual references (section-by-section)
-- .buildspace/artifacts/{feature}/assets-manifest.json — image asset references (used by /execute)
-- .buildspace/artifacts/{feature}/figmaAssets/ — downloaded image fills
+- .buildspace/artifacts/{feature}/assets-manifest.json — image asset references with Shopify CDN URLs (used by /execute)
+- .buildspace/artifacts/{feature}/figmaAssets/ — downloaded image fills (local copies)
 
 Run /prd to define requirements for this feature.
 ```
