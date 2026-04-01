@@ -186,7 +186,64 @@ After the script runs, use the `Read` tool to open each saved screenshot and pre
 
 ---
 
-## Step 5: Write design-context.md
+## Step 5: Discover & Download Image Assets
+
+> **Why?** Designs contain uploaded images (hero photos, product shots, backgrounds)
+> that are needed during implementation. This step downloads the originals from Figma
+> so `/execute` can reference real assets instead of placeholders.
+
+### 5a: Run the asset discovery & download script
+
+The script auto-discovers IMAGE fills in each section, downloads the originals from
+Figma's image fill API, and saves them to `figmaAssets/`. It batches downloads (3
+concurrent) to respect rate limits.
+
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/save-figma-assets.js \
+  --file-key "{desktop-fileKey}" \
+  --feature "{feature}" \
+  --node-id "{desktop-top-level-nodeId}"
+```
+
+If mobile uses a **different file key**, run a second call with the mobile file key and node ID. If mobile is in the same file, the desktop call already covers it (images are discovered by walking all sections in the frame).
+
+The script:
+1. Fetches the node tree via `GET /v1/files/:key/nodes`
+2. Walks each section's descendants for fills with `type: "IMAGE"`
+3. Skips Header/Footer sections (same rule as screenshots)
+4. Deduplicates by `imageRef` within each section
+5. Fetches download URLs via `GET /v1/files/:key/images`
+6. Downloads and saves with names: `{section}-image-{n}.{ext}`
+7. Outputs the manifest JSON to stdout
+
+### 5b: Save assets-manifest.json
+
+Capture the script's stdout and save it to `.buildspace/artifacts/{feature}/assets-manifest.json`.
+
+The manifest is a JSON array:
+```json
+[
+  {
+    "name": "hero-image-1",
+    "section": "hero",
+    "file": "figmaAssets/hero-image-1.jpg",
+    "imageRef": "abc123def",
+    "sourceNode": "49:382",
+    "sourceNodeName": "Hero Photo"
+  }
+]
+```
+
+If the script found zero images, save an empty array `[]` — this is not an error.
+
+### 5c: Report to user
+
+Tell the user how many image assets were found and downloaded, grouped by section.
+If zero images found, note it and move on — not all designs have image fills.
+
+---
+
+## Step 6: Write design-context.md
 
 Assemble all MCP data into `.buildspace/artifacts/{feature}/design-context.md`:
 
@@ -232,18 +289,28 @@ Assemble all MCP data into `.buildspace/artifacts/{feature}/design-context.md`:
 
 **Elements:**
 {Structured hierarchy of components in this section with key visual properties}
+
+## Image Assets
+See `assets-manifest.json` for full details.
+
+| Asset | Section | File |
+|-------|---------|------|
+| {name} | {section} | {file path} |
 ```
 
 Fill every table with the actual values from the MCP response. Do not leave placeholders. If a value was not available from the MCP, omit the row rather than guessing.
 
+For the Image Assets table, read `assets-manifest.json` and list each saved asset. If the manifest is empty (no image fills found), omit the Image Assets section entirely.
+
 ---
 
-## Step 6: Present & Hand Off
+## Step 7: Present & Hand Off
 
 Show the user:
 1. Number of sections found
 2. Each section screenshot for visual review
 3. Key design values discovered (primary colors, fonts, notable spacing)
+4. Number of image assets downloaded (if any), grouped by section
 
 Then tell the user:
 ```
@@ -251,6 +318,8 @@ Design context extracted and saved.
 - .buildspace/artifacts/{feature}/design-context.md — structured design specs
 - .buildspace/artifacts/{feature}/sections.json — canonical section names (used by /execute and /compare)
 - .buildspace/artifacts/{feature}/screenshots/ — visual references (section-by-section)
+- .buildspace/artifacts/{feature}/assets-manifest.json — image asset references (used by /execute)
+- .buildspace/artifacts/{feature}/figmaAssets/ — downloaded image fills
 
 Run /prd to define requirements for this feature.
 ```

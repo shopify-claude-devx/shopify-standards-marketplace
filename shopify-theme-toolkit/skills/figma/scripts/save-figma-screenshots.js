@@ -22,8 +22,39 @@
 'use strict';
 
 const https = require('node:https');
+const fs = require('node:fs');
 const { mkdir, writeFile } = require('node:fs/promises');
 const path = require('node:path');
+
+// ── .env loader (zero dependencies) ────────────────────────────
+
+function loadEnv() {
+  const envPath = path.resolve(process.cwd(), '.env');
+  try {
+    const content = fs.readFileSync(envPath, 'utf8');
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIndex = trimmed.indexOf('=');
+      if (eqIndex === -1) continue;
+      const key = trimmed.slice(0, eqIndex).trim();
+      let value = trimmed.slice(eqIndex + 1).trim();
+      // Strip surrounding quotes
+      if ((value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      // Don't override existing env vars
+      if (!process.env[key]) {
+        process.env[key] = value;
+      }
+    }
+  } catch {
+    // No .env file — that's fine, fall through to env var check
+  }
+}
+
+loadEnv();
 
 // ── Args ────────────────────────────────────────────────────────
 

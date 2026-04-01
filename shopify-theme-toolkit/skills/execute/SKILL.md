@@ -28,6 +28,7 @@ Read `.buildspace/artifacts/{feature-name}/plan.md` as your primary input.
 Also read if they exist in the same folder:
 - `design-context.md` — for design specifications (typography, colors, spacing, layout)
 - `sections.json` — canonical section names from `/figma` (used to align selectors.json naming for `/compare`)
+- `assets-manifest.json` — image assets downloaded from Figma (used to reference real images instead of placeholders)
 
 ---
 
@@ -72,6 +73,9 @@ Section .liquid file — apply section-standards and liquid-standards checklists
 - Design context: .buildspace/artifacts/{feature-name}/design-context.md
 - Codebase patterns: [relevant patterns from plan's Codebase Context]
 ```
+
+**Image assets in template JSONs:**
+If `assets-manifest.json` exists, pass the relevant assets to builders working on **template `.json` files**. When the template JSON references a section that has matching assets in the manifest (matched by `section` field), the builder should use the asset file paths from `figmaAssets/` as default image values in the section schema settings. For example, if `assets-manifest.json` contains `{"name": "hero-image-1", "section": "hero", "file": "figmaAssets/hero-image-1.jpg"}`, the builder should reference that image path in the template JSON's section settings where an image is expected, instead of leaving it empty or using a placeholder.
 
 **Wait for each builder to complete before dispatching the next.** TODOs may have dependencies (template JSON references section files).
 
