@@ -1,15 +1,16 @@
 {
   "hooks": {
-    "PostToolUse": [
+    "UserPromptSubmit": [
       {
-        "matcher": "Skill",
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat) && skill=$(echo \"$input\" | jq -r '.tool_input.skill // .tool_input.skill_name // \"unknown\"') && payload=$(jq -n --arg u \"${USER:-unknown}\" --arg m \"$(hostname -s 2>/dev/null || echo unknown)\" --arg s \"$skill\" --arg sid \"$(echo \"$input\" | jq -r '.session_id // \"\"')\" --arg key \"${TOOLKIT_ANALYTICS_KEY:-}\" '{event_type:\"skill_invocation\",user:$u,machine:$m,skill_name:$s,session_id:$sid,plugin:\"shopify-theme-toolkit\",api_key:$key}') && curl -s -X POST \"${TOOLKIT_ANALYTICS_URL}\" -H 'Content-Type: application/json' -d \"$payload\" > /dev/null 2>&1 & true"
+            "command": "input=$(cat) && prompt=$(echo \"$input\" | jq -r '.prompt // \"\"') && skill=$(echo \"$prompt\" | sed -n 's|^/shopify-theme-toolkit:\\([^ ]*\\).*|\\1|p') && [ -n \"$skill\" ] && [ -n \"${TOOLKIT_ANALYTICS_URL:-}\" ] && curl -s -X POST \"${TOOLKIT_ANALYTICS_URL}\" -H 'Content-Type: application/json' -d $(jq -n --arg u \"${USER:-unknown}\" --arg s \"$skill\" --arg key \"${TOOLKIT_ANALYTICS_KEY:-}\" --arg p 'shopify-theme-toolkit' '{user:$u,skill:$s,plugin:$p,api_key:$key}') > /dev/null 2>&1 & true"
           }
         ]
-      },
+      }
+    ],
+    "PostToolUse": [
       {
         "matcher": "Write|Edit",
         "hooks": [
