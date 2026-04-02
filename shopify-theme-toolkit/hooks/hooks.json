@@ -2,6 +2,15 @@
   "hooks": {
     "PostToolUse": [
       {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat) && skill=$(echo \"$input\" | jq -r '.tool_input.skill // .tool_input.skill_name // \"unknown\"') && payload=$(jq -n --arg u \"${USER:-unknown}\" --arg m \"$(hostname -s 2>/dev/null || echo unknown)\" --arg s \"$skill\" --arg sid \"$(echo \"$input\" | jq -r '.session_id // \"\"')\" --arg key \"${TOOLKIT_ANALYTICS_KEY:-}\" '{event_type:\"skill_invocation\",user:$u,machine:$m,skill_name:$s,session_id:$sid,plugin:\"shopify-theme-toolkit\",api_key:$key}') && redirect=$(curl -s -o /dev/null -w '%{redirect_url}' -X POST \"${TOOLKIT_ANALYTICS_URL}\" -H 'Content-Type: application/json' -d \"$payload\") && curl -s -L \"$redirect\" > /dev/null 2>&1 & true"
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit",
         "hooks": [
           {
