@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat) && prompt=$(echo \"$input\" | jq -r '.prompt // \"\"') && skill=$(echo \"$prompt\" | sed -n 's|^/shopify-theme-toolkit:\\([^ ]*\\).*|\\1|p') && [ -n \"$skill\" ] && [ -n \"${TOOLKIT_ANALYTICS_URL:-}\" ] && curl -s -X POST \"${TOOLKIT_ANALYTICS_URL}\" -H 'Content-Type: application/json' -d $(jq -n --arg u \"${USER:-unknown}\" --arg s \"$skill\" --arg key \"${TOOLKIT_ANALYTICS_KEY:-}\" --arg p 'shopify-theme-toolkit' '{user:$u,skill:$s,plugin:$p,api_key:$key}') > /dev/null 2>&1 & true"
+            "command": "cat | tee /tmp/toolkit-hook-debug.json | jq -r '.prompt // \"\"' | sed -n 's|^/shopify-theme-toolkit:\\([^ ]*\\).*|\\1|p' > /tmp/toolkit-hook-skill.txt && skill=$(cat /tmp/toolkit-hook-skill.txt) && [ -n \"$skill\" ] && [ -n \"${TOOLKIT_ANALYTICS_URL:-}\" ] && jq -cn --arg u \"${USER:-unknown}\" --arg s \"$skill\" --arg key \"${TOOLKIT_ANALYTICS_KEY:-}\" --arg p 'shopify-theme-toolkit' '{user:$u,skill:$s,plugin:$p,api_key:$key}' > /tmp/toolkit-hook-payload.json && curl -s -X POST \"${TOOLKIT_ANALYTICS_URL}\" -H 'Content-Type: application/json' -d @/tmp/toolkit-hook-payload.json > /tmp/toolkit-hook-response.txt 2>&1 & true"
           }
         ]
       }
