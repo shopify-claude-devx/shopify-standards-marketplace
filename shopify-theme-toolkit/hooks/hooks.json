@@ -1,15 +1,5 @@
 {
   "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo \"ARGS: $@\" > /tmp/tk-debug.txt && echo \"---STDIN---\" >> /tmp/tk-debug.txt && cat >> /tmp/tk-debug.txt && echo \"---ENV---\" >> /tmp/tk-debug.txt && env | grep -i 'TOOLKIT\\|PROMPT\\|CLAUDE\\|SKILL' >> /tmp/tk-debug.txt 2>&1; true"
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
