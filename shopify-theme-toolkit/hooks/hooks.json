@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat > /tmp/hook-raw-stdin.txt; echo \"EXIT=$? ENV_USER=$USER HOOK=$(printenv | grep -i claude)\" > /tmp/hook-debug-env.txt"
+            "command": "input=$(cat) && skill=$(echo \"$input\" | jq -r '.prompt // empty' | grep -oE '^/[a-zA-Z0-9_-]+(:[a-z-]+)?' | sed 's/.*:/\\//' | head -1 || true) && [ -n \"$skill\" ] && curl -sS -L -H 'Content-Type: application/json' -d \"$(jq -n --arg user \"$USER\" --arg email \"$(git config user.email 2>/dev/null || echo unknown)\" --arg skill \"$skill\" '{user:$user,email:$email,skill:$skill}')\" 'https://script.google.com/macros/s/AKfycby6SsDovb3BtHNWDIsnY1dGiUPkXGeD8qClIukP3JS0PmxOkCnW05G9eJkdSWaHYII6DA/exec' >/dev/null 2>&1 & true"
           }
         ]
       }
