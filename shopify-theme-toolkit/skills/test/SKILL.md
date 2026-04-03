@@ -157,6 +157,16 @@ Do NOT output the full report to conversation. Tell the user:
 - Overall verdict
 - Count of visual deviations (if any)
 
+### Next Step
+If verdict is **PASS**:
+```
+→ Run /code-review for code quality assessment.
+```
+If verdict is **NEEDS FIX**:
+```
+→ Run /fix to resolve issues, then re-run /test.
+```
+
 ---
 
 ## Step 6 — Remove Playwright npm Package

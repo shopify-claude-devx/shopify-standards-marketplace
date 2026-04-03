@@ -18,5 +18,5 @@
 - **Iteration 2:** {pass / X remaining issues} (if needed)
 
 ## Final Status
-- **All Fixed** — All issues resolved. Run /test and /review to confirm.
+- **All Fixed** — All issues resolved. Run /test and /code-review to confirm.
 - **Partially Fixed** — [count] issues remain. See remaining issues above.

@@ -25,9 +25,52 @@ If both URLs are not provided, ask the user for both before proceeding. If the u
 
 ---
 
-## Step 1: Validate MCP & Parse URLs
+## Step 1: Check Credentials & Validate MCP
 
-Check that Figma MCP tools are available by calling `get_design_context` or `get_metadata`.
+**MANDATORY FIRST ACTION — run this bash command before doing anything else:**
+
+```bash
+echo "=== Credential Check ==="
+if [ -n "$FIGMA_TOKEN" ]; then
+  echo "FIGMA_TOKEN: set (env)"
+elif [ -f .env ] && grep -q '^FIGMA_TOKEN=' .env; then
+  echo "FIGMA_TOKEN: set (.env file)"
+else
+  echo "FIGMA_TOKEN: NOT FOUND"
+fi
+
+if [ -n "$SHOPIFY_STORE" ]; then
+  echo "SHOPIFY_STORE: set (env)"
+elif [ -f .env ] && grep -q '^SHOPIFY_STORE=' .env; then
+  echo "SHOPIFY_STORE: set (.env file)"
+else
+  echo "SHOPIFY_STORE: not set (upload step will be skipped)"
+fi
+
+if [ -n "$SHOPIFY_ADMIN_TOKEN" ]; then
+  echo "SHOPIFY_ADMIN_TOKEN: set (env)"
+elif [ -f .env ] && grep -q '^SHOPIFY_ADMIN_TOKEN=' .env; then
+  echo "SHOPIFY_ADMIN_TOKEN: set (.env file)"
+else
+  echo "SHOPIFY_ADMIN_TOKEN: not set (upload step will be skipped)"
+fi
+```
+
+**You MUST run this check and read its output before proceeding.** Do NOT skip it. Do NOT try MCP calls first.
+
+If `FIGMA_TOKEN` is NOT FOUND, stop and tell the user:
+```
+FIGMA_TOKEN is required to save Figma screenshots to disk.
+1. Go to: https://www.figma.com/developers/api#access-tokens
+2. Create a Personal Access Token
+3. Add it to your project's .env file: FIGMA_TOKEN="your-token-here"
+```
+Wait for the user to add the token before continuing.
+
+> **Note:** The screenshot and asset scripts have a built-in `.env` loader — they will
+> read from `.env` automatically. You do NOT need to `source .env` before running them.
+
+**After credentials are confirmed**, check that Figma MCP tools are available by calling `get_design_context` or `get_metadata`.
 
 If the MCP tools are not available, stop and tell the user:
 ```
@@ -37,28 +80,6 @@ Run this command to add it:
 Then restart Claude Code and authenticate via the browser when prompted.
 Requires Figma Pro plan or higher for practical use (free plan = 6 calls/month).
 ```
-
-Check that `FIGMA_TOKEN` is available — either as an environment variable OR in the project's `.env` file:
-```bash
-if [ -n "$FIGMA_TOKEN" ]; then
-  echo "FIGMA_TOKEN: set (env)"
-elif [ -f .env ] && grep -q '^FIGMA_TOKEN=' .env; then
-  echo "FIGMA_TOKEN: set (.env file)"
-else
-  echo "FIGMA_TOKEN: NOT FOUND"
-fi
-```
-
-Only if NOT FOUND in both locations, tell the user:
-```
-FIGMA_TOKEN is required to save Figma screenshots to disk.
-1. Go to: https://www.figma.com/developers/api#access-tokens
-2. Create a Personal Access Token
-3. Add it to your project's .env file: FIGMA_TOKEN="your-token-here"
-```
-
-> **Note:** The screenshot and asset scripts have a built-in `.env` loader — they will
-> read from `.env` automatically. You do NOT need to `source .env` before running them.
 
 Parse each Figma URL to extract:
 - `fileKey` — from the URL path (e.g., `figma.com/design/{fileKey}/...`)
@@ -447,8 +468,13 @@ Design context extracted and saved.
 - .buildspace/artifacts/{feature}/screenshots/ — visual references (section-by-section)
 - .buildspace/artifacts/{feature}/assets-manifest.json — image asset references with Shopify CDN URLs (used by /execute)
 - .buildspace/artifacts/{feature}/figmaAssets/ — downloaded image fills (local copies)
+```
 
-Run /prd to define requirements for this feature.
+### Next Step
+Tell the user:
+```
+→ Run /prd to define requirements for this feature.
+  Remaining: /prd → /plan → /execute → /compare → /test → /code-review
 ```
 
 **Context tip:** You can `/clear` before the next step — all data is in artifacts, not conversation.

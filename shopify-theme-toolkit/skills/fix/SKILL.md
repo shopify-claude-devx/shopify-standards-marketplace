@@ -3,7 +3,7 @@ name: fix
 description: >
   Fix bugs and issues with full Root Cause Analysis. Never patches symptoms.
   Always finds and fixes the root cause across all instances. Works after
-  /test or /review (pipeline), or standalone for any bug report.
+  /test or /code-review (pipeline), or standalone for any bug report.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, WebSearch, WebFetch
 ---
 
@@ -18,8 +18,8 @@ Bug report or context: `$ARGUMENTS`
 
 ## Mode Detection
 
-### Pipeline Mode (after /test or /review)
-Check `.buildspace/artifacts/` for feature folders containing `test-report.md` or `review-report.md`.
+### Pipeline Mode (after /test or /code-review)
+Check `.buildspace/artifacts/` for feature folders containing `test-report.md` or `code-review-report.md`.
 If found, read both reports. Issues are already identified — but you still do RCA before fixing.
 
 ### Standalone Mode (direct bug report)
@@ -34,7 +34,7 @@ User describes a bug. You investigate from scratch.
 **Read all relevant code.** Do not stop at the first broken line.
 
 1. **Start from the symptom:**
-   - Pipeline: read the issue descriptions from test-report.md / review-report.md
+   - Pipeline: read the issue descriptions from test-report.md / code-review-report.md
    - Standalone: understand the user's bug description — what's broken, where, what triggers it
 
 2. **Find the files:**
@@ -91,7 +91,7 @@ Examples:
 ### Step 4: PRESENT DIAGNOSIS
 
 **Pipeline mode (issues pre-diagnosed):**
-For each issue from test-report/review-report, present:
+For each issue from test-report/code-review-report, present:
 
 ```
 ## RCA: {issue title}
@@ -138,7 +138,7 @@ After approval (standalone) or immediately (pipeline):
 After fixing all issues, automatically re-run validation:
 
 **Iteration 1:**
-- Run the same checks that /test and /review would run:
+- Run the same checks that /test and /code-review would run:
   - Automated checks (theme check, schema validation)
   - Read all fixed files and verify against skill checklists
   - Check null guards, integration, cross-file concerns
@@ -170,6 +170,30 @@ These may need manual intervention or a plan revision.
 Write to `.buildspace/artifacts/{feature-name}/fix-log.md` (pipeline) or present in conversation (standalone).
 
 Read the template from `${CLAUDE_SKILL_DIR}/templates/fix-log-template.md` and fill it in with the fix results.
+
+---
+
+## Next Step
+
+After fix completion, tell the user which validation to re-run:
+
+If triggered from `/compare`:
+```
+→ Run /compare to re-verify visual fidelity.
+```
+If triggered from `/test`:
+```
+→ Run /test to re-verify functional requirements.
+```
+If triggered from `/code-review`:
+```
+→ Run /code-review to re-verify code quality.
+```
+If standalone (user-reported bug):
+```
+→ Run /test to verify the fix.
+  Then /code-review for code quality.
+```
 
 ---
 

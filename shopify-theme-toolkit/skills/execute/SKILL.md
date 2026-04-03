@@ -141,12 +141,25 @@ This file is used by `/compare` to capture section-level screenshots of the deve
    - Count of files created/modified
    - Builder results summary (all passed / issues found)
    - If `selectors.json` was written, mention it
-   - If Figma screenshots exist (`.buildspace/artifacts/{feature}/screenshots/figma-*.png`), suggest running `/compare` for visual comparison
-   - Otherwise suggest running `/test`
 
 **Do NOT output file contents in conversation. The code files and execution log are the source of truth.**
 
-**Context tip:** If your conversation is getting long, you can `/clear` before running `/test` — it reads from artifacts, not conversation history.
+### Next Step
+Check if Figma screenshots exist (`.buildspace/artifacts/{feature}/screenshots/figma-*.png`).
+
+If **Figma screenshots exist**, tell the user:
+```
+→ Run /compare for visual comparison against the Figma design.
+  Remaining: /compare → /test → /code-review
+```
+
+If **no Figma screenshots**, tell the user:
+```
+→ Run /test for functional validation.
+  Remaining: /test → /code-review
+```
+
+**Context tip:** If your conversation is getting long, you can `/clear` before the next step — it reads from artifacts, not conversation history.
 
 ---
 

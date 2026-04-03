@@ -91,6 +91,13 @@ Save the plan to the artifact file. Then tell the user:
 
 **Do NOT output the full plan in conversation. The artifact file is the source of truth.**
 
+### Next Step
+Once the user confirms the plan, tell them:
+```
+→ Run /execute to implement the plan.
+  Remaining: /execute → /compare (if built from Figma) → /test → /code-review
+```
+
 **Context tip:** If your conversation is getting long, you can `/clear` before running `/execute` — it reads from artifacts, not conversation history.
 
 ---

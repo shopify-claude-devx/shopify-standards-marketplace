@@ -39,5 +39,5 @@
 - [Element] — [what's wrong] — [suggested fix: CSS property or Liquid change]
 
 ## Verdict
-- **PASS** — All checks pass, visual fidelity is HIGH. Run /review.
+- **PASS** — All checks pass, visual fidelity is HIGH. Run /code-review.
 - **NEEDS FIX** — Issues found. Run /fix, then /test again.

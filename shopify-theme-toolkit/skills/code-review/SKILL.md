@@ -1,5 +1,5 @@
 ---
-name: review
+name: code-review
 description: >
   Review code quality against project standards. Checks standards compliance,
   design token usage, cross-file concerns. Works after /execute (pipeline) or
@@ -11,9 +11,9 @@ agent: general-purpose
 allowed-tools: Read, Write, Grep, Glob, Agent
 ---
 
-# Review — Code Quality Assessment
+# Code Review — Quality Assessment
 
-You are entering the Review phase. Your job is to check if the code is written well — does it follow project standards, is it readable, maintainable, and consistent?
+You are entering the Code Review phase. Your job is to check if the code is written well — does it follow project standards, is it readable, maintainable, and consistent?
 
 **This is NOT functional validation (that's /test). You don't check if features work. You check if the code is CLEAN.**
 
@@ -67,15 +67,15 @@ Check with `Grep` and `Glob`:
 
 ## Review Report
 
-Write to `.buildspace/artifacts/{feature-name}/review-report.md` (pipeline mode) or present in conversation (standalone mode).
+Write to `.buildspace/artifacts/{feature-name}/code-review-report.md` (pipeline mode) or present in conversation (standalone mode).
 
-Read the template from `${CLAUDE_SKILL_DIR}/templates/review-report-template.md` and fill it in with the review findings.
+Read the template from `${CLAUDE_SKILL_DIR}/templates/code-review-report-template.md` and fill it in with the review findings.
 
 ---
 
 ## Auto-Capture Learnings
 
-When /review verdict is CLEAN, check if `test-report.md` exists in the same artifact folder. If it exists and contains a "PASS" verdict, then both /test and /review have passed — trigger auto-capture.
+When /code-review verdict is CLEAN, check if `test-report.md` exists in the same artifact folder. If it exists and contains a "PASS" verdict, then both /test and /code-review have passed — trigger auto-capture.
 
 If test-report.md doesn't exist (standalone review), skip auto-capture.
 
@@ -98,6 +98,21 @@ Before writing:
 - Read existing file to avoid duplicates
 - If a new learning conflicts with an existing one, update the existing entry
 - Maximum 3 learnings per feature — keep it focused
+
+---
+
+## Next Step
+
+After presenting the report, tell the user:
+
+If verdict is **CLEAN**:
+```
+Pipeline complete. Feature is ready for deployment.
+```
+If verdict is **NEEDS FIX**:
+```
+→ Run /fix to resolve issues, then re-run /code-review.
+```
 
 ---
 

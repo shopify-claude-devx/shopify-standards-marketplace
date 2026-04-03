@@ -26,4 +26,4 @@
 
 ## Verdict
 - **CLEAN** — Code passes all standards. No issues found.
-- **NEEDS FIX** — Issues found. Run /fix, then /review again.
+- **NEEDS FIX** — Issues found. Run /fix, then /code-review again.

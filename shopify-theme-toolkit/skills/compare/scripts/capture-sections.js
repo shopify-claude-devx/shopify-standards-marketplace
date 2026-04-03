@@ -89,9 +89,13 @@ function resolvePlaywright() {
   console.error('[capture] Playwright not found in any resolution path — installing...');
   const scriptDir = __dirname;
   execSync(`npm install --prefix "${scriptDir}" playwright`, { stdio: 'inherit' });
-  execSync('npx playwright install chromium', { stdio: 'inherit' });
+  // Use the locally installed playwright binary (not npx from CWD)
+  const pwBin = path.join(scriptDir, 'node_modules', '.bin', 'playwright');
+  execSync(`"${pwBin}" install chromium`, { stdio: 'inherit' });
   console.error('[capture] Playwright installed');
-  return require('playwright');
+  // Use createRequire to resolve from scriptDir explicitly
+  const localRequire = createRequire(path.join(scriptDir, 'package.json'));
+  return localRequire('playwright');
 }
 
 async function handlePassword(page, password) {

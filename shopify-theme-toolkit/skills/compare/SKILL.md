@@ -69,7 +69,25 @@ If the user provided a preview URL in `$ARGUMENTS`, use that instead of asking.
 
 ---
 
-## Step 3: Capture Developed Page Screenshots
+## Step 3: Ensure Playwright is Available
+
+Before capturing screenshots, verify Playwright and Chromium are installed. Run this check:
+
+```bash
+node -e "try { require('playwright').chromium; console.log('READY'); } catch(e) { console.log('NOT_READY'); process.exit(1); }" 2>/dev/null
+```
+
+If the output is `NOT_READY` (or the command fails), install Playwright:
+
+```bash
+npm install playwright && npx playwright install chromium
+```
+
+**Wait for installation to complete before proceeding.** Do NOT run the capture script until Playwright is confirmed `READY`. If the install fails, report the error to the user — do NOT retry in a loop.
+
+---
+
+## Step 4: Capture Developed Page Screenshots
 
 Run the capture script:
 
@@ -91,7 +109,7 @@ If a section selector is not found or not visible, note it as a potential issue.
 
 ---
 
-## Step 4: Visual Comparison — Section by Section
+## Step 5: Visual Comparison — Section by Section
 
 For each section that has both Figma and code screenshots:
 
@@ -135,7 +153,7 @@ Rate each section × viewport combination:
 
 ---
 
-## Step 5: Generate Comparison Report
+## Step 6: Generate Comparison Report
 
 Read the template from `${CLAUDE_SKILL_DIR}/templates/comparison-report-template.md` and fill it in.
 
@@ -177,13 +195,16 @@ Write the report to `.buildspace/artifacts/{feature-name}/comparison-report.md`:
 
 ---
 
-## Step 6: Handle Results
+## Step 7: Handle Results
 
 ### All MATCH or MINOR → Done
 Tell the user:
 ```
 Visual comparison passed. All sections match the Figma design.
 Report saved to .buildspace/artifacts/{feature-name}/comparison-report.md
+
+→ Run /test for functional validation.
+  Remaining: /test → /code-review
 ```
 
 ### Any MISMATCH found → Trigger Fix (auto)
@@ -208,10 +229,15 @@ Feature: {feature-name}
 If this is **iteration 2**:
 - If mismatches remain, report them to the user and stop. Do NOT trigger a third fix cycle.
 - Tell the user what still doesn't match and suggest they review manually.
+- Still suggest the next step:
+  ```
+  → Run /test for functional validation (even with remaining visual issues).
+    Remaining: /test → /code-review
+  ```
 
 ---
 
-## Step 7: Cleanup
+## Step 8: Cleanup
 
 After all comparisons are complete (pass or max iterations reached):
 

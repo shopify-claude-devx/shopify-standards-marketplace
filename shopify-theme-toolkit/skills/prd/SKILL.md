@@ -121,9 +121,15 @@ Read the template structure from `${CLAUDE_SKILL_DIR}/templates/prd-template.md`
 Tell the user:
 - Where the PRD was saved
 - A 1-2 line summary
-- Suggest running `/plan`
 
 **Do NOT output the full PRD in conversation. The artifact file is the source of truth.**
+
+### Next Step
+Tell the user:
+```
+→ Run /plan to create the technical specification.
+  Remaining: /plan → /execute → /compare (if built from Figma) → /test → /code-review
+```
 
 **Context tip:** If your conversation is getting long, you can `/clear` before running `/plan` — it reads from artifacts, not conversation history.
 

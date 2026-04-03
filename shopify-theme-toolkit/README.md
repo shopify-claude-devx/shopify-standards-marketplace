@@ -29,7 +29,7 @@ Restart Claude Code and type `/shopify-theme-toolkit:prd` — if it responds, th
 ### Full Pipeline (Feature Development)
 
 ```
-/figma → /prd → /plan → /execute → /compare → /test → /review → /fix (if needed)
+/figma → /prd → /plan → /execute → /compare → /test → /code-review → /fix (if needed)
 ```
 
 Start with `/figma` when building from a Figma design. Skip it if working from text requirements only.
@@ -39,7 +39,7 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 ```
 /figma       — Extract design context from Figma (via MCP)
 /fix         — Bug fixing with Root Cause Analysis
-/review      — Code review against project standards
+/code-review — Code review against project standards
 /test        — Code validation + optional visual review
 /compare     — Visual comparison of code vs Figma screenshots
 /research    — Shopify topic research
@@ -51,9 +51,9 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 | Use Case | Entry Point | Flow |
 |----------|-------------|------|
 | Figma → Feature | `/figma` | /figma → /prd → /plan → /execute → /compare → /fix |
-| Feature Development | `/prd` | /prd → /plan → /execute → /test → /review → /fix |
+| Feature Development | `/prd` | /prd → /plan → /execute → /test → /code-review → /fix |
 | Bug Fixing | `/fix` | standalone with RCA |
-| Code Review | `/review` | standalone against skill checklists |
+| Code Review | `/code-review` | standalone against skill checklists |
 | Testing | `/test` | standalone with optional visual review |
 | Visual Comparison | `/compare` | standalone after /execute when Figma screenshots exist |
 | Research | `/research` | standalone web search |
@@ -70,8 +70,8 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 | `/plan` | Technical specification with per-file decisions | `prd.md` | `plan.md` |
 | `/execute` | Implement plan TODO by TODO | `plan.md` | code files + `execution-log.md` |
 | `/test` | Functional validation + visual review | `execution-log.md` + `prd.md` | `test-report.md` |
-| `/review` | Code quality review + auto-capture learnings | `execution-log.md` | `review-report.md` |
-| `/fix` | Root cause analysis + fix all instances | `test-report.md` + `review-report.md` | `fix-log.md` |
+| `/code-review` | Code quality review + auto-capture learnings | `execution-log.md` | `code-review-report.md` |
+| `/fix` | Root cause analysis + fix all instances | `test-report.md` + `code-review-report.md` | `fix-log.md` |
 | `/understand` | Deep code explanation | file/section/feature name | conversation output |
 | `/research` | Shopify topic research | topic query | conversation output |
 
@@ -92,7 +92,7 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 | `builder` | `/execute` | opus | Builds one file per TODO from plan's File Spec |
 | `codebase-analyzer` | `/plan` | sonnet | Discovers existing patterns, conventions, conflicts |
 | `output-validator` | `/test` | sonnet | Validates requirements coverage, edge cases, integration |
-| `code-reviewer` | `/review` | sonnet | Reviews code quality against skill checklists |
+| `code-reviewer` | `/code-review` | sonnet | Reviews code quality against skill checklists |
 
 **Orchestrator-Worker pattern:** `/execute` is a lightweight orchestrator that dispatches one `builder` agent per TODO. Each builder runs in its own isolated context (File Spec + one skill), writes exactly one file, validates against the skill checklist, and returns. No context accumulation across TODOs.
 
@@ -113,7 +113,7 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
         code-{section}-desktop.png
         code-{section}-mobile.png
       comparison-report.md   ← /compare output
-      review-report.md       ← /review output
+      code-review-report.md  ← /code-review output
       fix-log.md             ← /fix output
 ```
 
@@ -130,7 +130,7 @@ This plugin is designed to minimize token usage and API costs:
 - **Artifacts replace conversation.** Each stage reads a small, structured artifact file. You can `/clear` between stages.
 
 ### Cost Optimization
-- **Context fork on /test, /review, /research.** Verbose agent output and WebFetch results stay in forked context. Only summaries return to main thread.
+- **Context fork on /test, /code-review, /research.** Verbose agent output and WebFetch results stay in forked context. Only summaries return to main thread.
 - **disable-model-invocation on workflow skills.** Skill descriptions not loaded for auto-trigger, saving context budget.
 - **allowed-tools restriction.** Each skill has only the tools it needs, preventing off-track tool calls.
 - **Session boundary guidance.** Each pipeline stage reminds users they can `/clear` between stages since artifacts are the handoff mechanism.
