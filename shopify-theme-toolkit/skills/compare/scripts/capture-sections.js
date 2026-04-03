@@ -17,8 +17,14 @@
 'use strict';
 
 const { execSync } = require('node:child_process');
+const { createRequire } = require('node:module');
 const { mkdir, readFile, writeFile } = require('node:fs/promises');
 const path = require('node:path');
+
+/* ── Timeouts ─────────────────────────────────────────────────────────── */
+const PER_IMAGE_TIMEOUT = 5000;   // max wait for a single image to load
+const ALL_IMAGES_TIMEOUT = 15000; // max wait for all images in a section
+const SECTION_TIMEOUT = 30000;    // max time to capture one section+viewport
 
 const VIEWPORTS = [
   { name: 'desktop', width: 1440, height: 900 },
@@ -53,16 +59,39 @@ function parseArgs() {
   return { url, feature, selectorsFile, password };
 }
 
-function ensurePlaywright() {
+/**
+ * Resolve Playwright from multiple locations before falling back to install.
+ * Search order: script's own node_modules → caller's cwd → NODE_PATH entries.
+ */
+function resolvePlaywright() {
+  // 1. Standard resolution (script's own node_modules)
   try {
-    require.resolve('playwright');
-    return;
-  } catch {
-    console.error('[capture] Playwright not found — installing...');
+    return require('playwright');
+  } catch {}
+
+  // 2. Caller's working directory (covers `NODE_PATH=$(pwd)/node_modules` cases)
+  try {
+    const cwdRequire = createRequire(path.join(process.cwd(), 'package.json'));
+    return cwdRequire('playwright');
+  } catch {}
+
+  // 3. Explicit NODE_PATH directories
+  if (process.env.NODE_PATH) {
+    for (const dir of process.env.NODE_PATH.split(path.delimiter)) {
+      try {
+        const npRequire = createRequire(path.join(dir, 'package.json'));
+        return npRequire('playwright');
+      } catch {}
+    }
   }
-  execSync('npm install playwright', { stdio: 'inherit' });
+
+  // 4. Last resort — install into script's own directory
+  console.error('[capture] Playwright not found in any resolution path — installing...');
+  const scriptDir = __dirname;
+  execSync(`npm install --prefix "${scriptDir}" playwright`, { stdio: 'inherit' });
   execSync('npx playwright install chromium', { stdio: 'inherit' });
   console.error('[capture] Playwright installed');
+  return require('playwright');
 }
 
 async function handlePassword(page, password) {
@@ -82,17 +111,54 @@ async function handlePassword(page, password) {
   }
 }
 
-async function waitForImages(page) {
-  await page.evaluate(() =>
-    Promise.all(
-      Array.from(document.images)
-        .filter((img) => !img.complete)
-        .map((img) => new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-        }))
-    )
-  );
+/**
+ * Wait for images to load within a scoped container.
+ *
+ * - Skips already-loaded images.
+ * - Skips lazy images that are still off-screen (they haven't started loading
+ *   and won't until scrolled into view — waiting for them hangs forever).
+ * - Each individual image gets a per-image timeout so one slow CDN doesn't stall everything.
+ * - The entire wait has an overall timeout as a safety net.
+ */
+async function waitForImages(page, { selector = null, timeout = ALL_IMAGES_TIMEOUT } = {}) {
+  try {
+    await Promise.race([
+      page.evaluate(({ scope, imgTimeout }) => {
+        const root = scope ? document.querySelector(scope) : document;
+        if (!root) return;
+
+        const images = Array.from(root.querySelectorAll('img'));
+        const pending = images.filter((img) => {
+          // Already loaded successfully
+          if (img.complete && img.naturalWidth > 0) return false;
+          // Already failed (broken src etc.)
+          if (img.complete) return false;
+          // Lazy image that is still off-screen — hasn't started loading
+          if (img.loading === 'lazy') {
+            const rect = img.getBoundingClientRect();
+            const inViewport = rect.top < window.innerHeight && rect.bottom > 0;
+            if (!inViewport) return false;
+          }
+          return true;
+        });
+
+        if (pending.length === 0) return;
+
+        return Promise.all(
+          pending.map((img) =>
+            Promise.race([
+              new Promise((r) => { img.onload = r; img.onerror = r; }),
+              new Promise((r) => setTimeout(r, imgTimeout)),
+            ])
+          )
+        );
+      }, { scope: selector, imgTimeout: PER_IMAGE_TIMEOUT }),
+      // Overall timeout — if evaluate itself hangs, we move on
+      new Promise((resolve) => setTimeout(resolve, timeout)),
+    ]);
+  } catch {
+    // page.evaluate can throw if the page/context is closed — safe to continue
+  }
 }
 
 async function waitForAnimations(page) {
@@ -101,7 +167,7 @@ async function waitForAnimations(page) {
   );
 }
 
-async function captureSection(page, section, viewport, outputDir) {
+async function captureSectionInner(page, section, viewport, outputDir) {
   const { name, selector } = section;
   const { name: vpName, width, height } = viewport;
 
@@ -130,8 +196,12 @@ async function captureSection(page, section, viewport, outputDir) {
     };
   }
 
+  // Scroll into view — this triggers lazy-loaded images within the section
   await locator.scrollIntoViewIfNeeded();
   await waitForAnimations(page);
+
+  // Wait for images scoped to this section only (not the entire page)
+  await waitForImages(page, { selector });
 
   const filename = `code-${name}-${vpName}.png`;
   const filepath = path.join(outputDir, filename);
@@ -148,6 +218,32 @@ async function captureSection(page, section, viewport, outputDir) {
     filename,
     path: path.relative('.', filepath),
   };
+}
+
+/**
+ * Capture a single section with a timeout guard.
+ * If the section hangs (e.g. an image wait that slips through), we return
+ * a TIMEOUT status instead of blocking the entire run.
+ */
+async function captureSection(page, section, viewport, outputDir) {
+  try {
+    return await Promise.race([
+      captureSectionInner(page, section, viewport, outputDir),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Timed out after ${SECTION_TIMEOUT / 1000}s`)),
+          SECTION_TIMEOUT
+        )
+      ),
+    ]);
+  } catch (err) {
+    return {
+      section: section.name,
+      viewport: viewport.name,
+      status: 'TIMEOUT',
+      error: err.message,
+    };
+  }
 }
 
 async function main() {
@@ -171,7 +267,7 @@ async function main() {
     }
   }
 
-  ensurePlaywright();
+  const playwright = resolvePlaywright();
 
   const outputDir = path.resolve(`.buildspace/artifacts/${feature}/screenshots`);
   await mkdir(outputDir, { recursive: true });
@@ -181,10 +277,9 @@ async function main() {
   console.error(`[capture] Sections: ${selectors.map((s) => s.name).join(', ')}`);
   console.error(`[capture] Viewports: ${VIEWPORTS.map((v) => `${v.name} (${v.width}px)`).join(', ')}`);
 
-  const { chromium } = require('playwright');
   let browser;
   try {
-    browser = await chromium.launch({ headless: true });
+    browser = await playwright.chromium.launch({ headless: true });
   } catch (err) {
     throw new Error(
       `Failed to launch Chromium: ${err.message}\nRun: npx playwright install chromium`
@@ -202,7 +297,10 @@ async function main() {
 
     await page.goto(url, NAV_OPTIONS);
     await handlePassword(page, password);
-    await waitForImages(page);
+
+    // Let the page settle (initial render, above-the-fold content).
+    // Per-section image waits happen inside captureSection after scrolling each into view.
+    await waitForAnimations(page);
 
     for (const viewport of VIEWPORTS) {
       for (const section of selectors) {
@@ -238,8 +336,12 @@ async function main() {
   const captured = results.filter((r) => r.status === 'CAPTURED').length;
   const notFound = results.filter((r) => r.status === 'NOT_FOUND').length;
   const notVisible = results.filter((r) => r.status === 'NOT_VISIBLE').length;
+  const timedOut = results.filter((r) => r.status === 'TIMEOUT').length;
 
-  console.error(`[capture] Done: ${captured} captured, ${notFound} not found, ${notVisible} not visible`);
+  console.error(
+    `[capture] Done: ${captured} captured, ${notFound} not found, ${notVisible} not visible` +
+    (timedOut > 0 ? `, ${timedOut} timed out` : '')
+  );
   console.log(JSON.stringify(manifest, null, 2));
 }
 

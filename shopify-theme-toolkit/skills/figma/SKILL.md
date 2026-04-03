@@ -38,18 +38,27 @@ Then restart Claude Code and authenticate via the browser when prompted.
 Requires Figma Pro plan or higher for practical use (free plan = 6 calls/month).
 ```
 
-Check that `FIGMA_TOKEN` environment variable is set (needed to save screenshots to disk):
+Check that `FIGMA_TOKEN` is available — either as an environment variable OR in the project's `.env` file:
 ```bash
-echo "${FIGMA_TOKEN:+set}" || echo "not set"
+if [ -n "$FIGMA_TOKEN" ]; then
+  echo "FIGMA_TOKEN: set (env)"
+elif [ -f .env ] && grep -q '^FIGMA_TOKEN=' .env; then
+  echo "FIGMA_TOKEN: set (.env file)"
+else
+  echo "FIGMA_TOKEN: NOT FOUND"
+fi
 ```
 
-If not set, tell the user:
+Only if NOT FOUND in both locations, tell the user:
 ```
 FIGMA_TOKEN is required to save Figma screenshots to disk.
 1. Go to: https://www.figma.com/developers/api#access-tokens
 2. Create a Personal Access Token
-3. Set it: export FIGMA_TOKEN="your-token-here"
+3. Add it to your project's .env file: FIGMA_TOKEN="your-token-here"
 ```
+
+> **Note:** The screenshot and asset scripts have a built-in `.env` loader — they will
+> read from `.env` automatically. You do NOT need to `source .env` before running them.
 
 Parse each Figma URL to extract:
 - `fileKey` — from the URL path (e.g., `figma.com/design/{fileKey}/...`)
@@ -251,11 +260,23 @@ If zero images found, note it and move on — not all designs have image fills.
 
 ### 6a: Check Shopify credentials
 
+Check both environment variables AND the `.env` file:
 ```bash
-echo "SHOPIFY_STORE=${SHOPIFY_STORE:+set}" "SHOPIFY_ADMIN_TOKEN=${SHOPIFY_ADMIN_TOKEN:+set}"
+check_var() {
+  local var_name=$1
+  if [ -n "${!var_name}" ]; then
+    echo "$var_name: set (env)"
+  elif [ -f .env ] && grep -q "^${var_name}=" .env; then
+    echo "$var_name: set (.env file)"
+  else
+    echo "$var_name: NOT FOUND"
+  fi
+}
+check_var SHOPIFY_STORE
+check_var SHOPIFY_ADMIN_TOKEN
 ```
 
-If either is not set, tell the user:
+Only if either is NOT FOUND in both locations, tell the user:
 ```
 Shopify credentials are required to upload assets to your store.
 
@@ -270,6 +291,9 @@ Shopify credentials are required to upload assets to your store.
    SHOPIFY_STORE=your-store.myshopify.com
    SHOPIFY_ADMIN_TOKEN=shpat_xxxxx
 ```
+
+> **Note:** The upload script has a built-in `.env` loader — it will read credentials
+> from `.env` automatically. You do NOT need to `source .env` before running it.
 
 If `assets-manifest.json` is empty (no image assets were downloaded in Step 5), skip this step entirely and move to Step 7.
 
