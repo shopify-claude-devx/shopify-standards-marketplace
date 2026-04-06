@@ -50,8 +50,11 @@ function doPost(e) {
     const skill = data.skill;
     const timestamp = data.timestamp || new Date().toISOString();
 
+    const project = data.project || 'unknown';
+
     updateSkillLevel_(ss, skill, user, timestamp);
     updateUserLevel_(ss, skill, user, timestamp);
+    updateProjectLevel_(ss, skill, project, timestamp);
 
     return jsonResponse({ success: true });
 
@@ -159,6 +162,56 @@ function updateUserLevel_(ss, skill, user, timestamp) {
 
 
 // ----------------------------------------------------------------
+// PROJECT LEVEL — direct increment
+// ----------------------------------------------------------------
+
+function updateProjectLevel_(ss, skill, project, timestamp) {
+  const sheet = ss.getSheetByName('Project Level');
+  const lastRow = sheet.getLastRow();
+
+  // Find skill column index (starts at column 4)
+  const skillColOffset = 4;
+  const skillIndex = ALL_SKILLS.indexOf(skill);
+  if (skillIndex === -1) return;
+  const skillCol = skillColOffset + skillIndex;
+
+  // Find the project row (column A = project name, starting row 2)
+  let projectRow = -1;
+  if (lastRow >= 2) {
+    const projects = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (let i = 0; i < projects.length; i++) {
+      if (projects[i][0] === project) {
+        projectRow = i + 2;
+        break;
+      }
+    }
+  }
+
+  // New project — add a row
+  if (projectRow === -1) {
+    projectRow = lastRow + 1;
+    sheet.getRange(projectRow, 1).setValue(project);
+    sheet.getRange(projectRow, 2).setValue(timestamp.substring(0, 10));
+    sheet.getRange(projectRow, 3).setValue(0);
+    for (let i = 0; i < ALL_SKILLS.length; i++) {
+      sheet.getRange(projectRow, skillColOffset + i).setValue(0);
+    }
+  }
+
+  // Increment skill count
+  const currentSkillCount = sheet.getRange(projectRow, skillCol).getValue() || 0;
+  sheet.getRange(projectRow, skillCol).setValue(currentSkillCount + 1);
+
+  // Update total uses
+  const currentTotal = sheet.getRange(projectRow, 3).getValue() || 0;
+  sheet.getRange(projectRow, 3).setValue(currentTotal + 1);
+
+  // Update last active
+  sheet.getRange(projectRow, 2).setValue(timestamp.substring(0, 10));
+}
+
+
+// ----------------------------------------------------------------
 // ONE-TIME SETUP — run manually from the Apps Script editor
 // ----------------------------------------------------------------
 
@@ -204,6 +257,25 @@ function initializeSheets() {
   userSheet.setFrozenRows(1);
   userSheet.setFrozenColumns(1);
   userSheet.autoResizeColumns(1, userHeader.length);
+
+  // ---- Project Level ----
+  let projectSheet = ss.getSheetByName('Project Level');
+  if (!projectSheet) {
+    projectSheet = ss.insertSheet('Project Level');
+  }
+  projectSheet.clearContents();
+
+  const projectHeader = ['Project', 'Last Active', 'Total Uses', ...ALL_SKILLS];
+  projectSheet.getRange(1, 1, 1, projectHeader.length).setValues([projectHeader]);
+  projectSheet.getRange(1, 1, 1, projectHeader.length).setFontWeight('bold');
+
+  colorRange_(projectSheet, 1, colOffset,                                             WORKFLOW_SKILLS.length,   '#d0e4ff');
+  colorRange_(projectSheet, 1, colOffset + WORKFLOW_SKILLS.length,                   STANDALONE_SKILLS.length, '#d6f5d6');
+  colorRange_(projectSheet, 1, colOffset + WORKFLOW_SKILLS.length + STANDALONE_SKILLS.length, STANDARDS_SKILLS.length,  '#ede0ff');
+
+  projectSheet.setFrozenRows(1);
+  projectSheet.setFrozenColumns(1);
+  projectSheet.autoResizeColumns(1, projectHeader.length);
 
   // ---- Cleanup ----
   const defaultSheet = ss.getSheetByName('Sheet1');
