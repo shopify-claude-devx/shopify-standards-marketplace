@@ -473,8 +473,8 @@ Design context extracted and saved.
 ### Next Step
 Tell the user:
 ```
-→ Run /prd to define requirements for this feature.
-  Remaining: /prd → /plan → /execute → /compare → /test → /code-review
+→ Run /clarify to define requirements for this feature.
+  Remaining: /clarify → /plan → /execute → /compare → /test → /code-review
 ```
 
 **Context tip:** You can `/clear` before the next step — all data is in artifacts, not conversation.

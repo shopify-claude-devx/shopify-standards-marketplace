@@ -15,7 +15,7 @@ You do NOT care about code style, naming conventions, or standards compliance. T
 
 You receive:
 - File paths to validate
-- Optionally: path to PRD (requirements) and plan (test cases)
+- Optionally: path to requirements (clarify.md) and plan (test cases)
 
 Read the actual code files and verify each check below.
 
@@ -61,8 +61,8 @@ For every section with blocks:
 - `Grep('render "{snippet}"', glob='sections/*.liquid')` — are snippets wired?
 - `Glob('assets/{css-file}')` — do referenced CSS/JS files exist?
 
-### 8. Requirements (if PRD exists)
-Go through each requirement from the PRD. For each one:
+### 8. Requirements (if requirements document exists)
+Go through each requirement from the requirements document. For each one:
 - Read the relevant code
 - Determine: **Met** / **Partially met** / **Not implemented**
 - If partially met or not implemented, explain what's missing
@@ -94,7 +94,7 @@ Go through each test case from the plan's Test Cases section. For each one:
 - Snippet references: [all correct / issues]
 - Asset files: [all exist / missing]
 
-### Requirements (if PRD)
+### Requirements (if requirements document)
 - [Requirement] — Met / Partially met / Not implemented [reason]
 
 ### Test Cases (if plan)

@@ -22,14 +22,14 @@ Inside Claude Code, run:
 
 ### Step 3: Verify
 
-Restart Claude Code and type `/shopify-theme-toolkit:prd` — if it responds, the plugin is working.
+Restart Claude Code and type `/shopify-theme-toolkit:clarify` — if it responds, the plugin is working.
 
 ## Workflow
 
 ### Full Pipeline (Feature Development)
 
 ```
-/figma → /prd → /plan → /execute → /compare → /test → /code-review → /fix (if needed)
+/figma → /clarify → /plan → /execute → /compare → /test → /code-review → /fix (if needed)
 ```
 
 Start with `/figma` when building from a Figma design. Skip it if working from text requirements only.
@@ -50,8 +50,8 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 
 | Use Case | Entry Point | Flow |
 |----------|-------------|------|
-| Figma → Feature | `/figma` | /figma → /prd → /plan → /execute → /compare → /fix |
-| Feature Development | `/prd` | /prd → /plan → /execute → /test → /code-review → /fix |
+| Figma → Feature | `/figma` | /figma → /clarify → /plan → /execute → /compare → /fix |
+| Feature Development | `/clarify` | /clarify → /plan → /execute → /test → /code-review → /fix |
 | Bug Fixing | `/fix` | standalone with RCA |
 | Code Review | `/code-review` | standalone against skill checklists |
 | Testing | `/test` | standalone with optional visual review |
@@ -66,10 +66,10 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 | Skill | Purpose | Input Artifact | Output Artifact |
 |-------|---------|----------------|-----------------|
 | `/figma` | Extract design context from Figma via MCP | Figma URL(s) | `design-context.md` + screenshots |
-| `/prd` | Define requirements, research, challenge user | User request | `prd.md` |
-| `/plan` | Technical specification with per-file decisions | `prd.md` | `plan.md` |
+| `/clarify` | Define requirements, research, challenge user | User request | `clarify.md` |
+| `/plan` | Technical specification with per-file decisions | `clarify.md` | `plan.md` |
 | `/execute` | Implement plan TODO by TODO | `plan.md` | code files + `execution-log.md` |
-| `/test` | Functional validation + visual review | `execution-log.md` + `prd.md` | `test-report.md` |
+| `/test` | Functional validation + visual review | `execution-log.md` + `clarify.md` | `test-report.md` |
 | `/code-review` | Code quality review + auto-capture learnings | `execution-log.md` | `code-review-report.md` |
 | `/fix` | Root cause analysis + fix all instances | `test-report.md` + `code-review-report.md` | `fix-log.md` |
 | `/understand` | Deep code explanation | file/section/feature name | conversation output |
@@ -103,7 +103,7 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
   artifacts/
     {feature-name}/
       design-context.md      ← /figma output (structured design specs)
-      prd.md                 ← /prd output
+      clarify.md             ← /clarify output
       plan.md                ← /plan output
       execution-log.md       ← /execute output
       selectors.json         ← /execute output (section→CSS selector map)

@@ -59,10 +59,10 @@ this one won.]
   - Files: {file-path}
 
 ## Test Cases
-[What /test should verify. Derived from PRD acceptance criteria + implementation decisions.]
+[What /test should verify. Derived from requirements acceptance criteria + implementation decisions.]
 
 ### Functional
-- [ ] [Test case from PRD requirements]
+- [ ] [Test case from requirements]
 - [ ] [Test case]
 
 ### Edge Cases

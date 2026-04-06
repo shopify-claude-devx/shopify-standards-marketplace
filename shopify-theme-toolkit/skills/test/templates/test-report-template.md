@@ -8,7 +8,7 @@
 ## Functional Validation
 **Status:** [All Pass / Failures Found]
 
-### Requirements (if PRD exists)
+### Requirements (if requirements document exists)
 - [Requirement] — Met / Partially met / Not implemented [reason]
 
 ### Test Cases (if plan exists)

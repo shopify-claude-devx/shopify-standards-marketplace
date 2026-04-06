@@ -1,4 +1,4 @@
-# PRD: {Feature Name}
+# Requirements: {Feature Name}
 
 **Goal:** [One sentence — what are we building and why]
 **Source:** [User requirement / design reference]

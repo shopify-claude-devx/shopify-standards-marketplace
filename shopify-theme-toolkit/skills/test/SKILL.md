@@ -29,7 +29,7 @@ Context or overrides: `$ARGUMENTS`
 
 Check `.buildspace/artifacts/` for feature folders containing `execution-log.md`.
 If found, read from `.buildspace/artifacts/{feature}/`:
-- `prd.md` — requirements to validate against
+- `clarify.md` — requirements to validate against
 - `plan.md` — test cases
 - `execution-log.md` — files created/modified
 
@@ -38,7 +38,7 @@ If found, read from `.buildspace/artifacts/{feature}/`:
 If no `execution-log.md` found:
 1. Ask the user what to test (section name, file paths, feature description)
 2. Use `Glob` and `Grep` to find the relevant files
-3. Skip requirements validation (no PRD)
+3. Skip requirements validation (no requirements document)
 
 ---
 
@@ -78,7 +78,7 @@ Dispatch the **output-validator** agent:
 Validate feature: {feature-name}
 
 Files: [list from execution-log or user-specified]
-PRD: .buildspace/artifacts/{feature-name}/prd.md (if exists)
+Requirements: .buildspace/artifacts/{feature-name}/clarify.md (if exists)
 Plan: .buildspace/artifacts/{feature-name}/plan.md (if exists)
 
 Check every file for:
@@ -90,7 +90,7 @@ Check every file for:
 6. Conditional display works (blank settings hide elements)
 7. Schema settings correctly wired to Liquid output
 
-If PRD exists: verify each requirement — Met / Partially met / Not implemented
+If requirements exist: verify each requirement — Met / Partially met / Not implemented
 If plan exists: run each test case — Pass / Fail with reason
 ```
 

@@ -1,5 +1,5 @@
 ---
-name: prd
+name: clarify
 description: >
   Define requirements clearly before planning or building. Extracts what needs
   to be done, researches Shopify capabilities, challenges user if needed,
@@ -10,9 +10,9 @@ model: sonnet
 allowed-tools: Read, Write, Glob, Grep, AskUserQuestion, WebSearch, WebFetch
 ---
 
-# PRD — Product Requirements Document
+# Clarify — Requirements Definition
 
-You are entering the PRD phase. Your job is to make "what needs to be done" crystal clear so /plan has zero ambiguity.
+You are entering the Clarify phase. Your job is to make "what needs to be done" crystal clear so /plan has zero ambiguity.
 
 **Do NOT write code. Do NOT plan implementation. Do NOT suggest technical approaches. Only extract, research, challenge, and confirm requirements.**
 
@@ -23,7 +23,7 @@ The request: `$ARGUMENTS`
 
 ## Artifact Setup
 1. Derive a short kebab-case feature name from the request (e.g., `hero-banner`, `product-filtering`, `cart-drawer`)
-2. Use `Glob('.buildspace/artifacts/*/prd.md')` to check for existing features
+2. Use `Glob('.buildspace/artifacts/*/clarify.md')` to check for existing features
 3. Create `.buildspace/artifacts/{feature-name}/` if it doesn't exist
 4. If `design-tokens.json` exists, read it for available tokens
 5. If `design-context.md` exists, read it for design specifications
@@ -110,19 +110,19 @@ For each ambiguous area, ask a specific question. Use `AskUserQuestion` with str
 2. [Specific question]
 ```
 
-If the request is already crystal clear and research confirmed it's fully feasible, skip the questions and produce the PRD directly. Tell the user it was clear — don't manufacture ambiguity.
+If the request is already crystal clear and research confirmed it's fully feasible, skip the questions and produce the requirements document directly. Tell the user it was clear — don't manufacture ambiguity.
 
-### Step 5: Save the PRD
-Once the user confirms (or if the request was clear from the start), write the PRD to `.buildspace/artifacts/{feature-name}/prd.md`.
+### Step 5: Save the Requirements
+Once the user confirms (or if the request was clear from the start), write the requirements to `.buildspace/artifacts/{feature-name}/clarify.md`.
 
-Read the template structure from `${CLAUDE_SKILL_DIR}/templates/prd-template.md` and fill it in with the feature's requirements.
+Read the template structure from `${CLAUDE_SKILL_DIR}/templates/clarify-template.md` and fill it in with the feature's requirements.
 
 ### Step 6: Hand Off
 Tell the user:
-- Where the PRD was saved
+- Where the requirements were saved
 - A 1-2 line summary
 
-**Do NOT output the full PRD in conversation. The artifact file is the source of truth.**
+**Do NOT output the full requirements in conversation. The artifact file is the source of truth.**
 
 ### Next Step
 Tell the user:

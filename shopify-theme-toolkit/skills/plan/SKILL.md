@@ -3,7 +3,7 @@ name: plan
 description: >
   Create a detailed technical specification for a feature. Produces per-file
   decisions (settings, classes, tokens, structure) so /execute has zero
-  creative decisions. Use after /prd when requirements are confirmed.
+  creative decisions. Use after /clarify when requirements are confirmed.
 disable-model-invocation: true
 allowed-tools: Read, Write, Grep, Glob, Agent
 ---
@@ -20,13 +20,13 @@ You are entering the Plan phase. Your job is to produce a specification so detai
 Context or overrides: `$ARGUMENTS`
 
 ## Artifact Resolution
-1. Look in `.buildspace/artifacts/` for feature folders containing `prd.md`
+1. Look in `.buildspace/artifacts/` for feature folders containing `clarify.md`
 2. If one folder exists → use it
 3. If multiple folders exist → ask the user which feature to plan
-4. If no prd.md found → ask the user to run `/prd` first
+4. If no clarify.md found → ask the user to run `/clarify` first
 
 Read from `.buildspace/artifacts/{feature-name}/`:
-- `prd.md` — the requirements (REQUIRED)
+- `clarify.md` — the requirements (REQUIRED)
 - `design-tokens.json` — available design tokens (if exists)
 - `design-context.md` — design specs: typography, colors, spacing, layout (if exists)
 
@@ -35,7 +35,7 @@ Read from `.buildspace/artifacts/{feature-name}/`:
 ## Process
 
 ### Step 1: Read All Inputs
-Read the PRD and all available artifacts. Understand the full picture before analyzing the codebase.
+Read the requirements and all available artifacts. Understand the full picture before analyzing the codebase.
 
 ### Step 2: Analyze the Codebase
 Use `Glob` and `Grep` for quick context:
@@ -45,9 +45,9 @@ Use `Glob` and `Grep` for quick context:
 - `Glob('templates/*.json')` — templates
 Then dispatch the **codebase-analyzer** agent:
 
-> Analyze this Shopify theme codebase to inform planning for: [one-line task description from PRD]
+> Analyze this Shopify theme codebase to inform planning for: [one-line task description from requirements]
 >
-> Read `.buildspace/artifacts/{feature-name}/prd.md` for requirements.
+> Read `.buildspace/artifacts/{feature-name}/clarify.md` for requirements.
 > If `.buildspace/artifacts/{feature-name}/design-context.md` exists, read it for design context.
 >
 > Return: naming conventions, existing patterns to reuse, schema patterns, CSS architecture, potential conflicts.
@@ -55,13 +55,13 @@ Then dispatch the **codebase-analyzer** agent:
 The agent has ALL skills preloaded — its analysis already accounts for project standards. Trust its findings for naming conventions and patterns.
 
 ### Step 3: Research (if needed)
-If the PRD requirements involve Shopify features you're not confident about after reading the codebase analysis:
+If the requirements involve Shopify features you're not confident about after reading the codebase analysis:
 - Dispatch a research subagent to search shopify.dev
 - Only for genuine knowledge gaps
-- Skip if the codebase analysis + PRD provide enough context
+- Skip if the codebase analysis + requirements provide enough context
 
 ### Step 4: Design the Solution
-Using the PRD requirements + codebase analysis, make every decision:
+Using the requirements + codebase analysis, make every decision:
 
 **For each file to create/modify, decide:**
 
