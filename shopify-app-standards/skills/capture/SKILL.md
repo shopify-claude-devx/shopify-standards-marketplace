@@ -1,5 +1,10 @@
 ---
-description: Capture learnings from a completed task. Use after /assess when a task passes. Extracts patterns and writes them to the feature artifact and a persistent project-level file.
+name: capture
+description: >
+  Capture learnings from a completed task. Use after /code-review when a task
+  passes. Extracts patterns and writes them to the feature artifact and a
+  persistent project-level file.
+disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---
 
@@ -13,10 +18,11 @@ Context or overrides: `$ARGUMENTS`
 ## Artifact Resolution
 1. Use `Glob('.buildspace/artifacts/*/execution-log.md')` to discover feature folders with completed builds
 2. Read the artifacts from the relevant feature to review what happened:
-   - `task-spec.md` — what was planned
+   - `clarify.md` — what was planned
    - `plan.md` — the approach taken
    - `execution-log.md` — what was built
-   - `assessment.md` — what issues were found (if any)
+   - `test-report.md` — what issues were found during testing (if any)
+   - `code-review-report.md` — what standards issues were found (if any)
 
 If no artifacts found, ask the user which feature to capture learnings from. Do not fall back to conversation context — artifacts are the source of truth.
 
@@ -24,10 +30,10 @@ If no artifacts found, ask the user which feature to capture learnings from. Do 
 
 ### Step 1: Review What Happened
 Look at:
-- The original task requirements
+- The original requirements
 - The plan and approach chosen
 - The code that was built
-- The assessment results
+- The test and code review results
 - Any issues found and how they were fixed
 - Any deviations from the original plan
 
@@ -56,17 +62,9 @@ A Shopify, Remix, Prisma, or tooling limitation/behavior that isn't obvious.
 ### Step 3: Write Learnings to Both Locations
 
 **Location 1: Feature-scoped artifact**
-Write to `.buildspace/artifacts/{feature-name}/capture.md`:
+Write to `.buildspace/artifacts/{feature-name}/capture.md`.
 
-```markdown
-# Capture: {Feature Name}
-
-### [Brief Title]
-**Type:** [Pattern | Mistake & Fix | Convention | Codebase Context | Platform Gotcha]
-**Category:** [TypeScript | Remix | Shopify API | Prisma | Polaris]
-
-[2-4 sentences explaining the learning. Include WHAT, WHY, and an example if helpful.]
-```
+Read the template structure from `${CLAUDE_SKILL_DIR}/templates/capture-template.md` and fill it in.
 
 **Location 2: Persistent project-level file**
 Append to `.claude/patterns-learned.md` in the user's project directory:

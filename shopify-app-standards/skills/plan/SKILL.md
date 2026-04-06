@@ -1,5 +1,10 @@
 ---
-description: Create a detailed execution plan for a task. Use after /clarify when requirements are confirmed. Researches codebase, references project skills, and produces a step-by-step TODO plan.
+name: plan
+description: >
+  Create a detailed execution plan for a task. Use after /clarify when
+  requirements are confirmed. Researches codebase, references project skills,
+  and produces a step-by-step TODO plan.
+disable-model-invocation: true
 allowed-tools: Read, Write, Grep, Glob, Agent, WebSearch, WebFetch
 ---
 
@@ -11,12 +16,12 @@ You are entering the Plan phase. Your job is to create a detailed, directionally
 The task to plan: `$ARGUMENTS`
 
 ## Artifact Resolution
-1. Look in `.buildspace/artifacts/` for feature folders containing `task-spec.md`
+1. Look in `.buildspace/artifacts/` for feature folders containing `clarify.md`
 2. If one folder exists → use it
 3. If multiple folders exist → ask the user which feature to plan
-4. If no task-spec.md found → ask the user to run `/clarify` first
+4. If no clarify.md found → ask the user to run `/clarify` first
 
-Read `.buildspace/artifacts/{feature-name}/task-spec.md` as your primary input.
+Read `.buildspace/artifacts/{feature-name}/clarify.md` as your primary input.
 
 ## Process
 
@@ -31,7 +36,7 @@ Use the Agent tool to dispatch the **codebase-analyzer** agent:
 
 > **Mission: Codebase Analysis**
 >
-> Analyze the codebase to understand how to implement: [task description from task-spec.md]
+> Analyze the codebase to understand how to implement: [task description from clarify.md]
 >
 > Find:
 > 1. Existing files that will need to be modified or that relate to this task
@@ -49,42 +54,9 @@ If the feature involves Shopify APIs, Remix patterns, or Prisma features you're 
 - Search `polaris.shopify.com` for component usage
 
 ### Step 4: Draft the Execution Plan
-Based on the Task Spec, codebase analysis, and any research, create the plan:
+Based on the requirements, codebase analysis, and any research, create the plan.
 
-```markdown
-## Execution Plan
-
-**Task:** [One-line summary]
-**Estimated Complexity:** [Low / Medium / High]
-
-### Approach
-[2-3 sentences explaining the overall approach and WHY this approach was chosen over alternatives. Reference specific existing codebase patterns that informed this decision.]
-
-### Files to Create/Modify
-- `path/to/file.tsx` — [what changes and why]
-- `prisma/schema.prisma` — [what changes and why]
-
-### TODO Steps
-Each TODO must be specific enough to execute without ambiguity.
-
-- [ ] **TODO 1:** [Specific action]
-  - Details: [What exactly to do]
-  - Skills: [Which skill standards apply — e.g., typescript-standards, remix-patterns]
-
-- [ ] **TODO 2:** [Specific action]
-  - Details: [What exactly to do]
-  - Skills: [Which skill standards apply]
-
-[Continue for all steps...]
-
-### Risks & Considerations
-- [Anything that could go wrong or needs careful attention]
-
-### Test Cases
-- [Specific verification criteria to check after building]
-- [Edge case to verify]
-- [Integration check]
-```
+Read the template structure from `${CLAUDE_SKILL_DIR}/templates/plan-template.md` and fill it in with the feature's specification.
 
 ### Step 5: Validate the Plan
 Before presenting, self-check:
@@ -99,9 +71,18 @@ Write the plan to `.buildspace/artifacts/{feature-name}/plan.md`.
 Then tell the user:
 - Where the plan was saved
 - A brief summary of the approach
-- Ask for confirmation or adjustments before proceeding to `/build`
+- Ask for confirmation or adjustments before proceeding to `/execute`
 
-Do NOT output the full plan in the conversation. The artifact file is the source of truth. Present only the approach summary and ask for confirmation.
+**Do NOT output the full plan in conversation. The artifact file is the source of truth.**
+
+### Next Step
+Once the user confirms the plan, tell them:
+```
+→ Run /execute to execute the plan.
+  Remaining: /execute → /test → /code-review → /fix (if needed) → /capture
+```
+
+**Context tip:** If your conversation is getting long, you can `/clear` before running `/execute` — it reads from artifacts, not conversation history.
 
 ## Rules
 - Never write implementation code during planning — pseudocode or brief snippets for clarity are acceptable

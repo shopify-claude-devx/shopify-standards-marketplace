@@ -5,6 +5,9 @@ description: >
   from shopify.dev, Remix docs, Polaris docs, Shopify Community, and other trusted sources, then
   synthesizes findings into an actionable summary. Use whenever you need to look up Admin API details,
   Remix patterns, Prisma queries, Polaris components, App Bridge actions, or community solutions.
+model: sonnet
+context: fork
+agent: general-purpose
 allowed-tools: WebSearch, WebFetch, Read, Grep, Glob
 ---
 

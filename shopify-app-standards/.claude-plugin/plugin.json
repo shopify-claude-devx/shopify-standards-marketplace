@@ -1,8 +1,11 @@
 {
   "name": "shopify-app-standards",
-  "description": "Skills, commands, and agents for Shopify Remix app development. Enforces TypeScript, Remix, Prisma, Shopify API, and Polaris standards through a clarify → plan → build → assess → fix → capture workflow.",
-  "version": "2.0.0",
+  "description": "Orchestrated Shopify Remix app development workflow with skills, agents, and standards. Supports feature development, bug fixing, code review, testing, and code understanding through /clarify → /plan → /execute → /test → /code-review → /fix → /capture pipeline.",
+  "version": "3.0.0",
   "author": {
     "name": "Aditya Pasikanti"
-  }
+  },
+  "repository": "https://github.com/shopify-claude-devx/shopify-standards-marketplace",
+  "license": "MIT",
+  "keywords": ["shopify", "remix", "app", "development", "workflow"]
 }

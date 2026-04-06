@@ -1,8 +1,9 @@
 ---
 name: code-reviewer
-description: Reviews code quality against project standards for readability, maintainability, flexibility, and reusability. Use during assessment phase to ensure code follows project conventions.
+description: Reviews code quality against project standards for readability, maintainability, flexibility, and reusability. Use during code review phase to ensure code follows project conventions.
 tools: Read, Grep, Glob
 model: sonnet
+effort: medium
 skills: typescript-standards, remix-patterns, shopify-api, prisma-standards, polaris-appbridge
 maxTurns: 20
 ---

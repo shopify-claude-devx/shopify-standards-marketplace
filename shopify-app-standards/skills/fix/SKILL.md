@@ -1,5 +1,10 @@
 ---
-description: Debug and fix a bug. Investigates the codebase, performs root cause analysis, proposes the fix for user approval, then executes. Use when something is broken and needs diagnosing.
+name: fix
+description: >
+  Debug and fix a bug. Investigates the codebase, performs root cause analysis,
+  proposes the fix for user approval, then executes. Use when something is
+  broken and needs diagnosing.
+disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, WebSearch, WebFetch
 ---
 
@@ -14,16 +19,17 @@ The bug report: `$ARGUMENTS`
 
 ## Artifact Resolution
 Check `.buildspace/artifacts/` for the relevant feature folder.
-If `assessment.md` exists, read it — the assessment identifies what needs fixing and why.
+If `test-report.md` exists, read it — the test report identifies what needs fixing.
+If `code-review-report.md` exists, read it — the code review identifies standards issues.
 
 ---
 
 ## Step 1: Understand the Bug
 
-Read the user's description and any assessment findings. Identify:
+Read the user's description and any test/review findings. Identify:
 - **What's broken** — the symptom (crash, wrong data, UI glitch, error message, 500 response)
 - **Where it happens** — which route, action, loader, or component triggers it
-- **Files mentioned** — if the user or assessment pointed to specific files, start there
+- **Files mentioned** — if the user or reports pointed to specific files, start there
 
 If the bug description is too vague to investigate, ask one clarifying question. Only one. Then proceed.
 
@@ -64,7 +70,7 @@ Common root causes in Shopify Remix apps:
 - **Timezone bug** — manual UTC math that breaks during DST
 - **Unbounded query** — `findMany` without `take` limit causing timeout on large datasets
 
-Then use `Grep` to search the entire codebase for other instances of the same root cause — e.g., `Grep('window.location', glob='app/**/*.{ts,tsx}')` to find all occurrences of the problematic pattern.
+Then use `Grep` to search the entire codebase for other instances of the same root cause.
 
 ## Step 4: Present Diagnosis — STOP HERE
 
@@ -115,22 +121,11 @@ Approve this fix? Say "go" to proceed or tell me what to adjust.
 
 ## Step 6: Report
 
-```
-## Fix Applied
+Write the fix log to `.buildspace/artifacts/{feature-name}/fix-log.md`.
 
-**What was wrong:** [one sentence]
-**What was changed:**
-- `file` — [what changed]
+Read the template structure from `${CLAUDE_SKILL_DIR}/templates/fix-log-template.md` and fill it in.
 
-**Verified:**
-- Lint: Passed
-- Type Check: Passed
-- No breakage: All callers/usages verified
-
-**Skill that should have prevented this:** [skill name and which rule]
-```
-
-After the fix is verified, suggest running `/assess` again to ensure no new issues were introduced.
+After the fix is verified, suggest running `/test` and `/code-review` again to ensure no new issues were introduced.
 
 ## Rules
 - Never guess. If you're not sure about the cause, read more code before diagnosing

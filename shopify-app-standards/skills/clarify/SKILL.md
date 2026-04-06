@@ -1,5 +1,11 @@
 ---
-description: Clarify requirements before starting any task. Use this as the first step before planning or building anything.
+name: clarify
+description: >
+  Clarify requirements before starting any task. Use this as the first step
+  before planning or building anything. Extracts what needs to be done,
+  asks clarifying questions, and saves a requirements document.
+disable-model-invocation: true
+model: sonnet
 allowed-tools: Read, Write, Glob, AskUserQuestion
 ---
 
@@ -13,7 +19,7 @@ The request: `$ARGUMENTS`
 ## Artifact Setup
 
 1. Derive a short, kebab-case feature name from the request (e.g., "product-sync", "discount-manager", "settings-page")
-2. Use `Glob('.buildspace/artifacts/*/task-spec.md')` to check if artifacts already exist for this or a similar feature
+2. Use `Glob('.buildspace/artifacts/*/clarify.md')` to check if artifacts already exist for this or a similar feature
 3. If no folder exists, create `.buildspace/artifacts/{feature-name}/`
 
 ## Process
@@ -58,34 +64,31 @@ Present your understanding back to the user:
 - [Question 2]
 ```
 
-### Step 5: Save the Task Spec
-Once the user confirms, write the final Task Spec directly to `.buildspace/artifacts/{feature-name}/task-spec.md`:
+If the request is already crystal clear, say so and produce the requirements document directly — don't manufacture ambiguity.
 
-```markdown
-# Task Spec: {Feature Name}
+### Step 5: Save the Requirements
+Once the user confirms, write the requirements to `.buildspace/artifacts/{feature-name}/clarify.md`.
 
-**Goal:** [One sentence — what are we building/doing?]
+Read the template structure from `${CLAUDE_SKILL_DIR}/templates/clarify-template.md` and fill it in with the feature's requirements.
 
-**Requirements:**
-- [Concrete requirement 1]
-- [Concrete requirement 2]
-
-**Out of Scope:**
-- [Explicitly what we are NOT doing]
-
-**Acceptance Criteria:**
-- [How do we know this is done correctly?]
-```
-
-Then tell the user:
-- Where the task spec was saved
+### Step 6: Hand Off
+Tell the user:
+- Where the requirements were saved
 - Suggest running `/plan`
 
-Do NOT output the full task spec in the conversation. The artifact file is the source of truth. The clarifying questions in Step 4 already showed the user what was understood — the saved artifact is the final version.
+**Do NOT output the full requirements in conversation. The artifact file is the source of truth.**
+
+### Next Step
+Tell the user:
+```
+→ Run /plan to create the execution plan.
+  Remaining: /plan → /execute → /test → /code-review → /fix (if needed) → /capture
+```
+
+**Context tip:** If your conversation is getting long, you can `/clear` before running `/plan` — it reads from artifacts, not conversation history.
 
 ## Rules
 - Never suggest implementation details during clarify
 - Never write code during clarify
 - Always surface ambiguity — don't make silent assumptions
 - Keep questions focused — ask only what you genuinely need to know
-- If the request is already crystal clear, say so and produce the Task Spec directly

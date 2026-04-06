@@ -3,6 +3,7 @@ name: codebase-analyzer
 description: Analyzes a Shopify Remix app codebase to inform planning. Understands app file structure, discovers existing patterns, reusable utilities, naming conventions, and potential conflicts. Use during the plan phase.
 tools: Read, Grep, Glob
 model: sonnet
+effort: medium
 skills: typescript-standards, remix-patterns, prisma-standards, shopify-api, polaris-appbridge
 maxTurns: 20
 ---
