@@ -27,22 +27,15 @@
             "command": "input=$(cat) && file=$(echo \"$input\" | jq -r '.tool_input.file_path // empty') && [[ \"$file\" == *.js ]] && npx eslint \"$file\" 2>&1 | tail -20 || true"
           }
         ]
-      },
+      }
+    ],
+    "UserPromptSubmit": [
       {
-        "matcher": "Skill",
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat) && echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) | $(echo $input | python3 -c \"import json,sys; print(json.load(sys.stdin).get('tool_input',{}).get('skill',''))\" 2>/dev/null)\" >> /tmp/skill-hook-fire.log && echo \"$input\" | python3 -c \"import json,sys; print(json.dumps(json.load(sys.stdin), indent=2))\" >> /tmp/skill-hook-fire.log || true"
-          }
-        ]
-      },
-      {
-        "matcher": "Skill",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "input=$(cat) && skill=$(echo \"$input\" | python3 -c \"import json,sys; s=json.load(sys.stdin).get('tool_input',{}).get('skill',''); print(s.split(':')[-1] if ':' in s else s)\" 2>/dev/null) && [ -n \"$skill\" ] && VALID='clarify plan execute test code-review fix figma compare research understand liquid-standards section-standards css-standards js-standards theme-architecture' && [[ \" $VALID \" =~ \" $skill \" ]] && user=$(git config user.name 2>/dev/null || echo unknown) && project=$(basename \"$(git rev-parse --show-toplevel 2>/dev/null)\" 2>/dev/null || basename \"$(pwd)\") && ts=$(date -u +\"%Y-%m-%dT%H:%M:%SZ\") && payload=$(SKILL=\"$skill\" USER_NAME=\"$user\" PROJECT=\"$project\" TS=\"$ts\" python3 -c \"import json,os; print(json.dumps({'skill':os.environ['SKILL'],'user':os.environ['USER_NAME'],'project':os.environ['PROJECT'],'timestamp':os.environ['TS'],'token':'shopify-theme-toolkit'}))\") && curl -s --max-time 5 -X POST 'https://script.google.com/macros/s/AKfycbxBQ90rMnmE-AYkQlaTF1XVretzK2pE2UN9XPgleOVHV-4BYwWaV0esQT6ymtGsjlvD7A/exec' -H 'Content-Type: application/json' -d \"$payload\" > /dev/null 2>&1 || true"
+            "command": "input=$(cat) && prompt=$(echo \"$input\" | python3 -c \"import json,sys,re; d=json.load(sys.stdin); p=d.get('prompt',''); m=re.match(r'^/(?:shopify-theme-toolkit:)?(clarify|plan|execute|test|code-review|fix|figma|compare|research|understand|liquid-standards|section-standards|css-standards|js-standards|theme-architecture)\\b', p); print(m.group(1) if m else '')\" 2>/dev/null) && [ -n \"$prompt\" ] && skill=\"$prompt\" && user=$(git config user.name 2>/dev/null || echo unknown) && project=$(basename \"$(git rev-parse --show-toplevel 2>/dev/null)\" 2>/dev/null || basename \"$(pwd)\") && ts=$(date -u +\"%Y-%m-%dT%H:%M:%SZ\") && payload=$(SKILL=\"$skill\" USER_NAME=\"$user\" PROJECT=\"$project\" TS=\"$ts\" python3 -c \"import json,os; print(json.dumps({'skill':os.environ['SKILL'],'user':os.environ['USER_NAME'],'project':os.environ['PROJECT'],'timestamp':os.environ['TS'],'token':'shopify-theme-toolkit'}))\") && curl -s --max-time 5 -X POST 'https://script.google.com/macros/s/AKfycbxBQ90rMnmE-AYkQlaTF1XVretzK2pE2UN9XPgleOVHV-4BYwWaV0esQT6ymtGsjlvD7A/exec' -H 'Content-Type: application/json' -d \"$payload\" > /dev/null 2>&1 || true"
           }
         ]
       }
