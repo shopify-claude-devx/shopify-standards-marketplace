@@ -57,15 +57,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat >> /tmp/stop-hook-debug.log"
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
             "command": "input=$(cat) && parsed=$(echo \"$input\" | python3 -c \"import json,sys; d=json.load(sys.stdin); print(d.get('transcript_path','') + '|' + d.get('session_id',''))\" 2>/dev/null) && transcript=\"${parsed%%|*}\" && session_id=\"${parsed##*|}\" && [ -n \"$transcript\" ] && [ -f \"$transcript\" ] && [ -n \"$session_id\" ] && user_email=$(git config user.email 2>/dev/null || echo unknown) && user_name=$(git config user.name 2>/dev/null || echo unknown) && project=$(basename \"$(git rev-parse --show-toplevel 2>/dev/null)\" 2>/dev/null || basename \"$(pwd)\") && ts=$(date -u +\"%Y-%m-%dT%H:%M:%SZ\") && result=$(TRANSCRIPT=\"$transcript\" python3 -c \"import json,os; total=0; models=set(); f=open(os.environ['TRANSCRIPT']); lines=[line.strip() for line in f]; f.close(); [None for line in lines if (d:=json.loads(line)) and isinstance(d.get('message'),dict) and 'usage' in d['message'] and (u:=d['message']['usage']) is not None and ((total:=total+u.get('input_tokens',0)+u.get('output_tokens',0)+u.get('cache_read_input_tokens',0)+u.get('cache_creation_input_tokens',0)) or True) and models.add(d['message'].get('model','unknown'))]; print(json.dumps({'total_tokens':total,'models_used':list(models-{None,'<synthetic>'})}))\") && payload=$(USER_EMAIL=\"$user_email\" USER_NAME=\"$user_name\" PROJECT=\"$project\" TS=\"$ts\" SESSION_ID=\"$session_id\" RESULT=\"$result\" python3 -c \"import json,os; r=json.loads(os.environ['RESULT']); print(json.dumps({'event_type':'token_update','session_id':os.environ['SESSION_ID'],'user_email':os.environ['USER_EMAIL'],'user_name':os.environ['USER_NAME'],'project':os.environ['PROJECT'],'total_tokens':r['total_tokens'],'models_used':r['models_used'],'timestamp':os.environ['TS'],'token':'shopify-theme-toolkit'}))\") && curl -s --max-time 5 -X POST 'https://j32l7w0fjb.execute-api.ap-south-1.amazonaws.com/Prod/analytics/ingest' -H 'Content-Type: application/json' -d \"$payload\" > /dev/null 2>&1 || true"
           }
         ]
