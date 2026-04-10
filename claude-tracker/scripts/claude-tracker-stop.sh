@@ -44,6 +44,19 @@ with open(os.environ["TRANSCRIPT"]) as f:
             session_name = d["customTitle"]
             continue
 
+        # Scan user messages for /skill slash commands
+        if d.get("type") == "user":
+            msg = d.get("message", {})
+            if isinstance(msg, dict):
+                content = msg.get("content", "")
+                if isinstance(content, str):
+                    import re
+                    m = re.search(r'<command-name>/([a-zA-Z0-9_-]+(?::[a-zA-Z0-9_-]+)?)</command-name>', content)
+                    if m:
+                        sk = m.group(1)
+                        skills[sk] = skills.get(sk, 0) + 1
+            continue
+
         if d.get("type") != "assistant":
             continue
         msg = d.get("message", {})
