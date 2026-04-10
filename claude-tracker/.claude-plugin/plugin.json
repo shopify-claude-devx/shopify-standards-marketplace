@@ -7,5 +7,6 @@
   },
   "repository": "https://github.com/shopify-claude-devx/shopify-standards-marketplace",
   "license": "MIT",
-  "keywords": ["analytics", "tracking", "usage", "tokens", "claude-code"]
+  "keywords": ["analytics", "tracking", "usage", "tokens", "claude-code"],
+  "hooks": "./hooks/hooks.json"
 }
