@@ -14,7 +14,7 @@ session_id=$(echo "$input" | python3 -c "import json,sys; print(json.load(sys.st
 [ -z "$session_id" ] && exit 0
 
 # Resolve identity
-user_email=$(git config user.email 2>/dev/null || echo "$(whoami)@$(hostname -s 2>/dev/null || echo local)")
+user_email=$(whoami 2>/dev/null || echo "unknown")
 user_name=$(git config user.name 2>/dev/null || whoami 2>/dev/null || echo unknown)
 project=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || basename "$(pwd)")
 ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
