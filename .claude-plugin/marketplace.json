@@ -38,6 +38,11 @@
       "name": "pilot",
       "source": "./pilot",
       "description": "Pilot plugin to use independent features of claude"
+    },
+    {
+      "name": "claude-tracker",
+      "source": "./claude-tracker",
+      "description": "Universal usage analytics — tracks tokens, models, skills, agents, tools, and sessions"
     }
   ]
 }
