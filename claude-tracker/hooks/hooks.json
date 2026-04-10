@@ -11,17 +11,6 @@
         ]
       }
     ],
-    "UserPromptSubmit": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "script=$(find ~/.claude/plugins/marketplaces -path '*/claude-tracker/scripts/claude-tracker-skill.sh' 2>/dev/null | head -1) && [ -f \"$script\" ] && bash \"$script\" || true"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "matcher": "",
