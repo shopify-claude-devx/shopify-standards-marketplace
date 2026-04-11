@@ -1,7 +1,7 @@
 {
   "name": "claude-tracker",
   "description": "Universal usage analytics for Claude Code — tracks tokens, models, skills, agents, tools, and sessions across any project and device.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": {
     "name": "Aditya Pasikanti"
   },
