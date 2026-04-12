@@ -1,9 +1,7 @@
 ---
 name: output-validator
-description: Validates that built features match all requirements from the requirements document. Use during test phase to check output correctness, edge cases, and missing functionality.
+description: Validates that built features match all requirements from the requirements document. Use during validate phase to check output correctness, edge cases, and missing functionality.
 tools: Read, Grep, Glob
-model: sonnet
-effort: medium
 maxTurns: 15
 ---
 
@@ -19,10 +17,7 @@ You receive:
 
 Read both artifacts. The requirements document contains the requirements. The execution log tells you which files were created or modified.
 
-Then read the actual files listed in the execution log and check each requirement. Use `Grep` and `Glob` to verify requirements that span multiple files:
-- `Grep('route-name', glob='app/routes/**/*.{ts,tsx}')` — confirm new routes exist and are named correctly
-- `Grep('model ModelName', glob='prisma/schema.prisma')` — confirm schema changes were made
-- `Glob('app/components/ComponentName*')` — confirm all expected component files were created
+Then read the actual files listed in the execution log and check each requirement.
 
 ## What You Check
 
@@ -31,7 +26,7 @@ Is every stated requirement implemented? Go through them one by one.
 
 ### 2. Functional Completeness
 Does the implementation actually work for its intended purpose? Look for:
-- Missing conditional paths (what if a value is empty? null? unexpected type?)
+- Missing conditional paths (empty/null/unexpected values)
 - Edge cases in loaders (no data, unauthorized, network failure)
 - Missing form validation and error display
 - Empty states for lists and tables
@@ -41,14 +36,14 @@ Does the implementation actually work for its intended purpose? Look for:
 Will this work within the existing app?
 - Are new routes properly named and accessible?
 - Do new components integrate with existing layout?
-- Are Prisma schema changes migrated?
+- Are Prisma schema changes complete?
 - Are new API calls authenticated?
 
 ### 4. Shopify-Specific Validation
 - Does this work inside the embedded app iframe?
 - Are GraphQL mutations checking userErrors?
 - Are webhook handlers returning 200 within 5 seconds?
-- Is authenticate.admin called before any logic?
+- Is `authenticate.admin` called before any logic?
 
 ## How You Report
 

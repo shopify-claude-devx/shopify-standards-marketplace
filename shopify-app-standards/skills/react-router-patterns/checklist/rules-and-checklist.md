@@ -1,4 +1,12 @@
-# Remix Patterns — Checklist
+# React Router Patterns — Checklist
+
+### Imports
+- [ ] No `@remix-run/*` imports — use `react-router`
+- [ ] Types from `react-router`: `LoaderFunctionArgs`, `ActionFunctionArgs`, `HeadersFunction`
+- [ ] Hooks from `react-router`: `useLoaderData`, `useActionData`, `useNavigation`, `useSubmit`
+- [ ] Components from `react-router`: `Form`, `Link`, `Outlet`
+- [ ] Shopify auth from `../shopify.server`: `authenticate`
+- [ ] Boundaries from `@shopify/shopify-app-react-router/server`: `boundary`
 
 ### Loader
 - [ ] `authenticate.admin(request)` called first
@@ -10,6 +18,7 @@
 
 ### Action
 - [ ] `authenticate.admin(request)` called first
+- [ ] `redirect` destructured from `authenticate.admin(request)`, not imported from `react-router`
 - [ ] `formData.get()` narrowed to string before using
 - [ ] GraphQL `userErrors` checked — never assume mutation succeeded
 - [ ] Multiple actions use hidden `_action` field with switch
@@ -18,24 +27,35 @@
 - [ ] Catch blocks return error data or rethrow — never empty
 
 ### Iframe Safety
-- [ ] No `<a>` tags — only `<Link>` from Remix or Polaris
-- [ ] No `redirect` from `@remix-run/node` — only from `authenticate.admin`
-- [ ] No lowercase `<form>` — only `<Form>` from Remix or `useSubmit`
+- [ ] No `<a>` tags — only `<Link>` from `react-router` or `<s-link>`
+- [ ] No `redirect` from `react-router` — only from `authenticate.admin`
+- [ ] No lowercase `<form>` — only `<Form>` from `react-router` or `useSubmit`
 - [ ] No `window.location`, `window.alert`, `window.confirm`, `window.open`
 - [ ] No `window.scrollTo`, `window.reload`
+
+### Layout Route (app.tsx)
+- [ ] Exports `ErrorBoundary` using `boundary.error(useRouteError())`
+- [ ] Exports `headers` using `boundary.headers(headersArgs)`
+- [ ] Default export renders `<Outlet />`
+- [ ] `boundary` imported from `@shopify/shopify-app-react-router/server`
 
 ### Error Handling
 - [ ] ErrorBoundary exported (every route with loader/action)
 - [ ] `isRouteErrorResponse(error)` used to distinguish expected vs unexpected
-- [ ] Errors shown in Polaris `Banner` with `tone="critical"`
+- [ ] Errors shown in `<s-banner tone="critical">`
 - [ ] Root ErrorBoundary never throws
 - [ ] ErrorBoundary renders meaningful UI, not empty
 
 ### Component Completeness
 - [ ] Forms show validation errors inline (check `actionData?.errors`)
 - [ ] Forms show success feedback (banner, toast, or redirect)
-- [ ] Loading states visible (button spinner, skeleton, disabled state)
+- [ ] Loading states visible (button loading state, `<s-spinner>`, disabled state)
 - [ ] Lists handle empty state ("No items found")
 - [ ] `useActionData()` checked for undefined before accessing properties
-- [ ] `useFetcher.data` handles undefined, error, and success states
 - [ ] Submit buttons disabled during `navigation.state === "submitting"`
+
+### Webhook Routes
+- [ ] Action-only — no loader, no default export
+- [ ] Uses `authenticate.webhook(request)`
+- [ ] Returns `new Response()` (200)
+- [ ] Heavy processing done async — respond within 5 seconds

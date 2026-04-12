@@ -2,13 +2,18 @@
 
 **TODOs Completed:** [X/X]
 
-**Files Created/Modified:**
+**Files Created:**
 - `path/to/file` — [what was done]
 
-**Per-File Validation:** [All passed / Issues found and fixed during build]
+**Files Modified:**
+- `path/to/file` — [what changed]
+
+**Automated Checks:**
+- **Lint:** PASS / FAIL (details if fail)
+- **Type Check:** PASS / FAIL (details if fail)
 
 **Deviations from Plan:**
 - [What changed and why, or "None"]
 
-**APIs/Docs Searched During Build:**
+**Docs Searched During Build:**
 - [List any external docs checked, or "None"]

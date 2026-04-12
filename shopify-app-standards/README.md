@@ -1,6 +1,6 @@
 # Shopify App Standards
 
-A Claude Code plugin for orchestrated Shopify Remix app development. Enforces TypeScript, Remix, Prisma, Shopify API, and Polaris standards through an artifact-based workflow. Version 3.0.0.
+A Claude Code plugin for Shopify React Router app development. Enforces TypeScript, React Router, Prisma, Shopify API, and Polaris Web Components standards through an artifact-based workflow. Version 4.0.0.
 
 **Author:** Aditya Pasikanti
 
@@ -26,18 +26,16 @@ Restart Claude Code and type `/shopify-app-standards:clarify` — if it responds
 
 ## Workflow
 
-### Full Pipeline (Feature Development)
+### Pipeline (Feature Development)
 
 ```
-/clarify → /plan → /execute → /test → /code-review → /fix (if needed) → /capture
+/clarify → /plan → /execute → /validate
 ```
 
 ### Standalone Commands
 
 ```
-/fix         — Bug fixing with Root Cause Analysis
-/test        — Output validation against requirements
-/code-review — Code review against project standards
+/fix         — First-principles debugging and repair
 /research    — Shopify app topic research
 ```
 
@@ -45,11 +43,9 @@ Restart Claude Code and type `/shopify-app-standards:clarify` — if it responds
 
 | Use Case | Entry Point | Flow |
 |----------|-------------|------|
-| Feature Development | `/clarify` | /clarify → /plan → /execute → /test → /code-review → /capture |
-| Bug Fixing | `/fix` | standalone with RCA |
-| Code Review | `/code-review` | standalone against skill checklists |
-| Testing | `/test` | standalone output validation |
-| Research | `/research` | standalone web search |
+| Feature Development | `/clarify` | /clarify → /plan → /execute → /validate |
+| Bug Fixing | `/fix` | Standalone — root cause analysis, user approval, then fix |
+| Research | `/research` | Standalone — web search and synthesis |
 
 ## Skills
 
@@ -57,91 +53,87 @@ Restart Claude Code and type `/shopify-app-standards:clarify` — if it responds
 
 | Skill | Purpose | Input Artifact | Output Artifact |
 |-------|---------|----------------|-----------------|
-| `/clarify` | Define requirements, research, challenge user | User request | `clarify.md` |
-| `/plan` | Execution plan with per-TODO skill references | `clarify.md` | `plan.md` |
-| `/execute` | Execute plan TODO by TODO with per-file skills | `plan.md` | `execution-log.md` |
-| `/test` | Output validation + automated checks | `execution-log.md` + `clarify.md` | `test-report.md` |
-| `/code-review` | Code quality review against standards | `execution-log.md` | `code-review-report.md` |
-| `/fix` | Root cause analysis + fix all instances | `test-report.md` + `code-review-report.md` | `fix-log.md` |
-| `/capture` | Extract learnings to project-level file | All artifacts | `capture.md` + `.claude/patterns-learned.md` |
+| `/clarify` | Define requirements, ask clarifying questions | User request | `clarify.md` |
+| `/plan` | Execution plan with grouped TODOs | `clarify.md` | `plan.md` |
+| `/execute` | Build all files in-context with full visibility | `plan.md` | `execution-log.md` |
+| `/validate` | First-principles verification — report and stop | `execution-log.md` + `clarify.md` | `validation-report.md` |
+| `/fix` | First-principles root cause analysis + repair | `validation-report.md` or user report | `fix-log.md` |
 | `/research` | Shopify app topic research | Topic query | Conversation output |
 
-### Standard Skills (auto-triggered by Claude)
+### Standard Skills (loaded contextually during execution)
 
 | Skill | Applies To | Key Standards |
 |-------|------------|---------------|
 | `typescript-standards` | All `.ts`/`.tsx` files | No any/unknown, no as casts, no empty blocks, no console.log |
-| `remix-patterns` | Route files | authenticate.admin first, no `<a>` tags, ErrorBoundary, action errors |
+| `react-router-patterns` | Route files | React Router v7, authenticate.admin first, no `<a>` tags, ErrorBoundary |
 | `shopify-api` | API calls | GraphQL only, userErrors checking, rate limits, webhooks |
 | `prisma-standards` | Schema + queries | db.server.ts singleton, findMany limits, null handling, error codes |
-| `polaris-appbridge` | UI components | No bare HTML, App Bridge Modal, no custom CSS, deprecated components |
+| `polaris-web-components` | UI components | `s-*` prefix, CDN delivery, no `@shopify/polaris`, `<s-section>` replaces `<Card>` |
 
 ## Agents
 
-| Agent | Dispatched By | Model | Role |
-|-------|--------------|-------|------|
-| `codebase-analyzer` | `/plan` | sonnet | Discovers existing patterns, conventions, conflicts |
-| `output-validator` | `/test` | sonnet | Validates requirements coverage, edge cases, integration |
-| `code-reviewer` | `/code-review` | sonnet | Reviews code quality against skill checklists |
+| Agent | Dispatched By | Role |
+|-------|--------------|------|
+| `codebase-analyzer` | `/plan` | Discovers existing patterns, conventions, framework stack, conflicts |
+| `output-validator` | Available for standalone use | Validates requirements coverage, edge cases, integration |
+| `code-reviewer` | Available for standalone use | Reviews code quality against standard checklists |
+
+Note: `/validate` does its work inline (no agent dispatch) to maintain full context visibility. The output-validator and code-reviewer agents exist for standalone use or future extensibility.
 
 ## Artifact Structure
 
 ```
 .buildspace/
+  current-feature              ← Active feature name (auto-tracked)
   artifacts/
     {feature-name}/
-      clarify.md             ← /clarify output
-      plan.md                ← /plan output
-      execution-log.md       ← /execute output
-      test-report.md         ← /test output
-      code-review-report.md  ← /code-review output
-      fix-log.md             ← /fix output
-      capture.md             ← /capture output
+      clarify.md               ← /clarify output
+      plan.md                  ← /plan output
+      execution-log.md         ← /execute output
+      validation-report.md     ← /validate output
+      fix-log.md               ← /fix output
 ```
 
 Add `.buildspace/` to your project's `.gitignore` — artifacts are working files, not source code.
 
-## Context & Cost Efficiency
+## Key Design Decisions (v4.0.0)
 
-This plugin is designed to minimize token usage and API costs:
+### What Changed from v3
+
+1. **Execute builds directly** — no more one-file-per-builder agents in isolation. Execute reads the plan and builds all files itself, with full visibility across everything created. This eliminates cross-file integration issues.
+
+2. **Simplified pipeline** — clarify → plan → execute → validate. No more test → fix → test loops. Validate reports and stops. Fix is standalone with first-principles thinking.
+
+3. **Updated standards** — Polaris Web Components (`<s-*>`) replace deprecated Polaris React. React Router v7 replaces Remix. All checklists updated for 2026 patterns.
+
+4. **Feature tracking** — `.buildspace/current-feature` tracks the active feature. No more "which feature?" prompts mid-pipeline.
+
+5. **No model overrides** — skills don't force `model: sonnet`. Your chosen model handles all phases.
+
+6. **No per-file tsc hook** — type checking runs once at the end of execute, not on every file write.
 
 ### Token Optimization
-- **Per-file-type checklists.** Agents load only the relevant checklist file for each file type on demand, not all standards at once.
-- **Externalized artifact templates.** Markdown output templates live in `skills/{name}/templates/` and are loaded via Read on demand, not baked into skill system prompts.
-- **Per-file skill loading in /execute.** Only loads the skill relevant to the current file type, never all skills at once.
 - **Artifacts replace conversation.** Each stage reads a small, structured artifact file. You can `/clear` between stages.
-
-### Cost Optimization
-- **Context fork on /research.** Verbose WebFetch results stay in forked context. Only summaries return to main thread.
-- **disable-model-invocation on workflow skills.** Skill descriptions not loaded for auto-trigger, saving context budget.
-- **allowed-tools restriction.** Each skill has only the tools it needs, preventing off-track tool calls.
-- **Session boundary guidance.** Each pipeline stage reminds users they can `/clear` between stages since artifacts are the handoff mechanism.
+- **Context fork on /research.** Verbose WebFetch results stay in forked context.
+- **disable-model-invocation on workflow skills.** Prevents accidental auto-triggering.
+- **allowed-tools restriction.** Each skill has only the tools it needs.
 
 ## Skills & Enforcement
 
-Plugin skill descriptions are loaded into Claude's context, and Claude auto-invokes skills it deems relevant. To guarantee skills are invoked every time, add the following to your project's `CLAUDE.md`:
+To ensure skills are invoked during ad-hoc coding (outside the pipeline), add this to your project's `CLAUDE.md`:
 
 ```markdown
 ## Project Standards — MANDATORY
 
 Coding standards are provided as **plugin skills** from the `shopify-app-standards` plugin.
-They must be invoked using the **Skill tool** before writing any code.
 
-**Before writing or modifying any file, invoke the relevant skill(s):**
-- **`.ts` / `.tsx` files** → invoke `shopify-app-standards:typescript-standards`
-- **Route files** → invoke `shopify-app-standards:remix-patterns`
-- **Polaris UI components** → invoke `shopify-app-standards:polaris-appbridge`
-- **Shopify API calls** → invoke `shopify-app-standards:shopify-api`
-- **Prisma schema/queries** → invoke `shopify-app-standards:prisma-standards`
-
-Do not skip this step. The plugin skills have detailed rules and checklists that must be followed.
+**Before writing or modifying any file, read the relevant checklist:**
+- **`.ts` / `.tsx` files** → `typescript-standards/checklist/rules-and-checklist.md`
+- **Route files** → + `react-router-patterns/checklist/rules-and-checklist.md`
+- **Polaris UI** → + `polaris-web-components/checklist/rules-and-checklist.md`
+- **Shopify API calls** → + `shopify-api/checklist/rules-and-checklist.md`
+- **Prisma schema/queries** → + `prisma-standards/checklist/rules-and-checklist.md`
 ```
-
-## TypeScript Check Hook
-
-The plugin includes a PostToolUse hook that auto-runs `tsc --noEmit` on TypeScript files after Write/Edit operations. Copy `hooks/hooks.json` into your theme project's `.claude/settings.json` to enable it.
-
-Requires Node.js and TypeScript installed.
 
 ## Prerequisites
 
@@ -150,4 +142,4 @@ Requires Node.js and TypeScript installed.
 | Claude Code | Yes | `npm install -g @anthropic-ai/claude-code` |
 | Node.js 18+ | Yes | nodejs.org |
 | Shopify CLI | For app development | `npm install -g @shopify/cli` |
-| TypeScript | For type checking hook | `npm install -D typescript` |
+| TypeScript | For type checking | `npm install -D typescript` |

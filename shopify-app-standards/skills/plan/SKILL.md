@@ -5,7 +5,7 @@ description: >
   requirements are confirmed. Researches codebase, references project skills,
   and produces a step-by-step TODO plan.
 disable-model-invocation: true
-allowed-tools: Read, Write, Grep, Glob, Agent, WebSearch, WebFetch
+allowed-tools: Read Write Grep Glob Agent WebSearch WebFetch
 ---
 
 # Plan — Execution Planning
@@ -16,10 +16,11 @@ You are entering the Plan phase. Your job is to create a detailed, directionally
 The task to plan: `$ARGUMENTS`
 
 ## Artifact Resolution
-1. Look in `.buildspace/artifacts/` for feature folders containing `clarify.md`
-2. If one folder exists → use it
-3. If multiple folders exist → ask the user which feature to plan
-4. If no clarify.md found → ask the user to run `/clarify` first
+1. Read `.buildspace/current-feature` for the active feature name
+2. If the file doesn't exist, look in `.buildspace/artifacts/` for feature folders containing `clarify.md`
+3. If one folder exists → use it and write the feature name to `.buildspace/current-feature`
+4. If multiple folders exist → ask the user which feature to plan
+5. If no clarify.md found → ask the user to run `/clarify` first
 
 Read `.buildspace/artifacts/{feature-name}/clarify.md` as your primary input.
 
@@ -27,9 +28,9 @@ Read `.buildspace/artifacts/{feature-name}/clarify.md` as your primary input.
 
 ### Step 1: Read Project Context
 1. Read `CLAUDE.md` if it exists for project overview
-2. Read `.claude/patterns-learned.md` if it exists — it contains project-specific learnings from previous tasks that may inform your plan
+2. Read `.claude/patterns-learned.md` if it exists — it contains project-specific learnings from previous tasks
 
-Do NOT read skill files during planning. Skills are loaded per-file during the build phase via the `Skill` tool. Planning only needs project context and codebase analysis.
+Do NOT read skill files during planning. Skills are loaded contextually during execution. Planning only needs project context and codebase analysis.
 
 ### Step 2: Research the Codebase
 Use the Agent tool to dispatch the **codebase-analyzer** agent:
@@ -47,23 +48,38 @@ Use the Agent tool to dispatch the **codebase-analyzer** agent:
 > Return a structured analysis following your report format.
 
 ### Step 3: Assess Knowledge Gaps
-If the feature involves Shopify APIs, Remix patterns, or Prisma features you're not 100% certain about, use `WebSearch` and `WebFetch` to research:
+If the feature involves Shopify APIs, React Router patterns, or Prisma features you're not 100% certain about, use `WebSearch` and `WebFetch` to research:
 - Search `shopify.dev` for API details
-- Search `remix.run/docs` for routing or data patterns
+- Search `reactrouter.com/docs` for routing or data patterns
 - Search `prisma.io/docs` for schema or query patterns
-- Search `polaris.shopify.com` for component usage
+- Search `shopify.dev/docs/api/app-home/polaris-web-components` for component usage
 
 ### Step 4: Draft the Execution Plan
 Based on the requirements, codebase analysis, and any research, create the plan.
 
-Read the template structure from `${CLAUDE_SKILL_DIR}/templates/plan-template.md` and fill it in with the feature's specification.
+**The plan must define TODOs as logical groups, not individual files.** Group related files that depend on each other:
+
+Example grouping:
+- **TODO 1: Database layer** — Prisma schema changes + migration + service file
+- **TODO 2: API route** — Route file with loader/action + GraphQL queries
+- **TODO 3: UI page** — Route component with Polaris Web Components
+
+Each TODO group should contain:
+- Files to create or modify (with full paths)
+- What each file should do
+- Which standards apply (typescript-standards, react-router-patterns, shopify-api, prisma-standards, polaris-web-components)
+- Dependencies on other TODOs
+- Key decisions and WHY
+
+Read the template structure from `${CLAUDE_SKILL_DIR}/templates/plan-template.md` and fill it in.
 
 ### Step 5: Validate the Plan
 Before presenting, self-check:
-- Does every TODO reference which skill standards apply?
-- Are the steps in the right order (dependencies handled)?
-- Is anything missing between current state and desired state?
+- Are the TODOs in dependency order?
+- Is every file accounted for?
+- Does every TODO specify which standards apply?
 - Is this plan specific enough that building is just execution?
+- Are there any assumptions that need the user's input?
 
 ### Step 6: Save and Present
 Write the plan to `.buildspace/artifacts/{feature-name}/plan.md`.
@@ -78,17 +94,18 @@ Then tell the user:
 ### Next Step
 Once the user confirms the plan, tell them:
 ```
-→ Run /execute to execute the plan.
-  Remaining: /execute → /test → /code-review → /fix (if needed) → /capture
+→ Run /execute to build the feature.
+  Pipeline: /execute → /validate
 ```
 
 **Context tip:** If your conversation is getting long, you can `/clear` before running `/execute` — it reads from artifacts, not conversation history.
 
 ## Rules
 - Never write implementation code during planning — pseudocode or brief snippets for clarity are acceptable
-- Every TODO must reference which skill standards apply
+- Every TODO must reference which standards apply
 - Every TODO must be actionable and specific — "implement the feature" is not a TODO
+- Group related files into logical TODOs — don't plan one-file-per-TODO
 - If you find the existing codebase contradicts best practices, flag it to the user
 - If the task is too large, suggest breaking it into smaller plans
 - Include the WHY behind approach decisions, not just the WHAT
-- Do NOT read skill files during planning — they're loaded per-file during build
+- Do NOT read skill files during planning — they're loaded contextually during execution

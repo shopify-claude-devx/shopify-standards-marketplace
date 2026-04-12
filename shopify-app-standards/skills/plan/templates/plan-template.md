@@ -15,7 +15,7 @@ Each TODO must be specific enough to execute without ambiguity.
 
 - [ ] **TODO 1:** [Specific action]
   - Details: [What exactly to do]
-  - Skills: [Which skill standards apply — e.g., typescript-standards, remix-patterns]
+  - Skills: [Which skill standards apply — e.g., typescript-standards, react-router-patterns]
 
 - [ ] **TODO 2:** [Specific action]
   - Details: [What exactly to do]
@@ -26,8 +26,8 @@ Each TODO must be specific enough to execute without ambiguity.
 ### Risks & Considerations
 - [Anything that could go wrong or needs careful attention]
 
-### Test Cases
-[What /test should verify. Derived from requirements acceptance criteria + implementation decisions.]
+### Validation Criteria
+[What /validate should verify. Derived from requirements acceptance criteria + implementation decisions.]
 
 - [ ] [Test case from requirements]
 - [ ] [Edge case to verify]

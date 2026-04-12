@@ -1,13 +1,28 @@
 ---
 name: typescript-standards
-description: Enforces strict TypeScript rules for Shopify Remix apps — no any, no unknown, no as casts, no non-null assertions, no empty blocks, no console.log, no dead code. Use when writing, editing, reviewing, or generating any .ts or .tsx file, or when the user mentions TypeScript, type errors, linting, or code quality.
+description: Strict TypeScript rules for Shopify apps — no any, no unknown, no as casts, no non-null assertions, no empty blocks, no console.log, no dead code. Use when writing, editing, reviewing, or generating any .ts or .tsx file, or when the user mentions TypeScript, type errors, linting, or code quality.
 user-invocable: false
-globs: ["**/*.ts", "**/*.tsx"]
+paths: ["**/*.ts", "**/*.tsx"]
 ---
 
-# TypeScript Standards — Shopify Remix Apps
+# TypeScript Standards — Shopify Apps
 
 **Search docs first.** If unsure about a tsconfig flag, ESLint rule, or type pattern — search `typescriptlang.org` or `typescript-eslint.io` before using it.
+
+## TypeScript Setup for Polaris Web Components
+
+Polaris Web Components are loaded via CDN. TypeScript needs type declarations:
+
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "types": ["@shopify/polaris-types", "@shopify/app-bridge-types"]
+  }
+}
+```
+
+Without these, `<s-button>`, `<s-page>`, etc. will error with "does not exist on type 'JSX.IntrinsicElements'".
 
 ## Rules That Override Defaults
 
@@ -41,7 +56,7 @@ Order (separated by blank lines): Node built-ins → third-party → internal (`
 
 Always use `import type` for type-only imports:
 ```typescript
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "react-router";
 ```
 
 Never leave unused imports.

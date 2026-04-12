@@ -5,8 +5,7 @@ description: >
   before planning or building anything. Extracts what needs to be done,
   asks clarifying questions, and saves a requirements document.
 disable-model-invocation: true
-model: sonnet
-allowed-tools: Read, Write, Glob, AskUserQuestion
+allowed-tools: Read Write Glob AskUserQuestion
 ---
 
 # Clarify — Requirement Extraction
@@ -18,9 +17,10 @@ The request: `$ARGUMENTS`
 
 ## Artifact Setup
 
-1. Derive a short, kebab-case feature name from the request (e.g., "product-sync", "discount-manager", "settings-page")
+1. Derive a short, kebab-case feature name from the request (e.g., "ga4-onboarding", "event-pixel-setup", "custom-events")
 2. Use `Glob('.buildspace/artifacts/*/clarify.md')` to check if artifacts already exist for this or a similar feature
 3. If no folder exists, create `.buildspace/artifacts/{feature-name}/`
+4. **Write the feature name to `.buildspace/current-feature`** — this tracks the active feature across the pipeline
 
 ## Process
 
@@ -82,7 +82,7 @@ Tell the user:
 Tell the user:
 ```
 → Run /plan to create the execution plan.
-  Remaining: /plan → /execute → /test → /code-review → /fix (if needed) → /capture
+  Pipeline: /plan → /execute → /validate
 ```
 
 **Context tip:** If your conversation is getting long, you can `/clear` before running `/plan` — it reads from artifacts, not conversation history.

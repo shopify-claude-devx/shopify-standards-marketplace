@@ -11,7 +11,7 @@
 - [ ] Booleans have explicit `@default`
 - [ ] Optional fields (`?`) only where null has distinct meaning
 - [ ] Unique constraints added where business logic requires (`@@unique`)
-- [ ] Session model untouched
+- [ ] Session model untouched (includes `refreshToken` and `refreshTokenExpires` fields)
 
 ### Queries
 - [ ] Every `findMany` has `take` limit or `where` clause

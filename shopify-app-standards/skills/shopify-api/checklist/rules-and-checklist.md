@@ -14,10 +14,12 @@
 - [ ] Empty results handled (`nodes: []` doesn't crash)
 - [ ] GIDs fetched dynamically, never hardcoded
 - [ ] Response typed with an interface
+- [ ] `nodes` used over `edges` unless per-item cursor needed
 
 ### Authentication
 - [ ] `authenticate.admin(request)` called before any API call
 - [ ] `admin.graphql()` used — no raw fetch to Shopify
+- [ ] `redirect` from `authenticate.admin`, not from `react-router`
 - [ ] Webhook routes use `authenticate.webhook(request)`
 
 ### Error Handling
@@ -25,20 +27,20 @@
 - [ ] Network errors return meaningful error to component
 - [ ] Query errors (top-level `errors`) treated as bugs to fix
 - [ ] User errors (`userErrors`) shown to user in UI
-- [ ] GraphQL errors logged with operation name (sensitive data scrubbed)
+- [ ] No raw error messages exposed to merchant — use friendly text
 
 ### Webhooks
-- [ ] Registered in `shopify.server.ts` webhooks config
+- [ ] Registered in `shopify.app.toml` webhooks config
 - [ ] Action-only route (no loader, no component)
-- [ ] Returns 200 within 5 seconds
+- [ ] Returns `new Response()` (200) within 5 seconds
 - [ ] Heavy processing done async
-- [ ] Idempotent — handles duplicate deliveries via `X-Shopify-Webhook-Id`
+- [ ] Idempotent — handles duplicate deliveries via `webhookId`
 - [ ] Mandatory webhooks implemented: `APP_UNINSTALLED`, `CUSTOMERS_DATA_REQUEST`, `CUSTOMERS_REDACT`, `SHOP_REDACT`
 
 ### Versioning
 - [ ] `apiVersion` in `shopify.server.ts` is a current supported version
 - [ ] Not using `unstable` in production
-- [ ] Checked `shopify.dev/changelog` for breaking changes in current version
+- [ ] Webhook API version in `shopify.app.toml` matches app version
 
 ### Performance
 - [ ] No paginated loops for 1000+ items — use bulk operations

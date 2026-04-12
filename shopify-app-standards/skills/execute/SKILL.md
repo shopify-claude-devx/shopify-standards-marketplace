@@ -1,117 +1,111 @@
 ---
 name: execute
 description: >
-  Execute a plan by dispatching a builder agent per TODO. Orchestrates
-  sequential file building, each in an isolated context with relevant
-  standards. Use after /plan when the execution plan is confirmed.
+  Execute a plan by building all files in-context. Reads the plan,
+  loads relevant standards, and builds everything with full visibility
+  across files. Use after /plan when the execution plan is confirmed.
 disable-model-invocation: true
-model: sonnet
-context: fork
-allowed-tools: Read, Write, Glob, Grep, Agent, Bash
+allowed-tools: Read Write Edit Bash Glob Grep Skill WebSearch WebFetch
 ---
 
-# Execute — Orchestrated Plan Implementation
+# Execute — Build the Feature
 
-You are the Execute orchestrator. Your job is to dispatch a **builder agent per TODO** from the plan. Each builder writes exactly one file in its own isolated context with the relevant standards skill loaded. You do NOT write code yourself.
+You are the builder. Your job is to read the plan and build every file yourself, in order, with full context of what you've already created. You build directly — no agent dispatch, no isolated contexts.
 
 ## Input
 Context or overrides: `$ARGUMENTS`
 
 ## Artifact Resolution
-1. Look in `.buildspace/artifacts/` for feature folders containing `plan.md`
-2. If one folder exists → use it
-3. If multiple folders exist → ask the user which feature to build
-4. If no plan.md found → ask the user to run `/plan` first
+1. Read `.buildspace/current-feature` for the active feature name
+2. If the file doesn't exist, look in `.buildspace/artifacts/` for feature folders containing `plan.md`
+3. If one folder exists → use it
+4. If multiple folders exist → ask the user which feature to build
+5. If no plan.md found → ask the user to run `/plan` first
 
 Read `.buildspace/artifacts/{feature-name}/plan.md` as your primary input.
 
 ---
 
-## Orchestration Process
+## Build Process
 
 ### Step 1: Parse the Plan
 Read `plan.md` and extract:
 - The list of TODOs in order
-- The details for each TODO (files, skills, what to do)
-- Any context from the Approach and Risks sections
+- The files to create/modify per TODO
+- Which standards apply per TODO
+- Dependencies between TODOs
+- Key context from the Approach and Risks sections
 
-### Step 2: Determine File Type per TODO
-For each TODO, identify the file type so the builder knows which preloaded standards to apply:
+### Step 2: Load Standards
+For each TODO group, read the relevant standard skill's checklist BEFORE building:
 
-| File Type | Standards to Apply |
+| File Type | Read These Checklists |
 |---|---|
-| `.ts` / `.tsx` file | typescript-standards |
-| Route file (`app/routes/**`) | remix-patterns + typescript-standards |
-| Route with Polaris UI | remix-patterns + typescript-standards + polaris-appbridge |
-| Code with `admin.graphql()` | shopify-api + typescript-standards |
-| Prisma schema or `.server.ts` with DB | prisma-standards + typescript-standards |
+| Any `.ts` / `.tsx` file | `typescript-standards/checklist/rules-and-checklist.md` |
+| Route file (`app/routes/**`) | + `react-router-patterns/checklist/rules-and-checklist.md` |
+| Route with UI components | + `polaris-web-components/checklist/rules-and-checklist.md` |
+| Code with `admin.graphql()` | + `shopify-api/checklist/rules-and-checklist.md` |
+| Prisma schema or `.server.ts` with DB | + `prisma-standards/checklist/rules-and-checklist.md` |
 
-### Step 3: Dispatch Builders Sequentially
-For each TODO in order, dispatch the **builder** agent with a prompt containing:
+Read the checklist files from the skill directories within this plugin. You have access to them via Glob and Read.
 
-1. **The TODO details** — copy the full TODO section from the plan
-2. **File type** — tell the builder which of its preloaded standards to apply
-3. **Codebase patterns** — relevant findings from the plan's Approach section
+### Step 3: Build TODO by TODO
 
-Example dispatch prompt:
-```
-Build the following file from this TODO spec.
+For each TODO in order:
 
-## TODO
-[paste the TODO details from plan.md]
+1. **Read existing files** that will be modified — understand what's there before changing it
+2. **Search docs if needed** — if the TODO involves a Shopify API, Prisma feature, or React Router pattern you're not 100% certain about, use `WebSearch` and `WebFetch` to verify. Don't rely on training data for API-specific details.
+3. **Build all files in the TODO group** — you have full visibility into everything you've already created. Use the actual exports, types, and function signatures from previous files — don't guess.
+4. **Validate against checklists** — after building each file, mentally check every item in the relevant checklist. Fix violations before moving on.
+5. **Record what you built** — keep a running list of files created/modified and any deviations from the plan.
 
-## File Type
-Route .tsx file — apply remix-patterns, typescript-standards, and polaris-appbridge checklists.
+**You build in the main context.** This means:
+- You can see every file you've already created
+- You can reference actual exports and types from files you just wrote
+- Import paths and function signatures will be consistent across files
+- If you realize the plan needs adjustment mid-build, note the deviation
 
-## Additional Context
-- Codebase patterns: [relevant patterns from plan's Approach section]
-```
+### Step 4: Post-Build Validation
 
-**Wait for each builder to complete before dispatching the next.** TODOs may have dependencies.
+After all TODOs are complete:
 
-### Step 4: Collect Results
-After each builder returns, record:
-- File path created/modified
-- Whether checklist passed
-- Any conflicts or issues reported
-
-If a builder reports a conflict or ambiguity:
-- **Plan vs. skill conflict:** Stop and ask the user which to follow
-- **Naming conflict with existing files:** Stop and ask the user how to proceed
-- **Minor issue:** Note it and continue to the next TODO
-
-If a builder fails or produces an error, do NOT retry automatically. Report the failure to the user.
-
----
-
-## Post-Build
-
-After all builders complete:
-
-1. **Run automated validation** — run lint and type check via `Bash`:
+1. **Run type check and lint:**
    ```bash
-   npm run lint && npx tsc --noEmit
+   npx tsc --noEmit 2>&1 | head -50
    ```
-   Fix any errors before proceeding.
+   ```bash
+   npm run lint 2>&1 | head -50
+   ```
 
-2. **Verify integration** — use `Grep` to confirm new routes, models, and components are properly connected.
+2. **Fix any errors** — these are YOUR errors from code YOU just wrote. Fix them directly.
 
-3. **Write execution log** to `.buildspace/artifacts/{feature-name}/execution-log.md`.
+3. **Verify integration** — use `Grep` to confirm:
+   - New routes exist and follow naming conventions
+   - New models/services are properly imported where used
+   - All imports resolve to actual files
+   - `authenticate.admin(request)` present in all app routes
 
-Read the template from `${CLAUDE_SKILL_DIR}/templates/execution-log-template.md` and fill it in with the build results from all builders.
+### Step 5: Write Execution Log
 
-4. **Report to user:**
-   - Where the execution log was saved
-   - Count of files created/modified
-   - Builder results summary (all passed / issues found)
+Write the execution log to `.buildspace/artifacts/{feature-name}/execution-log.md`.
+
+Read the template from `${CLAUDE_SKILL_DIR}/templates/execution-log-template.md` and fill it in with results.
+
+### Step 6: Report to User
+
+Tell the user:
+- Where the execution log was saved
+- Count of files created/modified
+- Whether lint and type check passed
+- Any deviations from the plan and why
 
 **Do NOT output file contents in conversation. The code files and execution log are the source of truth.**
 
 ### Next Step
 Tell the user:
 ```
-→ Run /test for output validation.
-  Remaining: /test → /code-review → /fix (if needed) → /capture
+→ Run /validate to verify the build meets requirements.
+  Pipeline: /validate
 ```
 
 **Context tip:** If your conversation is getting long, you can `/clear` before the next step — it reads from artifacts, not conversation history.
@@ -119,8 +113,11 @@ Tell the user:
 ---
 
 ## Rules
-- You are an orchestrator — do NOT write code yourself, dispatch builders
-- Follow the plan's TODO order — builders run sequentially
-- Pass complete TODO details to builders — do not summarize or truncate
-- If a builder reports a conflict, stop and ask the user before continuing
-- Never skip a TODO — every TODO gets a builder dispatch
+- You build directly — do NOT dispatch builder agents
+- Follow the plan's TODO order — dependencies matter
+- If the plan is ambiguous about something, make the best decision and note it as a deviation
+- If a TODO requires an API or pattern you're not certain about, search docs BEFORE writing code
+- Every file must pass its relevant checklist before you move on
+- Run `tsc --noEmit` ONCE at the end, not per file
+- If lint/type errors exist after building, fix them before reporting
+- Never skip a TODO — every TODO gets built
