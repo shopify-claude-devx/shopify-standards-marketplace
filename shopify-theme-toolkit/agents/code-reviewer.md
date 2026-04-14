@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Reviews code quality against project standards for readability, maintainability, flexibility, and reusability. Use during code-review phase to ensure code follows project conventions.
+description: Reviews code quality against project standards for readability, maintainability, flexibility, and reusability. Dispatched by /assess for standards compliance checking.
 tools: Read, Grep, Glob
 model: sonnet
 effort: medium

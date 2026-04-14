@@ -25,11 +25,12 @@ Context or overrides: `$ARGUMENTS`
 
 ## Artifact Resolution
 
-1. Check `.buildspace/artifacts/` for feature folders containing both `design-context.md` (from /figma) and `selectors.json` (from /execute)
-2. If one folder exists → use it
-3. If multiple → ask the user which feature to compare
-4. If `design-context.md` is missing → tell user to run `/figma` first
-5. If `selectors.json` is missing → tell user to run `/execute` first (it generates the selector mapping)
+1. Read `.buildspace/current-feature` for the active feature name
+2. If the file doesn't exist, check `.buildspace/artifacts/` for feature folders containing both `design-context.md` (from /figma) and `selectors.json` (from /execute)
+3. If one folder exists → use it
+4. If multiple → ask the user which feature to compare
+5. If `design-context.md` is missing → tell user to run `/figma` first
+6. If `selectors.json` is missing → tell user to run `/execute` first (it generates the selector mapping)
 
 Read from `.buildspace/artifacts/{feature-name}/`:
 - `sections.json` — canonical section names from `/figma` (the naming authority)
@@ -203,8 +204,8 @@ Tell the user:
 Visual comparison passed. All sections match the Figma design.
 Report saved to .buildspace/artifacts/{feature-name}/comparison-report.md
 
-→ Run /test for functional validation.
-  Remaining: /test → /code-review
+→ Run /assess for verification.
+  Pipeline: /assess
 ```
 
 ### Any MISMATCH found → Trigger Fix (auto)
@@ -231,8 +232,8 @@ If this is **iteration 2**:
 - Tell the user what still doesn't match and suggest they review manually.
 - Still suggest the next step:
   ```
-  → Run /test for functional validation (even with remaining visual issues).
-    Remaining: /test → /code-review
+  → Run /assess for verification (even with remaining visual issues).
+    Pipeline: /assess
   ```
 
 ---

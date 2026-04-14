@@ -1,27 +1,26 @@
 ---
 name: execute
 description: >
-  Execute a plan by dispatching a builder agent per TODO. Orchestrates
-  sequential file building, each in an isolated context with relevant
-  standards. Use after /plan when the specification is confirmed.
+  Execute a plan by building all files in-context. Reads the plan,
+  loads relevant standards, and builds everything with full visibility
+  across files. Use after /plan when the specification is confirmed.
 disable-model-invocation: true
-model: sonnet
-context: fork
-allowed-tools: Read, Write, Glob, Grep, Agent, Bash
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, TaskCreate, TaskUpdate, TaskList
 ---
 
-# Execute — Orchestrated Plan Implementation
+# Execute — Build the Feature
 
-You are the Execute orchestrator. Your job is to dispatch a **builder agent per TODO** from the plan. Each builder writes exactly one file in its own isolated context with the relevant standards skill loaded. You do NOT write code yourself.
+You are the builder. Your job is to read the plan and build every file yourself, in order, with full context of what you've already created. You build directly — no agent dispatch, no isolated contexts.
 
 ## Input
 Context or overrides: `$ARGUMENTS`
 
 ## Artifact Resolution
-1. Look in `.buildspace/artifacts/` for feature folders containing `plan.md`
-2. If one folder exists → use it
-3. If multiple folders exist → ask the user which feature to build
-4. If no plan.md found → ask the user to run `/plan` first
+1. Read `.buildspace/current-feature` for the active feature name
+2. If the file doesn't exist, look in `.buildspace/artifacts/` for feature folders containing `plan.md`
+3. If one folder exists → use it
+4. If multiple folders exist → ask the user which feature to build
+5. If no plan.md found → ask the user to run `/plan` first
 
 Read `.buildspace/artifacts/{feature-name}/plan.md` as your primary input.
 
@@ -32,76 +31,68 @@ Also read if they exist in the same folder:
 
 ---
 
-## Orchestration Process
+## Build Process
 
 ### Step 1: Parse the Plan
 Read `plan.md` and extract:
 - The list of TODOs in order
 - The File Spec for each TODO
 - Any context from the Codebase Context section
+- Dependencies between TODOs
 
-### Step 2: Determine File Type per TODO
-For each TODO, identify the file type so the builder knows which preloaded standards to apply:
+### Step 2: Create Tasks for Progress Tracking
 
-| File Type | Standards to Apply |
+Use `TaskCreate` to create one task per TODO from the plan. This gives the user real-time visibility into build progress.
+
+For each TODO:
+```
+TaskCreate({ subject: "TODO 1: Create sections/hero-banner.liquid", description: "..." })
+```
+
+### Step 3: Load Standards
+
+Before building the first file of each type, load the relevant standard skill's checklist using the `Skill` tool. Skills stay loaded for the session — load each type **once**, not per TODO.
+
+| File Type | Load These Skills |
 |---|---|
-| `.liquid` file | liquid-standards |
-| Section `.liquid` file | section-standards + liquid-standards |
-| `.css` file | css-standards |
-| `.js` file | js-standards |
-| Template `.json` file | theme-architecture |
+| `.liquid` file | `Skill('liquid-standards')` |
+| Section `.liquid` file | `Skill('section-standards')` + `Skill('liquid-standards')` |
+| `.css` file | `Skill('css-standards')` |
+| `.js` file | `Skill('js-standards')` |
+| Template `.json` file | `Skill('theme-architecture')` |
 
-### Step 3: Dispatch Builders Sequentially
-For each TODO in order, dispatch the **builder** agent with a prompt containing:
+Load the skill BEFORE building the first file of that type — understand the rules first, then write code.
 
-1. **The File Spec** — copy the full File Spec section for this TODO from the plan
-2. **File type** — tell the builder which of its preloaded standards to apply
-3. **Additional context** — design-context.md path if it exists
-4. **Codebase patterns** — relevant findings from the plan's Codebase Context section
+### Step 4: Build TODO by TODO
 
-Example dispatch prompt:
-```
-Build the following file from this File Spec.
+For each TODO in order:
 
-## File Spec
-[paste the File Spec for this TODO from plan.md]
+1. **Mark task as in_progress** — `TaskUpdate({ taskId: "...", status: "in_progress" })`
+2. **Read existing files** that will be modified — understand what's there before changing it
+3. **Build the file** following:
+   - **The File Spec** for WHAT to build (settings, classes, tokens, structure)
+   - **The loaded skill rules** for HOW to write it (syntax, patterns, conventions)
+   - The File Spec contains all decisions — do not improvise or add features not specified
+4. **Validate against checklist** — after building each file, check every item in the relevant skill checklist. Fix violations before moving on.
+5. **Mark task as completed** — `TaskUpdate({ taskId: "...", status: "completed" })`
+6. **Record what you built** — keep a running list of files created/modified, wrapper selectors, and any deviations from the plan.
 
-## File Type
-Section .liquid file — apply section-standards and liquid-standards checklists.
-
-## Additional Context
-- Design context: .buildspace/artifacts/{feature-name}/design-context.md
-- Codebase patterns: [relevant patterns from plan's Codebase Context]
-```
+**You build in the main context.** This means:
+- You can see every file you've already created
+- You can reference actual patterns and structures from files you just wrote
+- CSS classes, schema IDs, and snippet interfaces will be consistent across files
+- If you realize the plan needs adjustment mid-build, note the deviation
 
 **Image assets in template JSONs:**
-If `assets-manifest.json` exists, pass the relevant assets to builders working on **template `.json` files**. When the template JSON references a section that has matching assets in the manifest (matched by `section` field), the builder should use the **`shopifyRef`** field as the image value in section settings. This uses Shopify's internal reference format: `shopify://shop_images/{filename}`. For example, if `assets-manifest.json` contains `{"name": "hero-image-1", "section": "hero", "shopifyRef": "shopify://shop_images/hero-image-1.jpg"}`, the builder should set the image value like:
+If `assets-manifest.json` exists, use it when building **template `.json` files**. When the template JSON references a section that has matching assets in the manifest (matched by `section` field), use the **`shopifyRef`** field as the image value in section settings. This uses Shopify's internal reference format: `shopify://shop_images/{filename}`. For example:
 ```json
 "image": "shopify://shop_images/hero-image-1.jpg"
 ```
 If `shopifyRef` is not present for an asset, fall back to the local file path from `figmaAssets/`.
 
-**Wait for each builder to complete before dispatching the next.** TODOs may have dependencies (template JSON references section files).
+### Step 5: Post-Build Validation
 
-### Step 4: Collect Results
-After each builder returns, record:
-- File path created/modified
-- Whether checklist passed
-- Any conflicts or issues reported
-- **Wrapper selector** (if the builder reports one for a section file)
-
-If a builder reports a conflict or ambiguity:
-- **Plan vs. skill conflict:** Stop and ask the user which to follow
-- **Naming conflict with existing files:** Stop and ask the user how to proceed
-- **Minor issue:** Note it and continue to the next TODO
-
-If a builder fails or produces an error, do NOT retry automatically. Report the failure to the user.
-
----
-
-## Post-Build
-
-After all builders complete:
+After all TODOs are complete:
 
 1. **Run `shopify theme check`** if available:
    ```bash
@@ -111,13 +102,23 @@ After all builders complete:
 
 2. **Validate schema JSON** for any section with a `{% schema %}` block — confirm JSON is well-formed.
 
-3. **Write execution log** to `.buildspace/artifacts/{feature-name}/execution-log.md`.
+3. **Verify integration** — use `Grep` to confirm:
+   - New sections registered in templates: `Grep('{section-name}', glob='templates/*.json')`
+   - CSS loaded: `Grep('{css-filename}', glob='sections/*.liquid')`
+   - Snippets rendered correctly: `Grep('render "{snippet-name}"', glob='sections/*.liquid')`
+   - Assets exist: `Glob('assets/{filename}')`
 
-Read the template from `${CLAUDE_SKILL_DIR}/templates/execution-log-template.md` and fill it in with the build results from all builders.
+### Step 6: Write Execution Log
 
-4. **Write selectors.json** to `.buildspace/artifacts/{feature-name}/selectors.json`.
+Write the execution log to `.buildspace/artifacts/{feature-name}/execution-log.md`.
 
-Collect all wrapper selectors reported by builders (for section `.liquid` files only). Write a JSON array mapping section names to their CSS selectors:
+Read the template from `${CLAUDE_SKILL_DIR}/templates/execution-log-template.md` and fill it in with the build results.
+
+### Step 7: Write selectors.json
+
+Collect all wrapper selectors for section `.liquid` files you built. The wrapper selector is the CSS class on the outermost `<div>` or `<section>` element that wraps the entire section's content.
+
+Write a JSON array to `.buildspace/artifacts/{feature-name}/selectors.json`:
 
 ```json
 [
@@ -130,17 +131,16 @@ Collect all wrapper selectors reported by builders (for section `.liquid` files 
 - If `sections.json` exists (from `/figma`), the `name` field in selectors.json **MUST match** the `name` field in sections.json for each corresponding section. This is how `/compare` pairs Figma screenshots (`figma-{name}-desktop.png`) with code screenshots (`code-{name}-desktop.png`).
 - If `sections.json` does not exist, derive `name` from the section filename (kebab-case, without path or extension).
 
-The `selector` is the wrapper class reported by the builder (prefixed with `.`).
-
 If no section files were built (e.g., only CSS/JS modifications), skip this step.
 
-This file is used by `/compare` to capture section-level screenshots of the developed page.
+### Step 8: Report to User
 
-5. **Report to user:**
-   - Where the execution log was saved
-   - Count of files created/modified
-   - Builder results summary (all passed / issues found)
-   - If `selectors.json` was written, mention it
+Tell the user:
+- Where the execution log was saved
+- Count of files created/modified
+- Whether theme check and schema validation passed
+- Any deviations from the plan and why
+- If `selectors.json` was written, mention it
 
 **Do NOT output file contents in conversation. The code files and execution log are the source of truth.**
 
@@ -150,13 +150,13 @@ Check if Figma screenshots exist (`.buildspace/artifacts/{feature}/screenshots/f
 If **Figma screenshots exist**, tell the user:
 ```
 → Run /compare for visual comparison against the Figma design.
-  Remaining: /compare → /test → /code-review
+  Remaining: /compare → /assess
 ```
 
 If **no Figma screenshots**, tell the user:
 ```
-→ Run /test for functional validation.
-  Remaining: /test → /code-review
+→ Run /assess for verification.
+  Pipeline: /assess
 ```
 
 **Context tip:** If your conversation is getting long, you can `/clear` before the next step — it reads from artifacts, not conversation history.
@@ -164,8 +164,11 @@ If **no Figma screenshots**, tell the user:
 ---
 
 ## Rules
-- You are an orchestrator — do NOT write code yourself, dispatch builders
-- Follow the plan's TODO order — builders run sequentially
-- Pass complete File Specs to builders — do not summarize or truncate
-- If a builder reports a conflict, stop and ask the user before continuing
-- Never skip a TODO — every TODO gets a builder dispatch
+- You build directly — do NOT dispatch builder agents
+- Follow the plan's TODO order — you have full visibility of everything you've already built
+- Load the relevant skill BEFORE building each file type — understand the rules first
+- If the plan is ambiguous about something, make the best decision and note it as a deviation
+- Never skip a TODO — every TODO gets built
+- Every file must pass its relevant checklist before you move on
+- Run `shopify theme check` ONCE at the end, not per file
+- If theme check errors exist after building, fix them before reporting

@@ -93,9 +93,10 @@ Derive a short kebab-case feature name from the design (e.g., `hero-banner`, `pr
 
 Use `Glob('.buildspace/artifacts/*/design-context.md')` to check for existing features. If one exists with the same name, confirm with the user that they want to overwrite it.
 
-Create the artifacts directory:
+Create the artifacts directory and save the active feature name:
 ```bash
 mkdir -p .buildspace/artifacts/{feature-name}/screenshots
+echo "{feature-name}" > .buildspace/current-feature
 ```
 
 ---
@@ -474,7 +475,7 @@ Design context extracted and saved.
 Tell the user:
 ```
 → Run /clarify to define requirements for this feature.
-  Remaining: /clarify → /plan → /execute → /compare → /test → /code-review
+  Remaining: /clarify → /plan → /execute → /compare → /assess
 ```
 
 **Context tip:** You can `/clear` before the next step — all data is in artifacts, not conversation.

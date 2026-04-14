@@ -3,10 +3,13 @@
 ## Issues Fixed
 
 ### {Issue Title}
-**Root Cause:** {one sentence}
+**Symptom:** {what the user sees}
+**Root Cause:** {one sentence, from first principles}
 **Where:** {file:line}
+**Why it's wrong:** {fundamental reason — not just "this line is buggy"}
 **Fix:** {what was changed}
 **Other instances fixed:** {list or "none"}
+**Standard that should have prevented this:** {which skill rule, if applicable}
 
 [Repeat for each issue]
 
@@ -14,9 +17,8 @@
 - `{file-path}` — {what changed}
 
 ## Validation
-- **Iteration 1:** {pass / X new issues found and fixed}
-- **Iteration 2:** {pass / X remaining issues} (if needed)
+- **Theme Check:** PASS / FAIL / Not available
+- **Schema Validation:** PASS / FAIL
 
-## Final Status
-- **All Fixed** — All issues resolved. Run /test and /code-review to confirm.
-- **Partially Fixed** — [count] issues remain. See remaining issues above.
+## Next Step
+→ Run /assess to verify the fix and check for any new issues.

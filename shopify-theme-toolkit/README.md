@@ -1,6 +1,6 @@
 # Shopify Theme Toolkit
 
-A Claude Code plugin for orchestrated Shopify theme development. Supports feature development, bug fixing, code review, testing, and code understanding through an artifact-based workflow. Version 2.1.0.
+A Claude Code plugin for orchestrated Shopify theme development. Supports feature development, bug fixing, assessment, and code understanding through an artifact-based workflow. Version 3.0.0.
 
 **Author:** Aditya Pasikanti
 
@@ -29,7 +29,7 @@ Restart Claude Code and type `/shopify-theme-toolkit:clarify` — if it responds
 ### Full Pipeline (Feature Development)
 
 ```
-/figma → /clarify → /plan → /execute → /compare → /test → /code-review → /fix (if needed)
+/figma → /clarify → /plan → /execute → /compare → /assess → /fix (if needed)
 ```
 
 Start with `/figma` when building from a Figma design. Skip it if working from text requirements only.
@@ -38,9 +38,8 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 
 ```
 /figma       — Extract design context from Figma (via MCP)
-/fix         — Bug fixing with Root Cause Analysis
-/code-review — Code review against project standards
-/test        — Code validation + optional visual review
+/fix         — Bug fixing with first-principles Root Cause Analysis
+/assess      — First-principles verification against requirements and standards
 /compare     — Visual comparison of code vs Figma screenshots
 /research    — Shopify topic research
 /understand  — Deep code explanation
@@ -50,12 +49,11 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 
 | Use Case | Entry Point | Flow |
 |----------|-------------|------|
-| Figma → Feature | `/figma` | /figma → /clarify → /plan → /execute → /compare → /fix |
-| Feature Development | `/clarify` | /clarify → /plan → /execute → /test → /code-review → /fix |
-| Bug Fixing | `/fix` | standalone with RCA |
-| Code Review | `/code-review` | standalone against skill checklists |
-| Testing | `/test` | standalone with optional visual review |
-| Visual Comparison | `/compare` | standalone after /execute when Figma screenshots exist |
+| Figma → Feature | `/figma` | /figma → /clarify → /plan → /execute → /compare → /assess → /fix |
+| Feature Development | `/clarify` | /clarify → /plan → /execute → /assess → /fix |
+| Bug Fixing | `/fix` | standalone with first-principles RCA |
+| Assessment | `/assess` | standalone or after /execute |
+| Visual Comparison | `/compare` | after /execute when Figma screenshots exist |
 | Research | `/research` | standalone web search |
 | Understand Code | `/understand` | standalone deep trace |
 
@@ -68,10 +66,10 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 | `/figma` | Extract design context from Figma via MCP | Figma URL(s) | `design-context.md` + screenshots |
 | `/clarify` | Define requirements, research, challenge user | User request | `clarify.md` |
 | `/plan` | Technical specification with per-file decisions | `clarify.md` | `plan.md` |
-| `/execute` | Implement plan TODO by TODO | `plan.md` | code files + `execution-log.md` |
-| `/test` | Functional validation + visual review | `execution-log.md` + `clarify.md` | `test-report.md` |
-| `/code-review` | Code quality review + auto-capture learnings | `execution-log.md` | `code-review-report.md` |
-| `/fix` | Root cause analysis + fix all instances | `test-report.md` + `code-review-report.md` | `fix-log.md` |
+| `/execute` | Build all files in-context with full visibility | `plan.md` | code files + `execution-log.md` |
+| `/compare` | Visual comparison of code vs Figma screenshots | `selectors.json` + Figma screenshots | `comparison-report.md` |
+| `/assess` | First-principles verification (requirements + standards + integration) | `execution-log.md` + `clarify.md` | `assessment-report.md` |
+| `/fix` | First-principles RCA + fix all instances (waits for approval) | `assessment-report.md` or bug report | `fix-log.md` |
 | `/understand` | Deep code explanation | file/section/feature name | conversation output |
 | `/research` | Shopify topic research | topic query | conversation output |
 
@@ -89,12 +87,13 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 
 | Agent | Dispatched By | Model | Role |
 |-------|--------------|-------|------|
-| `builder` | `/execute` | opus | Builds one file per TODO from plan's File Spec |
-| `codebase-analyzer` | `/plan` | sonnet | Discovers existing patterns, conventions, conflicts |
-| `output-validator` | `/test` | sonnet | Validates requirements coverage, edge cases, integration |
-| `code-reviewer` | `/code-review` | sonnet | Reviews code quality against skill checklists |
+| `codebase-analyzer` | `/plan` | sonnet | Discovers naming conventions, reusable code, potential conflicts |
+| `output-validator` | `/assess` | sonnet | Validates requirements coverage, edge cases, integration |
+| `code-reviewer` | `/assess` | sonnet | Reviews code quality against skill checklists |
 
-**Orchestrator-Worker pattern:** `/execute` is a lightweight orchestrator that dispatches one `builder` agent per TODO. Each builder runs in its own isolated context (File Spec + one skill), writes exactly one file, validates against the skill checklist, and returns. No context accumulation across TODOs.
+**Direct build pattern:** `/execute` builds all files directly in the main context with full visibility across files. No agent dispatch during execution — standards are loaded via the Skill tool before each file type.
+
+**Agent-assisted assessment:** `/assess` dispatches `output-validator` for functional checks and `code-reviewer` for standards checks. Verbose agent output stays in forked contexts.
 
 ## Artifact Structure
 
@@ -102,19 +101,19 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 .buildspace/
   artifacts/
     {feature-name}/
-      design-context.md      ← /figma output (structured design specs)
-      clarify.md             ← /clarify output
-      plan.md                ← /plan output
-      execution-log.md       ← /execute output
-      selectors.json         ← /execute output (section→CSS selector map)
-      screenshots/           ← /figma + /compare + /test output
+      design-context.md      <- /figma output (structured design specs)
+      clarify.md             <- /clarify output
+      plan.md                <- /plan output
+      execution-log.md       <- /execute output
+      selectors.json         <- /execute output (section->CSS selector map)
+      screenshots/           <- /figma + /compare output
         figma-{section}-desktop.png
         figma-{section}-mobile.png
         code-{section}-desktop.png
         code-{section}-mobile.png
-      comparison-report.md   ← /compare output
-      code-review-report.md  ← /code-review output
-      fix-log.md             ← /fix output
+      comparison-report.md   <- /compare output
+      assessment-report.md   <- /assess output
+      fix-log.md             <- /fix output
 ```
 
 Add `.buildspace/` to your project's `.gitignore` — artifacts are working files, not source code.
@@ -124,16 +123,22 @@ Add `.buildspace/` to your project's `.gitignore` — artifacts are working file
 This plugin is designed to minimize token usage and API costs:
 
 ### Token Optimization
-- **Per-file-type checklists.** Agents load only the relevant checklist file for each file type on demand, not all standards at once.
-- **Externalized artifact templates.** Markdown output templates live in `skills/{name}/templates/` and are loaded via Read on demand, not baked into skill system prompts.
-- **Per-file skill loading in /execute.** Only loads the skill relevant to the current file type, never all skills at once.
+- **Direct build in /execute.** No agent dispatch overhead. Standards loaded once per file type via Skill tool, not per-agent.
+- **Single assessment pass.** /assess replaces separate /test + /code-review — one command, one report, no duplicate file reads.
+- **Agent-assisted assessment.** output-validator and code-reviewer run in forked contexts. Verbose output stays localized.
+- **Externalized artifact templates.** Markdown output templates live in `skills/{name}/templates/` and are loaded via Read on demand.
 - **Artifacts replace conversation.** Each stage reads a small, structured artifact file. You can `/clear` between stages.
 
 ### Cost Optimization
-- **Context fork on /test, /code-review, /research.** Verbose agent output and WebFetch results stay in forked context. Only summaries return to main thread.
+- **Context fork on /assess, /research.** Verbose agent output and WebFetch results stay in forked context. Only summaries return.
 - **disable-model-invocation on workflow skills.** Skill descriptions not loaded for auto-trigger, saving context budget.
 - **allowed-tools restriction.** Each skill has only the tools it needs, preventing off-track tool calls.
 - **Session boundary guidance.** Each pipeline stage reminds users they can `/clear` between stages since artifacts are the handoff mechanism.
+
+### Standards Authority
+- **Plugin standards are the authority** for code patterns, structure, and architecture.
+- **Codebase analyzer informs naming only** — file names, setting ID prefixes, CSS class prefixes. Never overrides standards.
+- **New code follows standards** even if the existing codebase doesn't. Bad patterns are not replicated.
 
 ## Skills & Enforcement
 
@@ -146,11 +151,11 @@ Coding standards are provided as **plugin skills** from the `shopify-theme-toolk
 They must be invoked using the **Skill tool** before writing any code.
 
 **Before writing or modifying any file, invoke the relevant skill(s):**
-- **`.liquid` files** → invoke `shopify-theme-toolkit:liquid-standards`
-- **`.js` files** → invoke `shopify-theme-toolkit:js-standards`
-- **CSS / styling** → invoke `shopify-theme-toolkit:css-standards`
-- **Section files** → invoke `shopify-theme-toolkit:section-standards`
-- **New files / architecture decisions** → invoke `shopify-theme-toolkit:theme-architecture`
+- **`.liquid` files** -> invoke `shopify-theme-toolkit:liquid-standards`
+- **`.js` files** -> invoke `shopify-theme-toolkit:js-standards`
+- **CSS / styling** -> invoke `shopify-theme-toolkit:css-standards`
+- **Section files** -> invoke `shopify-theme-toolkit:section-standards`
+- **New files / architecture decisions** -> invoke `shopify-theme-toolkit:theme-architecture`
 
 Do not skip this step. The plugin skills have detailed rules and checklists that must be followed.
 ```
@@ -169,4 +174,4 @@ Requires Shopify CLI installed (`npm install -g @shopify/cli`).
 | Figma MCP Server | For /figma skill | `claude mcp add --transport http figma https://mcp.figma.com/mcp` |
 | Figma Pro+ plan | For /figma skill | Free plan = 6 calls/month; Pro = 200/day |
 | Shopify CLI | For theme check hook | `npm install -g @shopify/cli` |
-| Node.js 18+ | For test screenshot capture | nodejs.org |
+| Node.js 18+ | For screenshot capture | nodejs.org |
