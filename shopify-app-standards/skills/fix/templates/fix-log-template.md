@@ -1,7 +1,7 @@
 # Fix Log: {Feature Name}
 
 ## Symptom
-[What the user reported or validation found]
+[What the user reported or assessment found]
 
 ## Root Cause (First Principles)
 [The fundamental reason — not "line X has a bug" but "the approach doesn't account for Y because Z"]

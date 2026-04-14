@@ -1,16 +1,16 @@
 ---
-name: validate
+name: assess
 description: >
-  Validate built features with first-principles thinking. Checks requirements
+  Assess built features with first-principles thinking. Checks requirements
   coverage, code quality against standards, and integration correctness.
   Reports findings and stops — no auto-fix loop. Use after /execute.
 disable-model-invocation: true
 allowed-tools: Read Write Grep Glob Bash
 ---
 
-# Validate — First-Principles Verification
+# Assess — First-Principles Verification
 
-You are entering the Validate phase. Your job is to verify that what was built is correct, complete, and follows standards. Think from first principles — don't just pattern-match against checklists. Understand WHY each requirement exists and whether the implementation actually satisfies it.
+You are entering the Assess phase. Your job is to verify that what was built is correct, complete, and follows standards. Think from first principles — don't just pattern-match against checklists. Understand WHY each requirement exists and whether the implementation actually satisfies it.
 
 **Report findings and stop. Do not fix anything. Do not loop.**
 
@@ -21,17 +21,17 @@ Context or overrides: `$ARGUMENTS`
 1. Read `.buildspace/current-feature` for the active feature name
 2. If the file doesn't exist, look in `.buildspace/artifacts/` for feature folders containing `execution-log.md`
 3. If one folder exists → use it
-4. If multiple folders exist → ask the user which feature to validate
+4. If multiple folders exist → ask the user which feature to assess
 5. If no execution-log.md found → ask the user to run `/execute` first
 
 Read from `.buildspace/artifacts/{feature-name}/`:
-- `clarify.md` — requirements to validate against
+- `clarify.md` — requirements to assess against
 - `plan.md` — planned approach and test cases
 - `execution-log.md` — files created/modified
 
 ---
 
-## Validation Process
+## Assessment Process
 
 ### Step 1 — Automated Checks
 
@@ -45,7 +45,7 @@ npm run lint 2>&1 | head -50
 
 If errors found, include them in the report.
 
-### Step 2 — Requirements Validation
+### Step 2 — Requirements Assessment
 
 Read `clarify.md` requirements one by one. For EACH requirement:
 
@@ -56,7 +56,7 @@ Read `clarify.md` requirements one by one. For EACH requirement:
 
 Report per requirement: **Met**, **Partially Met** (with what's missing), or **Not Implemented**.
 
-### Step 3 — Standards Validation
+### Step 3 — Standards Assessment
 
 Read the files listed in `execution-log.md`. For each file, identify which standards apply and read the relevant checklist:
 
@@ -72,7 +72,7 @@ Read checklist files from the skill directories within this plugin.
 
 For each checklist item: check it. If it fails, note the file, location, what's wrong, and which standard it violates.
 
-### Step 4 — Integration Validation
+### Step 4 — Integration Assessment
 
 Check cross-file concerns:
 - `Grep('authenticate.admin', glob='app/routes/app*.{ts,tsx}')` — auth in all app routes
@@ -94,12 +94,12 @@ For each significant piece of code, ask yourself:
 
 ## Report
 
-Write the validation report to `.buildspace/artifacts/{feature-name}/validation-report.md`.
+Write the assessment report to `.buildspace/artifacts/{feature-name}/assessment-report.md`.
 
 Structure:
 
 ```markdown
-# Validation Report: {feature-name}
+# Assessment Report: {feature-name}
 
 ## Automated Checks
 - **Lint:** PASS / FAIL (details)
@@ -150,15 +150,15 @@ If PASS:
 ```
 If NEEDS WORK:
 ```
-→ Run /fix with the validation report to resolve issues.
+→ Run /fix with the assessment report to resolve issues.
   The report includes root cause analysis for each issue.
 ```
 
 ---
 
 ## Rules
-- **Never fix issues during validation** — only identify and report them
+- **Never fix issues during assessment** — only identify and report them
 - **Think from first principles** — don't just check boxes. Ask "would this actually work?"
 - **Be honest** — if the code works, say PASS. Don't invent issues. Don't soften real issues.
 - **Root causes, not symptoms** — in the report, explain WHY something is wrong, not just WHAT
-- **One pass only** — validate once, report, stop. No loops, no retries.
+- **One pass only** — assess once, report, stop. No loops, no retries.

@@ -1,4 +1,4 @@
-# Validation Report: {feature-name}
+# Assessment Report: {feature-name}
 
 ## Automated Checks
 - **Lint:** PASS / FAIL

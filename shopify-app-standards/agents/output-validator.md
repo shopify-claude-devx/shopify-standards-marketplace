@@ -1,6 +1,6 @@
 ---
 name: output-validator
-description: Validates that built features match all requirements from the requirements document. Use during validate phase to check output correctness, edge cases, and missing functionality.
+description: Validates that built features match all requirements from the requirements document. Use during assess phase to check output correctness, edge cases, and missing functionality.
 tools: Read, Grep, Glob
 maxTurns: 15
 ---

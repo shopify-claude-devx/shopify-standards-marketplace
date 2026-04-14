@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Reviews code quality against project standards for readability, maintainability, and reusability. Use during validate phase to ensure code follows project conventions.
+description: Reviews code quality against project standards for readability, maintainability, and reusability. Use during assess phase to ensure code follows project conventions.
 tools: Read, Grep, Glob
 maxTurns: 20
 ---

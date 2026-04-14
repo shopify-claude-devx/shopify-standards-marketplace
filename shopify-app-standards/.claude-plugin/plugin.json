@@ -1,11 +1,18 @@
 {
   "name": "shopify-app-standards",
-  "description": "Shopify React Router app development workflow with skills, agents, and standards. Supports feature development through /clarify → /plan → /execute → /validate pipeline. Standalone /fix and /research available anytime.",
-  "version": "4.0.0",
+  "description": "Shopify React Router app development workflow with skills, agents, and standards. Supports feature development through /clarify → /plan → /execute → /assess pipeline. Standalone /fix and /research available anytime.",
+  "version": "4.0.1",
   "author": {
     "name": "Aditya Pasikanti"
   },
   "repository": "https://github.com/shopify-claude-devx/shopify-standards-marketplace",
   "license": "MIT",
-  "keywords": ["shopify", "react-router", "app", "development", "workflow", "polaris-web-components"]
+  "keywords": [
+    "shopify",
+    "react-router",
+    "app",
+    "development",
+    "workflow",
+    "polaris-web-components"
+  ]
 }

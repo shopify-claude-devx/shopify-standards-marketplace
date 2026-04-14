@@ -22,11 +22,11 @@ The issue: `$ARGUMENTS`
 ## Artifact Resolution
 Read `.buildspace/current-feature` for the active feature name.
 Check `.buildspace/artifacts/{feature-name}/` for:
-- `validation-report.md` — if it exists, this tells you exactly what needs fixing with root cause analysis
+- `assessment-report.md` — if it exists, this tells you exactly what needs fixing with root cause analysis
 - `clarify.md` — the original requirements (what the code SHOULD do)
 - `plan.md` — the planned approach
 
-If a validation report exists, start from its Root Cause Summary — it already contains first-principles analysis.
+If an assessment report exists, start from its Root Cause Summary — it already contains first-principles analysis.
 
 ---
 
@@ -130,7 +130,7 @@ Write the fix log to `.buildspace/artifacts/{feature-name}/fix-log.md`.
 
 Read the template from `${CLAUDE_SKILL_DIR}/templates/fix-log-template.md` and fill it in.
 
-After the fix is verified, suggest running `/validate` to confirm no new issues were introduced.
+After the fix is verified, suggest running `/assess` to confirm no new issues were introduced.
 
 ## Rules
 - **Never guess.** If you're not sure about the cause, read more code before diagnosing

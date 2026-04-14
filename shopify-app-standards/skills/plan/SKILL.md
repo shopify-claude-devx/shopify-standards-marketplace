@@ -95,7 +95,7 @@ Then tell the user:
 Once the user confirms the plan, tell them:
 ```
 → Run /execute to build the feature.
-  Pipeline: /execute → /validate
+  Pipeline: /execute → /assess
 ```
 
 **Context tip:** If your conversation is getting long, you can `/clear` before running `/execute` — it reads from artifacts, not conversation history.

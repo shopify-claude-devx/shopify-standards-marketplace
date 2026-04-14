@@ -82,7 +82,7 @@ Tell the user:
 Tell the user:
 ```
 → Run /plan to create the execution plan.
-  Pipeline: /plan → /execute → /validate
+  Pipeline: /plan → /execute → /assess
 ```
 
 **Context tip:** If your conversation is getting long, you can `/clear` before running `/plan` — it reads from artifacts, not conversation history.

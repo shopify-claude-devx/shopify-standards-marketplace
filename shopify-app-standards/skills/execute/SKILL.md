@@ -104,8 +104,8 @@ Tell the user:
 ### Next Step
 Tell the user:
 ```
-→ Run /validate to verify the build meets requirements.
-  Pipeline: /validate
+→ Run /assess to verify the build meets requirements.
+  Pipeline: /assess
 ```
 
 **Context tip:** If your conversation is getting long, you can `/clear` before the next step — it reads from artifacts, not conversation history.

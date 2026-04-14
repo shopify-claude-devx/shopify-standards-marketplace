@@ -29,7 +29,7 @@ Restart Claude Code and type `/shopify-app-standards:clarify` — if it responds
 ### Pipeline (Feature Development)
 
 ```
-/clarify → /plan → /execute → /validate
+/clarify → /plan → /execute → /assess
 ```
 
 ### Standalone Commands
@@ -43,7 +43,7 @@ Restart Claude Code and type `/shopify-app-standards:clarify` — if it responds
 
 | Use Case | Entry Point | Flow |
 |----------|-------------|------|
-| Feature Development | `/clarify` | /clarify → /plan → /execute → /validate |
+| Feature Development | `/clarify` | /clarify → /plan → /execute → /assess |
 | Bug Fixing | `/fix` | Standalone — root cause analysis, user approval, then fix |
 | Research | `/research` | Standalone — web search and synthesis |
 
@@ -56,8 +56,8 @@ Restart Claude Code and type `/shopify-app-standards:clarify` — if it responds
 | `/clarify` | Define requirements, ask clarifying questions | User request | `clarify.md` |
 | `/plan` | Execution plan with grouped TODOs | `clarify.md` | `plan.md` |
 | `/execute` | Build all files in-context with full visibility | `plan.md` | `execution-log.md` |
-| `/validate` | First-principles verification — report and stop | `execution-log.md` + `clarify.md` | `validation-report.md` |
-| `/fix` | First-principles root cause analysis + repair | `validation-report.md` or user report | `fix-log.md` |
+| `/assess` | First-principles verification — report and stop | `execution-log.md` + `clarify.md` | `assessment-report.md` |
+| `/fix` | First-principles root cause analysis + repair | `assessment-report.md` or user report | `fix-log.md` |
 | `/research` | Shopify app topic research | Topic query | Conversation output |
 
 ### Standard Skills (loaded contextually during execution)
@@ -78,7 +78,7 @@ Restart Claude Code and type `/shopify-app-standards:clarify` — if it responds
 | `output-validator` | Available for standalone use | Validates requirements coverage, edge cases, integration |
 | `code-reviewer` | Available for standalone use | Reviews code quality against standard checklists |
 
-Note: `/validate` does its work inline (no agent dispatch) to maintain full context visibility. The output-validator and code-reviewer agents exist for standalone use or future extensibility.
+Note: `/assess` does its work inline (no agent dispatch) to maintain full context visibility. The output-validator and code-reviewer agents exist for standalone use or future extensibility.
 
 ## Artifact Structure
 
@@ -90,7 +90,7 @@ Note: `/validate` does its work inline (no agent dispatch) to maintain full cont
       clarify.md               ← /clarify output
       plan.md                  ← /plan output
       execution-log.md         ← /execute output
-      validation-report.md     ← /validate output
+      assessment-report.md     ← /assess output
       fix-log.md               ← /fix output
 ```
 
@@ -102,7 +102,7 @@ Add `.buildspace/` to your project's `.gitignore` — artifacts are working file
 
 1. **Execute builds directly** — no more one-file-per-builder agents in isolation. Execute reads the plan and builds all files itself, with full visibility across everything created. This eliminates cross-file integration issues.
 
-2. **Simplified pipeline** — clarify → plan → execute → validate. No more test → fix → test loops. Validate reports and stops. Fix is standalone with first-principles thinking.
+2. **Simplified pipeline** — clarify → plan → execute → assess. No more test → fix → test loops. Assess reports and stops. Fix is standalone with first-principles thinking.
 
 3. **Updated standards** — Polaris Web Components (`<s-*>`) replace deprecated Polaris React. React Router v7 replaces Remix. All checklists updated for 2026 patterns.
 

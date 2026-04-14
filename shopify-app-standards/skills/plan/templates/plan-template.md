@@ -26,8 +26,8 @@ Each TODO must be specific enough to execute without ambiguity.
 ### Risks & Considerations
 - [Anything that could go wrong or needs careful attention]
 
-### Validation Criteria
-[What /validate should verify. Derived from requirements acceptance criteria + implementation decisions.]
+### Assessment Criteria
+[What /assess should verify. Derived from requirements acceptance criteria + implementation decisions.]
 
 - [ ] [Test case from requirements]
 - [ ] [Edge case to verify]
