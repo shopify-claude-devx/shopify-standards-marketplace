@@ -3,8 +3,7 @@ name: clarify
 description: >
   Define requirements clearly before planning or building. Extracts what needs
   to be done, researches Shopify capabilities, challenges user if needed,
-  asks clarifying questions. Use as the first step for feature development,
-  Use as the first step for feature development.
+  asks clarifying questions. Use as the first step for feature development.
 disable-model-invocation: true
 model: sonnet
 allowed-tools: Read, Write, Glob, Grep, AskUserQuestion, WebSearch, WebFetch
