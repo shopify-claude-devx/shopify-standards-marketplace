@@ -86,7 +86,7 @@ with open(os.environ["TRANSCRIPT"]) as f:
             seen_ids.add(msg_id)
             u = msg.get("usage")
             if u:
-                total += u.get("input_tokens", 0) + u.get("output_tokens", 0) + u.get("cache_read_input_tokens", 0) + u.get("cache_creation_input_tokens", 0)
+                total += u.get("input_tokens", 0) + u.get("output_tokens", 0)
             m = msg.get("model")
             if m and m != "<synthetic>":
                 models.add(m)
