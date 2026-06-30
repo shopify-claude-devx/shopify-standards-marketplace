@@ -27,7 +27,7 @@ Read from `.buildspace/artifacts/{feature-name}/`:
 - `assessment-report.md` — if it exists, this tells you exactly what needs fixing with root cause analysis
 - `clarify.md` — the original requirements (what the code SHOULD do)
 - `plan.md` — the planned approach
-- `clickup-context.md` — if it exists, this holds the reported bug from ClickUp (title, description, reproduction steps, mockups in `clickup-images/`, comments). View any mockups with `Read`. Treat it as the bug report when no assessment report is present.
+- `clickup-context.md` (if it exists): holds the reported bug from ClickUp (title, description, reproduction steps, mockups in `clickup-images/`, comments). View any mockups with `Read`. Treat it as the bug report when no assessment report is present.
 
 If an assessment report exists, start from its Root Cause Summary — it already contains first-principles analysis.
 

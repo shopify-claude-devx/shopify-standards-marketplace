@@ -37,7 +37,7 @@ Start with `/clickup` when work originates from a ClickUp task (it ingests the t
 ### Standalone Commands
 
 ```
-/clickup     — Ingest a ClickUp task (title, description, mockups, comments, subtasks) OR act on one (add comment, change status, log time) via MCP
+/clickup     : Ingest a ClickUp task (title, description, mockups, comments, subtasks) OR act on one (add comment, change status, log time) via MCP
 /figma       — Extract design context from Figma (via MCP)
 /fix         — Bug fixing with first-principles Root Cause Analysis
 /assess      — First-principles verification against requirements and standards

@@ -15,13 +15,13 @@
 - **URL:** {url}
 - **Status:** {status}
 - **Priority:** {priority}
-- **Type:** {task_type or "—"}
-- **Assignees:** {names or "—"}
-- **Tags:** {tags or "—"}
+- **Type:** {task_type or "n/a"}
+- **Assignees:** {names or "n/a"}
+- **Tags:** {tags or "n/a"}
 - **List / Folder / Space:** {list.name} / {folder.name} / {space}
 
 ### Description
-[Full `markdown_description`, verbatim. Keep the original wording — this is the
+[Full `markdown_description`, verbatim. Keep the original wording. This is the
 requester's intent. Replace remote `![](…clickup-attachments…)` links with
 references to the locally downloaded images below.]
 
@@ -40,7 +40,7 @@ references to the locally downloaded images below.]
 [Omit section if no custom fields.]
 
 ### Checklists
-- [ ] {checklist item} — {complete/incomplete}
+- [ ] {checklist item} ({complete/incomplete})
 
 [Omit section if none.]
 
@@ -51,7 +51,7 @@ references to the locally downloaded images below.]
 [Omit section if no comments. Note any images in comments in the Mockups table above.]
 
 ### Linked / Dependent Tasks
-- {linked task id/name} — {relationship}
+- {linked task id/name} ({relationship})
 
 [Omit section if none.]
 

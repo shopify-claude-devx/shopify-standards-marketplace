@@ -27,7 +27,7 @@ The request: `$ARGUMENTS`
 4. **Save the feature name** to `.buildspace/current-feature` — this tracks the active feature across the pipeline so subsequent skills (/plan, /execute, /assess, /fix, /compare) know which feature to work on without asking.
 5. If `design-tokens.json` exists, read it for available tokens
 6. If `design-context.md` exists, read it for design specifications
-7. If `clickup-context.md` exists, read it — it holds the originating ClickUp task (title, description, mockups in `clickup-images/`, comments). Treat it as the primary statement of the request, and view the mockups with `Read` to inform requirements.
+7. If `clickup-context.md` exists, read it. It holds the originating ClickUp task (title, description, mockups in `clickup-images/`, comments). Treat it as the primary statement of the request, and view the mockups with `Read` to inform requirements.
 
 ---
 
