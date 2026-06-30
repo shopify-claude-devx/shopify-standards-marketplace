@@ -29,14 +29,15 @@ Restart Claude Code and type `/shopify-theme-toolkit:clarify` — if it responds
 ### Full Pipeline (Feature Development)
 
 ```
-/figma → /clarify → /plan → /execute → /compare → /assess → /fix (if needed)
+/clickup → /figma → /clarify → /plan → /execute → /compare → /assess → /fix (if needed)
 ```
 
-Start with `/figma` when building from a Figma design. Skip it if working from text requirements only.
+Start with `/clickup` when work originates from a ClickUp task (it ingests the task and routes to /clarify or /fix). Start with `/figma` when building from a Figma design. Skip both if working from text requirements only.
 
 ### Standalone Commands
 
 ```
+/clickup     — Ingest a ClickUp task (title, description, mockups, comments, subtasks) via MCP
 /figma       — Extract design context from Figma (via MCP)
 /fix         — Bug fixing with first-principles Root Cause Analysis
 /assess      — First-principles verification against requirements and standards
@@ -49,6 +50,8 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 
 | Use Case | Entry Point | Flow |
 |----------|-------------|------|
+| ClickUp → Feature | `/clickup` | /clickup → /clarify → /plan → /execute → /assess |
+| ClickUp → Bug | `/clickup` | /clickup → /fix → /assess |
 | Figma → Feature | `/figma` | /figma → /clarify → /plan → /execute → /compare → /assess → /fix |
 | Feature Development | `/clarify` | /clarify → /plan → /execute → /assess → /fix |
 | Bug Fixing | `/fix` | standalone with first-principles RCA |
@@ -63,6 +66,7 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 
 | Skill | Purpose | Input Artifact | Output Artifact |
 |-------|---------|----------------|-----------------|
+| `/clickup` | Ingest a ClickUp task via MCP; route to /clarify or /fix | ClickUp task ID / URL | `clickup-context.md` + `clickup-images/` |
 | `/figma` | Extract design context from Figma via MCP | Figma URL(s) | `design-context.md` + screenshots |
 | `/clarify` | Define requirements, research, challenge user | User request | `clarify.md` |
 | `/plan` | Technical specification with per-file decisions | `clarify.md` | `plan.md` |
@@ -101,6 +105,8 @@ Start with `/figma` when building from a Figma design. Skip it if working from t
 .buildspace/
   artifacts/
     {feature-name}/
+      clickup-context.md     <- /clickup output (task title, description, comments, subtasks)
+      clickup-images/        <- /clickup output (downloaded mockups from the task)
       design-context.md      <- /figma output (structured design specs)
       clarify.md             <- /clarify output
       plan.md                <- /plan output
@@ -171,6 +177,7 @@ Requires Shopify CLI installed (`npm install -g @shopify/cli`).
 | What | Required? | Install |
 |---|---|---|
 | Claude Code | Yes | `npm install -g @anthropic-ai/claude-code` |
+| ClickUp MCP Server | For /clickup skill | Connect ClickUp via your Claude integrations / `claude mcp add` |
 | Figma MCP Server | For /figma skill | `claude mcp add --transport http figma https://mcp.figma.com/mcp` |
 | Figma Pro+ plan | For /figma skill | Free plan = 6 calls/month; Pro = 200/day |
 | Shopify CLI | For theme check hook | `npm install -g @shopify/cli` |

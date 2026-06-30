@@ -21,12 +21,13 @@ You are entering the Clarify phase. Your job is to make "what needs to be done" 
 The request: `$ARGUMENTS`
 
 ## Artifact Setup
-1. Derive a short kebab-case feature name from the request (e.g., `hero-banner`, `product-filtering`, `cart-drawer`)
+1. Derive a short kebab-case feature name from the request (e.g., `hero-banner`, `product-filtering`, `cart-drawer`). If `.buildspace/current-feature` already names a feature (e.g. `/clickup` ran first), use that name instead of deriving a new one.
 2. Use `Glob('.buildspace/artifacts/*/clarify.md')` to check for existing features
 3. Create `.buildspace/artifacts/{feature-name}/` if it doesn't exist
 4. **Save the feature name** to `.buildspace/current-feature` — this tracks the active feature across the pipeline so subsequent skills (/plan, /execute, /assess, /fix, /compare) know which feature to work on without asking.
 5. If `design-tokens.json` exists, read it for available tokens
 6. If `design-context.md` exists, read it for design specifications
+7. If `clickup-context.md` exists, read it — it holds the originating ClickUp task (title, description, mockups in `clickup-images/`, comments). Treat it as the primary statement of the request, and view the mockups with `Read` to inform requirements.
 
 ---
 
