@@ -37,7 +37,7 @@ Start with `/clickup` when work originates from a ClickUp task (it ingests the t
 ### Standalone Commands
 
 ```
-/clickup     — Ingest a ClickUp task (title, description, mockups, comments, subtasks) via MCP
+/clickup     — Ingest a ClickUp task (title, description, mockups, comments, subtasks) OR act on one (add comment, change status, log time) via MCP
 /figma       — Extract design context from Figma (via MCP)
 /fix         — Bug fixing with first-principles Root Cause Analysis
 /assess      — First-principles verification against requirements and standards
@@ -66,7 +66,7 @@ Start with `/clickup` when work originates from a ClickUp task (it ingests the t
 
 | Skill | Purpose | Input Artifact | Output Artifact |
 |-------|---------|----------------|-----------------|
-| `/clickup` | Ingest a ClickUp task via MCP; route to /clarify or /fix | ClickUp task ID / URL | `clickup-context.md` + `clickup-images/` |
+| `/clickup` | Ingest a ClickUp task (route to /clarify or /fix), or act on one (comment, status, time) via MCP | ClickUp task ID / URL, or an instruction | `clickup-context.md` + `clickup-images/` (ingest), or a ClickUp write (action) |
 | `/figma` | Extract design context from Figma via MCP | Figma URL(s) | `design-context.md` + screenshots |
 | `/clarify` | Define requirements, research, challenge user | User request | `clarify.md` |
 | `/plan` | Technical specification with per-file decisions | `clarify.md` | `plan.md` |
