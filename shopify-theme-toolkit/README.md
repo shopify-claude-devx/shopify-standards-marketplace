@@ -26,6 +26,16 @@ Restart Claude Code and type `/shopify-theme-toolkit:clarify` — if it responds
 
 ## Workflow
 
+### Project Pipeline (Outer Loop)
+
+```
+/brainstorm → docs/roadmap-{track}/ → one PRD at a time → the feature pipeline below
+```
+
+`/brainstorm` turns a TDD into a track: a `docs/roadmap-{track}/` folder of phases, self-contained PRDs, a README with the execution order, and a `status-log.md` with every PRD at `Not Started`. Each PRD then goes through the feature pipeline on its own.
+
+One TDD, one track. A project with a global standards doc and per-page sprint docs gets one run of `/brainstorm` per document.
+
 ### Full Pipeline (Feature Development)
 
 ```
@@ -37,6 +47,7 @@ Start with `/clickup` when work originates from a ClickUp task (it ingests the t
 ### Standalone Commands
 
 ```
+/brainstorm  — Decompose a TDD into a roadmap of phases and PRDs (outer loop)
 /clickup     : Ingest a ClickUp task (title, description, mockups, comments, subtasks) OR act on one (add comment, change status, log time) via MCP
 /figma       — Extract design context from Figma (via MCP)
 /fix         — Bug fixing with first-principles Root Cause Analysis
@@ -50,6 +61,7 @@ Start with `/clickup` when work originates from a ClickUp task (it ingests the t
 
 | Use Case | Entry Point | Flow |
 |----------|-------------|------|
+| Project / page from a TDD | `/brainstorm` | /brainstorm → then the feature pipeline per PRD |
 | ClickUp → Feature | `/clickup` | /clickup → /clarify → /plan → /execute → /assess |
 | ClickUp → Bug | `/clickup` | /clickup → /fix → /assess |
 | Figma → Feature | `/figma` | /figma → /clarify → /plan → /execute → /compare → /assess → /fix |
@@ -66,6 +78,7 @@ Start with `/clickup` when work originates from a ClickUp task (it ingests the t
 
 | Skill | Purpose | Input Artifact | Output Artifact |
 |-------|---------|----------------|-----------------|
+| `/brainstorm` | Decompose a TDD into phases and self-contained PRDs | TDD / project brief | `docs/roadmap-{track}/` — PRDs, `README.md`, `status-log.md` |
 | `/clickup` | Ingest a ClickUp task (route to /clarify or /fix), or act on one (comment, status, time) via MCP | ClickUp task ID / URL, or an instruction | `clickup-context.md` + `clickup-images/` (ingest), or a ClickUp write (action) |
 | `/figma` | Extract design context from Figma via MCP | Figma URL(s) | `design-context.md` + screenshots |
 | `/clarify` | Define requirements, research, challenge user | User request | `clarify.md` |
@@ -97,7 +110,17 @@ Start with `/clickup` when work originates from a ClickUp task (it ingests the t
 
 **Direct build pattern:** `/execute` builds all files directly in the main context with full visibility across files. No agent dispatch during execution — standards are loaded via the Skill tool before each file type.
 
-**Agent-assisted assessment:** `/assess` dispatches `output-validator` for functional checks and `code-reviewer` for standards checks. Verbose agent output stays in forked contexts.
+**Agent-assisted assessment:** `/assess` dispatches `output-validator` and `code-reviewer` **in a single message so they run concurrently** — they are independent and neither reads the other's output. Verbose agent output stays in forked contexts. `code-reviewer` loads only the standards skills for the file types present, rather than all five.
+
+**Deterministic checks:** integration is verified by a script, not by greps scattered across skills and agents.
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/skills/assess/scripts/verify-integration.mjs --feature {name}
+```
+
+It reads the file list from `execution-log.md` and confirms every section is reachable from a template, every snippet is rendered, every CSS and JS asset is loaded, and every `asset_url` reference resolves. Exits non-zero and names the failure in JSON. `/execute` runs it as a build smoke test with `--files`, `/assess` runs it in Step 1. Nothing else should hand-grep these.
+
+**Numeric visual comparison:** `/compare` captures at 2x to match Figma's export scale, reloads the page per viewport, then compares each section in two tiers — dimensions first, then a `pixelmatch` diff. Verdicts land in `capture-manifest.json`, and the model reads image pairs only for sections marked `REVIEW`. The diff threshold defaults to 5% and needs calibrating per project with `--diff-threshold`.
 
 ## Artifact Structure
 
@@ -112,11 +135,16 @@ Start with `/clickup` when work originates from a ClickUp task (it ingests the t
       plan.md                <- /plan output
       execution-log.md       <- /execute output
       selectors.json         <- /execute output (section->CSS selector map)
+      sections.json          <- /figma output (canonical section names + node IDs)
+      assets-manifest.json   <- /figma output (downloaded images + shopify:// refs)
+      preview-url.txt        <- /compare output (reused on later runs)
       screenshots/           <- /figma + /compare output
         figma-{section}-desktop.png
         figma-{section}-mobile.png
         code-{section}-desktop.png
         code-{section}-mobile.png
+        diff-{section}-{viewport}.png   <- /compare, only when a section is flagged
+        capture-manifest.json           <- /compare verdicts per section
       comparison-report.md   <- /compare output
       assessment-report.md   <- /assess output
       fix-log.md             <- /fix output

@@ -1,13 +1,14 @@
 // Docs viewer — editorial board + reader for a project's docs/ folder.
 // Runs from the skill directory against the current working directory:
 //   node ~/.claude/skills/docs-viewer/assets/server.mjs
-// Env: DOCS_VIEWER_PORT (default 4488), DOCS_DIR (default <cwd>/docs)
+// Env: DOCS_VIEWER_PORT (default 4488), DOCS_DIR (default <cwd>/docs),
+//      ROADMAP_DIR (folder name under DOCS, default "roadmap")
 //
 // Conventions it understands (all optional, degrades gracefully):
 //   docs/*.md                                  -> core documents
-//   docs/roadmap/phase-<N>-<slug>/overview.md  -> phase title
-//   docs/roadmap/phase-<N>-<slug>/X.Y-*.md     -> specification cards
-//   docs/roadmap/status-log.md with entries    -> delivery status (source of truth)
+//   docs/<roadmap>/phase-<N>-<slug>/overview.md  -> phase title
+//   docs/<roadmap>/phase-<N>-<slug>/X.Y-*.md     -> specification cards
+//   docs/<roadmap>/status-log.md with entries    -> delivery status (source of truth)
 //     ## YYYY-MM-DD — X.Y Title — ✅ Complete
 
 import { createServer } from "node:http";
@@ -20,6 +21,8 @@ const ASSETS = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = process.cwd();
 const DOCS = process.env.DOCS_DIR ? path.resolve(process.env.DOCS_DIR) : path.join(ROOT, "docs");
 const PORT = Number(process.env.DOCS_VIEWER_PORT || 4488);
+// One roadmap folder per track. Point at another with ROADMAP_DIR=roadmap-pdp.
+const ROADMAP = (process.env.ROADMAP_DIR || "roadmap").replace(/^\/+|\/+$/g, "");
 
 // ---------- project name ----------
 
@@ -98,7 +101,7 @@ function phaseTitleFromOverview(md, fallback) {
 }
 
 async function readStatusLog() {
-  const rel = "roadmap/status-log.md";
+  const rel = `${ROADMAP}/status-log.md`;
   if (!existsSync(path.join(DOCS, rel))) return {};
   return parseStatusLog(await readDoc(rel));
 }
@@ -115,17 +118,17 @@ async function buildState() {
     const content = await readDoc(e.name);
     coreDocs.push({ path: e.name, title: docTitle(e.name, content) });
   }
-  for (const rel of ["roadmap/README.md", "roadmap/status-log.md"]) {
+  for (const rel of [`${ROADMAP}/README.md`, `${ROADMAP}/status-log.md`]) {
     if (existsSync(path.join(DOCS, rel))) {
       const content = await readDoc(rel);
-      const fallback = rel === "roadmap/README.md" ? "Roadmap & Execution Order" : "Status Log";
+      const fallback = rel === `${ROADMAP}/README.md` ? "Roadmap & Execution Order" : "Status Log";
       coreDocs.push({ path: rel, title: KNOWN_TITLES[path.basename(rel).toLowerCase()] === "README" ? fallback : docTitle(path.basename(rel), content) });
     }
   }
 
   // phases
   const phases = [];
-  const roadmapDir = path.join(DOCS, "roadmap");
+  const roadmapDir = path.join(DOCS, ROADMAP);
   if (existsSync(roadmapDir)) {
     const logEntries = await readStatusLog();
     const dirents = await readdir(roadmapDir, { withFileTypes: true });
@@ -136,7 +139,7 @@ async function buildState() {
 
     for (const { name, num } of phaseDirs) {
       const files = await readdir(path.join(roadmapDir, name));
-      const overviewRel = files.includes("overview.md") ? `roadmap/${name}/overview.md` : null;
+      const overviewRel = files.includes("overview.md") ? `${ROADMAP}/${name}/overview.md` : null;
       const title = overviewRel
         ? phaseTitleFromOverview(await readDoc(overviewRel), titleCase(name.replace(/^phase-\d+-/, "")))
         : titleCase(name.replace(/^phase-\d+-/, ""));
@@ -148,7 +151,7 @@ async function buildState() {
       const prds = [];
       for (const f of prdFiles) {
         const id = f.match(/^(\d+\.\d+)-/)[1];
-        const rel = `roadmap/${name}/${f}`;
+        const rel = `${ROADMAP}/${name}/${f}`;
         const { title: prdTitle, meta } = parsePrdHead(await readDoc(rel));
         const entry = logEntries[id];
         prds.push({

@@ -19,7 +19,7 @@
 
 {2-4 sentences. What state the project is in when a developer picks this up.
 What was built in prior phases that this builds on. Reference prior phase paths
-explicitly, e.g., "After completing 1.1 (docs/roadmap/phase-1-foundation/1.1-project-setup.md),
+explicitly, e.g., "After completing 1.1 (docs/roadmap-{track}/phase-1-foundation/1.1-project-setup.md),
 the base project structure and dependencies are in place."}
 
 ## Goal

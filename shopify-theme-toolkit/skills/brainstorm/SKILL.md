@@ -3,8 +3,8 @@ name: brainstorm
 description: >
   Brainstorm a project from a brief into a structured roadmap of phases with
   rich, self-contained PRDs. Conducts iterative back-and-forth conversation
-  about approach, logic, and decomposition, then produces a docs/roadmap/
-  folder with arbitrarily nested phases. Each leaf-node PRD is detailed enough
+  about approach, logic, and decomposition, then produces a
+  docs/roadmap-{track}/ folder with arbitrarily nested phases. Each leaf-node PRD is detailed enough
   to hand directly to a development pipeline. Use when a developer describes
   a project idea and wants it decomposed into buildable units, or says
   "brainstorm", "break this down", "create a roadmap", "plan this project",
@@ -26,14 +26,42 @@ The project brief: `$ARGUMENTS`
 
 ---
 
+## Step 0: Resolve the Track
+
+A roadmap belongs to a **track** — one TDD, one track, one folder. Tracks sit side by side under `docs/`:
+
+```
+docs/
+  tdds/
+    global-standards.md
+    homepage-sprint.md
+    pdp-sprint.md
+  roadmap-homepage/
+  roadmap-navigation/
+  roadmap-pdp/
+```
+
+Resolve the track name in this order:
+
+1. An explicit track in `$ARGUMENTS` (e.g. `--track pdp`)
+2. Derived from the TDD filename you were handed, stripped of project prefix and document-type suffix — `amrutanjan-homepage-sprint.md` becomes `homepage`
+3. Ask the developer. Do not guess.
+
+**Everything below writes to `docs/roadmap-{track}/`.** This document abbreviates that path as `{ROADMAP}` from here on — substitute the resolved value every time.
+
+Run `Glob('docs/roadmap-*/README.md')` to list the tracks that already exist. A track that shares its name with an existing one is a revision of that track, not a new one — see Step 1.
+
+---
+
 ## Step 1: Absorb the Brief
 
 1. If no arguments provided, ask the developer to describe their project.
 
-2. Check if a roadmap already exists:
-   - `Glob('docs/roadmap/README.md')` — if found, read it
-   - Ask: "A roadmap already exists. Do you want to revise it, extend it, or start fresh?"
+2. Check if this track already has a roadmap:
+   - `Glob('{ROADMAP}/README.md')` — if found, read it
+   - Ask: "A roadmap already exists for the `{track}` track. Do you want to revise it, extend it, or start fresh?"
    - If revising/extending, read the existing structure to understand what's there
+   - Never write into another track's folder, even when this track depends on its output
 
 3. Scan the project codebase for context:
    - `Glob('package.json')`, `Glob('*.config.*')`, `Glob('README.md')` — tech stack
@@ -126,7 +154,7 @@ Apply this recursively. Sub-phases can have their own sub-phases if needed.
 
 Present the complete tree — all phases, sub-phases, and leaf nodes — to the developer. This gate approves the FULL decomposition, including nesting depth and what each leaf node covers. Do NOT proceed to execution order or PRD generation without approval.
 
-**For small projects (5 or fewer leaf PRDs):** Skip nesting. Use a flat structure — just numbered PRDs directly under `docs/roadmap/`.
+**For small projects (5 or fewer leaf PRDs):** Skip nesting. Use a flat structure — just numbered PRDs directly under `{ROADMAP}/`.
 
 **For large projects (20+ leaf PRDs):** Suggest grouping into major tracks (e.g., "Backend", "Frontend", "Infrastructure") as top-level phases. Each track gets its own sub-phases.
 
@@ -158,7 +186,7 @@ Once the tree, nesting, and execution order are all confirmed:
 
 1. **Create the directory structure** before writing any files:
    ```bash
-   mkdir -p docs/roadmap/phase-1-{name} docs/roadmap/phase-2-{name} ...
+   mkdir -p {ROADMAP}/phase-1-{name} {ROADMAP}/phase-2-{name} ...
    ```
    Create all phase folders (and nested sub-phase folders) in one command.
 
@@ -171,13 +199,13 @@ Once the tree, nesting, and execution order are all confirmed:
    - The **Context** section is critical — it must describe what exists when this phase starts, referencing prior phases by their file paths
    - The **Approach** section must be specific — name technologies, patterns, architectural direction
    - The **Acceptance Criteria** must be verifiable — a developer can check each item off
-   - Write the PRD to its correct path in `docs/roadmap/`
+   - Write the PRD to its correct path in `{ROADMAP}/`
    - Update the task to completed
 
 4. For each non-leaf phase (folder with sub-phases):
    - Read the overview template from `${CLAUDE_SKILL_DIR}/templates/overview-template.md`
    - Fill in the phase purpose, sub-phase table, and shared context
-   - Write to `docs/roadmap/{phase-folder}/overview.md`
+   - Write to `{ROADMAP}/{phase-folder}/overview.md`
 
 ### File naming conventions
 
@@ -192,8 +220,9 @@ Once the tree, nesting, and execution order are all confirmed:
 When the project has 5 or fewer leaf PRDs and no nesting:
 
 ```
-docs/roadmap/
+docs/roadmap-{track}/
 ├── README.md
+├── status-log.md
 ├── 1-{name}.md
 ├── 2-{name}.md
 ├── 3-{name}.md
@@ -213,21 +242,41 @@ Fill in:
 - **Execution order table** — numbered sequence with dependencies and parallel indicators
 - **Start here pointer** — path to the first PRD in execution order
 
-Write to `docs/roadmap/README.md`.
+Write to `{ROADMAP}/README.md`.
 
 ---
 
-## Step 8: Report to Developer
+## Step 8: Scaffold the Status Log
+
+Read the status-log template from `${CLAUDE_SKILL_DIR}/templates/status-log-template.md` and write it to `{ROADMAP}/status-log.md`.
+
+Fill in one `### Phase N — Name` section per phase, and one row per leaf PRD in execution order, with:
+
+- `#` — sequential position in the execution order
+- `PRD` — the PRD number and kebab slug, e.g. `2.4 shop-by-lifestyle`
+- `Depends on` — upstream PRD numbers, or `—`
+- `Status` — **`Not Started`** for every row at generation time
+- `Date` / `Notes` — `—`
+
+Leave the Deviations and Blocker tables empty; they fill in during execution.
+
+**The status vocabulary is fixed**: `Not Started` / `In Progress` / `Blocked` / `Done` / `Done with deviations`. The docs board matches these exactly and renders anything else as "Not started".
+
+This file is the delivery record for the track. Nothing in the pipeline writes to it automatically — the developer updates a row when a PRD moves.
+
+---
+
+## Step 9: Report to Developer
 
 Tell the developer:
-- Where the roadmap was saved (`docs/roadmap/`)
+- Where the roadmap was saved (`{ROADMAP}/`)
 - Count of phases and PRDs generated
 - The file tree of what was created
-- Path to README.md as the entry point
+- Path to README.md as the entry point, and that `status-log.md` starts with every PRD at `Not Started`
 
 Then:
 ```
-Start here: docs/roadmap/{path-to-first-prd}
+Start here: {ROADMAP}/{path-to-first-prd}
 
 Hand each PRD to your development pipeline one at a time, following the
 execution order in README.md. Each PRD is self-contained — it has full
@@ -263,6 +312,6 @@ For PRDs without a design:
 ### Structure
 - Phase numbering follows the tree: 1, 1.1, 1.1.1
 - All folder and file names are kebab-case
-- If `docs/roadmap/` already exists, ask before overwriting
+- If `{ROADMAP}/` already exists, ask before overwriting — and never write into a different track's folder
 - Small projects (5 or fewer PRDs): flat structure, no nesting
 - Large projects (20+ PRDs): suggest grouping into tracks
