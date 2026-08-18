@@ -6,7 +6,7 @@ description: >
   against the Figma screenshots. Auto-triggers /fix on mismatch.
   Use after /execute when building from a Figma design.
 disable-model-invocation: true
-model: opus
+model: claude-opus-5
 context: fork
 allowed-tools: Read, Write, Bash, Glob, Grep, Agent, AskUserQuestion, Skill
 ---
