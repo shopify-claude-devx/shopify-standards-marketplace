@@ -68,7 +68,7 @@ function parseArgs() {
   const fileKey = get('--file-key');
   const feature = get('--feature');
   const nodesJson = get('--nodes');
-  const scale = get('--scale') || '1';
+  const scale = get('--scale') || '2';  // 2x matches capture-sections.js DEVICE_SCALE
 
   if (!fileKey || !feature || !nodesJson) {
     console.error(

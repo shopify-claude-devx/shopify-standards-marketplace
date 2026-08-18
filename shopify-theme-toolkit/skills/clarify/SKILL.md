@@ -5,7 +5,7 @@ description: >
   to be done, researches Shopify capabilities, challenges user if needed,
   asks clarifying questions. Use as the first step for feature development.
 disable-model-invocation: true
-model: sonnet
+model: claude-opus-5
 allowed-tools: Read, Write, Glob, Grep, AskUserQuestion, WebSearch, WebFetch
 ---
 

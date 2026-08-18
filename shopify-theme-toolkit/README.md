@@ -166,11 +166,18 @@ They must be invoked using the **Skill tool** before writing any code.
 Do not skip this step. The plugin skills have detailed rules and checklists that must be followed.
 ```
 
-## Theme Check Hook
+## Hooks
 
-The plugin includes a PostToolUse hook that auto-runs `shopify theme check` on `.liquid` files after Write/Edit operations. Copy `hooks/hooks.json` into your theme project's `.claude/settings.json` to enable it.
+Copy `hooks/hooks.json` into your theme project's `.claude/settings.json` to enable the optional PostToolUse linters. Both are gated on the tool being installed locally, so they no-op silently in projects that don't use them:
 
-Requires Shopify CLI installed (`npm install -g @shopify/cli`).
+| File type | Runs | Requires |
+|---|---|---|
+| `.css` | `stylelint` | `stylelint` in the project's `node_modules` |
+| `.js` | `eslint` | `eslint` in the project's `node_modules` |
+
+**There is no per-file theme check hook.** The Shopify CLI's `theme check` accepts only `--path`, and passing a single file crashes it, so per-file checking is not possible. A whole-theme run takes about 3 seconds, and `/execute` runs one at the end of the build while `/assess` runs one as the verification gate. That covers it without a check on every edit.
+
+Requires Shopify CLI installed (`npm install -g @shopify/cli`) for `/execute` and `/assess`.
 
 ## Prerequisites
 

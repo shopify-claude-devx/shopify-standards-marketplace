@@ -62,35 +62,19 @@ If a Figma screenshot file is missing for a section, skip that section and note 
 
 ---
 
-## Step 2: Get Preview URL
+## Step 2: Get the Preview URL
 
-Ask the user for the Shopify preview URL (e.g., `http://127.0.0.1:9292`) and storefront password if any.
+Read `.buildspace/artifacts/{feature-name}/preview-url.txt` if it exists and use that.
 
-If the user provided a preview URL in `$ARGUMENTS`, use that instead of asking.
+Otherwise ask the user for the Shopify preview URL (e.g. `http://127.0.0.1:9292`) and storefront password if any, then **write the URL to that file** so later runs and later features don't ask again. If the user supplied a URL in `$ARGUMENTS`, that wins over both.
 
----
-
-## Step 3: Ensure Playwright is Available
-
-Before capturing screenshots, verify Playwright and Chromium are installed. Run this check:
-
-```bash
-node -e "try { require('playwright').chromium; console.log('READY'); } catch(e) { console.log('NOT_READY'); process.exit(1); }" 2>/dev/null
-```
-
-If the output is `NOT_READY` (or the command fails), install Playwright:
-
-```bash
-npm install playwright && npx playwright install chromium
-```
-
-**Wait for installation to complete before proceeding.** Do NOT run the capture script until Playwright is confirmed `READY`. If the install fails, report the error to the user — do NOT retry in a loop.
+Never store the password on disk.
 
 ---
 
-## Step 4: Capture Developed Page Screenshots
+## Step 3: Capture and Compare
 
-Run the capture script:
+Run the capture script. It resolves Playwright itself — installing it if absent — so there is nothing to set up or tear down:
 
 ```bash
 node ${CLAUDE_SKILL_DIR}/scripts/capture-sections.js \
@@ -100,106 +84,70 @@ node ${CLAUDE_SKILL_DIR}/scripts/capture-sections.js \
   --password "<password-if-any>"
 ```
 
-This captures:
-- `code-{section}-desktop.png` at 1440px viewport
-- `code-{section}-mobile.png` at 390px viewport
+For each section in `selectors.json` this captures `code-{section}-desktop.png` at 1440px and `code-{section}-mobile.png` at 390px, both at 2x to match the Figma exports, reloading the page for each viewport.
 
-for each section in selectors.json.
+It then compares each capture against its `figma-{section}-{viewport}.png` reference in two tiers and writes the verdicts to `capture-manifest.json`:
+
+| Verdict | Meaning | Action |
+|---|---|---|
+| `PASS` | Dimensions match and pixel diff is under threshold | No review needed |
+| `REVIEW` | Dimensions differ, or pixel diff exceeds threshold | Read the images in Step 4 |
+| `DIMENSIONS_ONLY` | Dimensions match; pixel diff could not run | Read the images in Step 4 |
+| `NO_FIGMA_REFERENCE` | No Figma screenshot for this section | Skip and note it |
+| `NO_CODE_IMAGE` | Capture failed | Report as an issue |
+
+A section that fails the pixel tier also gets a `diff-{section}-{viewport}.png` highlighting where.
+
+**Threshold.** The default is 5%. A browser and Figma rasterise text differently, so a correct section never scores zero — this number is a triage signal, not a verdict. If it is flagging sections you know are right, or missing ones you know are wrong, recalibrate it against a known-good section and pass `--diff-threshold <n>`.
 
 If a section selector is not found or not visible, note it as a potential issue.
 
 ---
 
-## Step 5: Visual Comparison — Section by Section
+## Step 4: Review the Flagged Sections
 
-For each section that has both Figma and code screenshots:
+Read `capture-manifest.json` first. **Only read image files for sections whose verdict is `REVIEW` or `DIMENSIONS_ONLY`.** Sections marked `PASS` are done — do not open them.
 
-### Desktop Comparison
-1. Read the Figma screenshot: `.buildspace/artifacts/{feature-name}/screenshots/figma-{section}-desktop.png`
-2. Read the code screenshot: `.buildspace/artifacts/{feature-name}/screenshots/code-{section}-desktop.png`
-3. Compare visually across these dimensions:
+For each flagged section, read the Figma screenshot, the code screenshot, and the diff image where one exists. The diff localises the problem, so read it first.
+
+Compare across these dimensions:
 
 | Dimension | What to check |
 |-----------|--------------|
 | Layout | Element positions, proportions, column counts, content stacking order |
-| Spacing | Margins, padding, gaps between elements — relative proportions matter more than exact pixels |
+| Spacing | Margins, padding, gaps between elements |
 | Typography | Font sizes (relative), weights, alignment, line spacing |
 | Colors | Background colors, text colors, border colors, accent colors |
 | Images & Media | Sizing, aspect ratio, positioning, cropping |
 | Interactive Elements | Button styles, link appearance, form elements |
 | Content Structure | Does the section contain all the elements shown in the Figma design? |
 
-### Mobile Comparison
-Repeat the same comparison for mobile screenshots (if they exist).
+For mobile, additionally check that the layout reflows (horizontal to vertical stacking), elements are resized appropriately, and anything meant to be hidden or shown at that breakpoint behaves.
 
-Additionally check:
-- Does the layout properly reflow for mobile (e.g., horizontal → vertical stacking)?
-- Are elements appropriately resized for the mobile viewport?
-- Are any elements correctly hidden/shown for mobile?
+### Verdicts per section
 
-### Verdicts per Section
+- **MATCH** — faithfully represents the design. Minor rendering differences do NOT count as mismatches.
+- **MINOR** — small deviations that don't affect the overall look. Note them; do not trigger a fix.
+- **MISMATCH** — a difference a user would notice. Describe exactly what's wrong.
 
-Rate each section × viewport combination:
+Every section the manifest marked `PASS` is recorded as **MATCH** without you opening it.
 
-- **MATCH** — The implementation faithfully represents the Figma design. Minor rendering differences (font smoothing, anti-aliasing, sub-pixel rounding) are expected and do NOT count as mismatches.
-- **MINOR** — Small deviations that don't affect the overall look (e.g., slightly different spacing, minor color shade difference). Note what's different but do not trigger a fix.
-- **MISMATCH** — Significant visual difference that a user would notice (e.g., wrong layout, missing element, wrong colors, broken spacing). Describe exactly what's wrong.
-
-**Important:** Be realistic about what browser rendering can match. Figma and browsers render differently. Focus on structural accuracy, not pixel perfection. Things that are NOT mismatches:
-- Font rendering differences (anti-aliasing, hinting)
-- Sub-pixel rounding (1-2px differences in spacing)
-- Scrollbar presence/absence
-- Browser-specific form element styling
-- Hover/focus states not visible in Figma
+**Not mismatches:** font rendering and anti-aliasing, sub-pixel rounding, scrollbar presence, browser-specific form styling, hover or focus states absent from Figma.
 
 ---
 
-## Step 6: Generate Comparison Report
+## Step 5: Generate the Comparison Report
 
-Read the template from `${CLAUDE_SKILL_DIR}/templates/comparison-report-template.md` and fill it in.
+Read the template from `${CLAUDE_SKILL_DIR}/templates/comparison-report-template.md`, fill it in, and write it to `.buildspace/artifacts/{feature-name}/comparison-report.md`.
 
-Write the report to `.buildspace/artifacts/{feature-name}/comparison-report.md`:
-
-```markdown
-# Comparison Report: {Feature Name}
-
-**Iteration:** {1 or 2}
-**Date:** {timestamp}
-**Preview URL:** {url}
-
-## Summary
-- Sections compared: {count}
-- Desktop: {pass}/{total} MATCH, {minor}/{total} MINOR, {mismatch}/{total} MISMATCH
-- Mobile: {pass}/{total} MATCH, {minor}/{total} MINOR, {mismatch}/{total} MISMATCH
-- **Overall Verdict:** PASS / NEEDS FIX
-
-## Section: {Section Name}
-
-### Desktop
-- **Verdict:** MATCH / MINOR / MISMATCH
-- **Figma:** `screenshots/figma-{section}-desktop.png`
-- **Code:** `screenshots/code-{section}-desktop.png`
-- **Notes:** {What matches well, what deviates}
-
-### Mobile
-- **Verdict:** MATCH / MINOR / MISMATCH
-- **Figma:** `screenshots/figma-{section}-mobile.png`
-- **Code:** `screenshots/code-{section}-mobile.png`
-- **Notes:** {What matches well, what deviates}
-
-### Issues (if MISMATCH)
-1. {Specific issue: what's wrong, where in the section, what it should look like}
-2. {Specific issue}
-
-[Repeat for each section]
-```
+Include the manifest's dimension delta and pixel-diff percentage for each section — they are the evidence behind the verdict, and they make the next run comparable to this one.
 
 ---
 
-## Step 7: Handle Results
+## Step 6: Handle Results
 
-### All MATCH or MINOR → Done
-Tell the user:
+### All MATCH or MINOR
+
 ```
 Visual comparison passed. All sections match the Figma design.
 Report saved to .buildspace/artifacts/{feature-name}/comparison-report.md
@@ -208,45 +156,26 @@ Report saved to .buildspace/artifacts/{feature-name}/comparison-report.md
   Pipeline: /assess
 ```
 
-### Any MISMATCH found → Trigger Fix (auto)
+### Any MISMATCH found
 
 If this is **iteration 1**:
 
-1. Tell the user what mismatches were found (brief summary, not the full report)
-2. Automatically invoke `/fix` with the comparison report as context:
-
-Use the Skill tool to invoke `fix` with arguments:
-```
-Visual comparison found mismatches. Fix the following issues from comparison-report.md:
-{list each MISMATCH issue with section name and description}
-Feature: {feature-name}
-```
-
-3. After `/fix` completes, **automatically re-run this comparison** (iteration 2):
-   - Re-capture screenshots (the code has changed)
-   - Re-compare against the same Figma screenshots
-   - Generate updated comparison report with `Iteration: 2`
+1. Tell the user what mismatches were found — a brief summary, not the full report
+2. Invoke `/fix` through the Skill tool with the mismatches as context:
+   ```
+   Visual comparison found mismatches. Fix the following issues from comparison-report.md:
+   {list each MISMATCH issue with section name and description}
+   Feature: {feature-name}
+   ```
+3. After `/fix` completes, re-run Step 3 and Step 4 (iteration 2). The capture script re-compares automatically, so only genuinely still-broken sections come back for review.
 
 If this is **iteration 2**:
-- If mismatches remain, report them to the user and stop. Do NOT trigger a third fix cycle.
-- Tell the user what still doesn't match and suggest they review manually.
-- Still suggest the next step:
+- Report what still doesn't match and stop. Do NOT trigger a third fix cycle.
+- Suggest the user review manually, then:
   ```
   → Run /assess for verification (even with remaining visual issues).
     Pipeline: /assess
   ```
-
----
-
-## Step 8: Cleanup
-
-After all comparisons are complete (pass or max iterations reached):
-
-```bash
-npm uninstall playwright 2>/dev/null || true
-```
-
-Keep the Chromium browser cache. Only remove the npm package.
 
 ---
 
@@ -255,6 +184,8 @@ Keep the Chromium browser cache. Only remove the npm package.
 - Focus on structural fidelity, not pixel perfection. Browser rendering differs from Figma — that's normal.
 - Font rendering, anti-aliasing, and sub-pixel differences are NOT mismatches.
 - If a selector is not found, flag it as an issue — the section wasn't built or the selector is wrong.
-- Always read both Figma and code screenshots before making a verdict — never guess from code alone.
+- Trust the manifest. Read images only for sections it flagged — opening a `PASS` section is wasted work.
+- Never guess a verdict from code alone. For a flagged section, read the screenshots.
+- Do NOT install or uninstall Playwright. The capture script owns that.
 - Do NOT fix issues yourself. Invoke /fix through the Skill tool and let it handle repairs.
 - Present the comparison report path to the user, not the full report content.

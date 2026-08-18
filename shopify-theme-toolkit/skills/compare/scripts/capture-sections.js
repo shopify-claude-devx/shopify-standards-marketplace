@@ -11,14 +11,21 @@
  *   [{ "name": "hero", "selector": ".hero-banner" }]
  *
  * Output (.buildspace/artifacts/{feature}/screenshots/):
- *   code-{name}-desktop.png, code-{name}-mobile.png, capture-manifest.json
+ *   code-{name}-desktop.png, code-{name}-mobile.png
+ *   diff-{name}-{viewport}.png  (only when a Figma reference exists)
+ *   capture-manifest.json
+ *
+ * Each captured section is compared against its figma-{name}-{viewport}.png
+ * reference in two tiers: dimensions (exact, no dependency) and then a pixel
+ * diff via pixelmatch. The manifest records a verdict per section so the
+ * caller only needs to look at images for sections marked REVIEW.
  */
 
 'use strict';
 
 const { execSync } = require('node:child_process');
 const { createRequire } = require('node:module');
-const { mkdir, readFile, writeFile } = require('node:fs/promises');
+const { mkdir, open, readFile, writeFile } = require('node:fs/promises');
 const path = require('node:path');
 
 /* ── Timeouts ─────────────────────────────────────────────────────────── */
@@ -30,6 +37,17 @@ const VIEWPORTS = [
   { name: 'desktop', width: 1440, height: 900 },
   { name: 'mobile', width: 390, height: 844 },
 ];
+
+/* ── Comparison thresholds ────────────────────────────────────────────── */
+// Figma exports at 2x (see skills/figma/SKILL.md step 4c); we capture at 2x to match.
+const DEVICE_SCALE = 2;
+// Tier 1: a dimension is a match if within whichever of these is larger.
+const DIM_TOLERANCE_PX = 4;
+const DIM_TOLERANCE_PCT = 2;
+// Tier 2: browser and Figma rasterise text differently, so a correct section
+// never scores zero. This default is a starting point — calibrate it against
+// sections already known good and pass --diff-threshold.
+const DEFAULT_DIFF_THRESHOLD_PCT = 5;
 
 const NAV_OPTIONS = { waitUntil: 'domcontentloaded', timeout: 60000 };
 
@@ -44,6 +62,7 @@ function parseArgs() {
   const feature = get('--feature');
   const selectorsFile = get('--selectors');
   const password = get('--password');
+  const diffThreshold = Number(get('--diff-threshold') ?? DEFAULT_DIFF_THRESHOLD_PCT);
 
   if (!url || !feature || !selectorsFile) {
     console.error(
@@ -51,12 +70,14 @@ function parseArgs() {
       '  --url        (required) Shopify preview URL\n' +
       '  --feature    (required) Feature name\n' +
       '  --selectors  (required) Path to selectors.json\n' +
-      '  --password   (optional) Storefront password'
+      '  --password   (optional) Storefront password\n' +
+      '  --diff-threshold (optional) Max pixel-diff %% before a section needs review ' +
+      `(default ${DEFAULT_DIFF_THRESHOLD_PCT})`
     );
     process.exit(1);
   }
 
-  return { url, feature, selectorsFile, password };
+  return { url, feature, selectorsFile, password, diffThreshold };
 }
 
 /**
@@ -171,6 +192,130 @@ async function waitForAnimations(page) {
   );
 }
 
+/* ── Comparison against the Figma reference ───────────────────────────── */
+
+/** Read width/height straight from the PNG IHDR chunk. No dependency needed. */
+async function pngSize(filepath) {
+  let fd;
+  try {
+    fd = await open(filepath, 'r');
+    const buf = Buffer.alloc(24);
+    const { bytesRead } = await fd.read(buf, 0, 24, 0);
+    if (bytesRead < 24) return null;
+    // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+    if (buf.readUInt32BE(0) !== 0x89504e47) return null;
+    return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+  } catch {
+    return null;
+  } finally {
+    if (fd) await fd.close().catch(() => {});
+  }
+}
+
+/**
+ * Resolve an optional module from the usual places, installing into the
+ * script's own directory as a last resort. Returns null if unavailable —
+ * tier 2 is a bonus, never a hard requirement.
+ */
+let optionalInstallAttempted = false;
+function resolveOptional(names) {
+  const tryLoad = (name) => {
+    try { return require(name); } catch {}
+    try { return createRequire(path.join(process.cwd(), 'package.json'))(name); } catch {}
+    try { return createRequire(path.join(__dirname, 'package.json'))(name); } catch {}
+    return null;
+  };
+
+  let mods = names.map(tryLoad);
+  if (mods.every(Boolean)) return mods;
+
+  if (!optionalInstallAttempted) {
+    optionalInstallAttempted = true;
+    try {
+      console.error(`[capture] Installing pixel-diff deps (${names.join(', ')})...`);
+      execSync(`npm install --prefix "${__dirname}" --no-save ${names.join(' ')}`, { stdio: 'inherit' });
+    } catch {
+      console.error('[capture] Could not install pixel-diff deps — dimension check only');
+    }
+    mods = names.map(tryLoad);
+  }
+  return mods.every(Boolean) ? mods : null;
+}
+
+function dimensionVerdict(code, figma) {
+  const within = (a, b) => {
+    const delta = Math.abs(a - b);
+    return delta <= Math.max(DIM_TOLERANCE_PX, (b * DIM_TOLERANCE_PCT) / 100);
+  };
+  return within(code.w, figma.w) && within(code.h, figma.h) ? 'MATCH' : 'DIFFERS';
+}
+
+/**
+ * Two-tier comparison against the Figma reference for this section+viewport.
+ * Tier 1 (dimensions) is exact and free. Tier 2 (pixel diff) only runs when
+ * dimensions already agree — comparing differently-sized images is meaningless.
+ */
+async function compareToFigma(name, vpName, outputDir, diffThreshold) {
+  const codePath = path.join(outputDir, `code-${name}-${vpName}.png`);
+  const figmaPath = path.join(outputDir, `figma-${name}-${vpName}.png`);
+
+  const [codeSize, figmaSize] = await Promise.all([pngSize(codePath), pngSize(figmaPath)]);
+  if (!codeSize) return { verdict: 'NO_CODE_IMAGE' };
+  if (!figmaSize) return { verdict: 'NO_FIGMA_REFERENCE', codeSize };
+
+  const dimVerdict = dimensionVerdict(codeSize, figmaSize);
+  const out = {
+    codeSize,
+    figmaSize,
+    dimensionDelta: { w: codeSize.w - figmaSize.w, h: codeSize.h - figmaSize.h },
+    dimensionVerdict: dimVerdict,
+  };
+
+  if (dimVerdict !== 'MATCH') {
+    out.verdict = 'REVIEW';
+    out.reason = `dimensions differ: code ${codeSize.w}x${codeSize.h} vs figma ${figmaSize.w}x${figmaSize.h}`;
+    return out;
+  }
+
+  const mods = resolveOptional(['pixelmatch', 'pngjs']);
+  if (!mods) {
+    out.verdict = 'DIMENSIONS_ONLY';
+    out.reason = 'pixelmatch/pngjs unavailable — tier 2 skipped';
+    return out;
+  }
+
+  const [pixelmatchMod, pngjs] = mods;
+  const pixelmatch = pixelmatchMod.default || pixelmatchMod;
+  const { PNG } = pngjs;
+
+  try {
+    const [codeBuf, figmaBuf] = await Promise.all([readFile(codePath), readFile(figmaPath)]);
+    const codeImg = PNG.sync.read(codeBuf);
+    const figmaImg = PNG.sync.read(figmaBuf);
+    const { width, height } = codeImg;
+    const diffImg = new PNG({ width, height });
+
+    const changed = pixelmatch(
+      codeImg.data, figmaImg.data, diffImg.data, width, height,
+      { threshold: 0.15, includeAA: false }
+    );
+
+    const pct = Number(((changed / (width * height)) * 100).toFixed(2));
+    const diffName = `diff-${name}-${vpName}.png`;
+    await writeFile(path.join(outputDir, diffName), PNG.sync.write(diffImg));
+
+    out.pixelDiffPct = pct;
+    out.diffImage = diffName;
+    out.verdict = pct <= diffThreshold ? 'PASS' : 'REVIEW';
+    if (out.verdict === 'REVIEW') out.reason = `pixel diff ${pct}% exceeds ${diffThreshold}%`;
+  } catch (err) {
+    out.verdict = 'DIMENSIONS_ONLY';
+    out.reason = `pixel diff failed: ${err.message}`;
+  }
+
+  return out;
+}
+
 async function captureSectionInner(page, section, viewport, outputDir) {
   const { name, selector } = section;
   const { name: vpName, width, height } = viewport;
@@ -251,7 +396,7 @@ async function captureSection(page, section, viewport, outputDir) {
 }
 
 async function main() {
-  const { url, feature, selectorsFile, password } = parseArgs();
+  const { url, feature, selectorsFile, password, diffThreshold } = parseArgs();
 
   let selectors;
   try {
@@ -293,30 +438,42 @@ async function main() {
   const results = [];
 
   try {
-    const context = await browser.newContext({
-      viewport: VIEWPORTS[0],
-      deviceScaleFactor: 1,
-    });
-    const page = await context.newPage();
-
-    await page.goto(url, NAV_OPTIONS);
-    await handlePassword(page, password);
-
-    // Let the page settle (initial render, above-the-fold content).
-    // Per-section image waits happen inside captureSection after scrolling each into view.
-    await waitForAnimations(page);
-
     for (const viewport of VIEWPORTS) {
-      for (const section of selectors) {
-        console.error(`[capture] ${viewport.name}/${section.name}...`);
-        const result = await captureSection(page, section, viewport, outputDir);
-        results.push(result);
+      // A fresh context and a real navigation per viewport. Resizing is not the
+      // same as loading — a script that measured on load at 1440px is stale at 390px.
+      const context = await browser.newContext({
+        viewport: { width: viewport.width, height: viewport.height },
+        deviceScaleFactor: DEVICE_SCALE,
+      });
+      const page = await context.newPage();
 
-        if (result.status === 'CAPTURED') {
-          console.error(`[capture]   saved: ${result.filename}`);
-        } else {
-          console.error(`[capture]   ${result.status}: ${result.error}`);
+      try {
+        await page.goto(url, NAV_OPTIONS);
+        await handlePassword(page, password);
+
+        // Let the page settle. Per-section image waits happen inside
+        // captureSection after scrolling each section into view.
+        await waitForAnimations(page);
+
+        for (const section of selectors) {
+          console.error(`[capture] ${viewport.name}/${section.name}...`);
+          const result = await captureSection(page, section, viewport, outputDir);
+
+          if (result.status === 'CAPTURED') {
+            result.compare = await compareToFigma(
+              section.name, viewport.name, outputDir, diffThreshold
+            );
+            const pct = result.compare.pixelDiffPct;
+            const detail = pct === undefined ? '' : ` (${pct}% diff)`;
+            console.error(`[capture]   saved: ${result.filename} — ${result.compare.verdict}${detail}`);
+          } else {
+            console.error(`[capture]   ${result.status}: ${result.error}`);
+          }
+
+          results.push(result);
         }
+      } finally {
+        await context.close();
       }
     }
   } finally {
@@ -328,6 +485,8 @@ async function main() {
     url,
     timestamp: new Date().toISOString(),
     viewports: VIEWPORTS,
+    deviceScaleFactor: DEVICE_SCALE,
+    diffThreshold,
     selectors,
     results,
   };
@@ -342,10 +501,20 @@ async function main() {
   const notVisible = results.filter((r) => r.status === 'NOT_VISIBLE').length;
   const timedOut = results.filter((r) => r.status === 'TIMEOUT').length;
 
+  const needsReview = results.filter((r) => r.compare && r.compare.verdict === 'REVIEW');
+
   console.error(
     `[capture] Done: ${captured} captured, ${notFound} not found, ${notVisible} not visible` +
     (timedOut > 0 ? `, ${timedOut} timed out` : '')
   );
+  if (needsReview.length > 0) {
+    console.error(`[capture] Needs review (${needsReview.length}):`);
+    for (const r of needsReview) {
+      console.error(`[capture]   ${r.viewport}/${r.section} — ${r.compare.reason}`);
+    }
+  } else if (captured > 0) {
+    console.error('[capture] All captured sections within threshold — no image review needed');
+  }
   console.log(JSON.stringify(manifest, null, 2));
 }
 

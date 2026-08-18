@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat) && file=$(echo \"$input\" | jq -r '.tool_input.file_path // empty') && [[ \"$file\" == *.liquid ]] && shopify theme check \"$file\" --fail-level error 2>&1 | tail -30 || true"
+            "command": "input=$(cat) && file=$(echo \"$input\" | jq -r '.tool_input.file_path // empty') && [[ \"$file\" == *.css ]] && [ -x ./node_modules/.bin/stylelint ] && ./node_modules/.bin/stylelint \"$file\" 2>&1 | tail -20 || true"
           }
         ]
       },
@@ -15,16 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat) && file=$(echo \"$input\" | jq -r '.tool_input.file_path // empty') && [[ \"$file\" == *.css ]] && npx stylelint \"$file\" 2>&1 | tail -20 || true"
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "input=$(cat) && file=$(echo \"$input\" | jq -r '.tool_input.file_path // empty') && [[ \"$file\" == *.js ]] && npx eslint \"$file\" 2>&1 | tail -20 || true"
+            "command": "input=$(cat) && file=$(echo \"$input\" | jq -r '.tool_input.file_path // empty') && [[ \"$file\" == *.js ]] && [ -x ./node_modules/.bin/eslint ] && ./node_modules/.bin/eslint \"$file\" 2>&1 | tail -20 || true"
           }
         ]
       }

@@ -102,11 +102,16 @@ After all TODOs are complete:
 
 2. **Validate schema JSON** for any section with a `{% schema %}` block — confirm JSON is well-formed.
 
-3. **Verify integration** — use `Grep` to confirm:
-   - New sections registered in templates: `Grep('{section-name}', glob='templates/*.json')`
-   - CSS loaded: `Grep('{css-filename}', glob='sections/*.liquid')`
-   - Snippets rendered correctly: `Grep('render "{snippet-name}"', glob='sections/*.liquid')`
-   - Assets exist: `Glob('assets/{filename}')`
+3. **Verify integration** — run the checker with the files you built, comma-separated:
+
+   ```bash
+   node ${CLAUDE_PLUGIN_ROOT}/skills/assess/scripts/verify-integration.mjs \
+     --files "sections/hero.liquid,snippets/hero-card.liquid,assets/hero.js"
+   ```
+
+   It confirms every new section is reachable from a template, every snippet is rendered somewhere, every CSS and JS asset is loaded by some Liquid file, and every `asset_url` reference resolves on disk. It exits non-zero when something is wrong and prints JSON naming it.
+
+   Fix anything it reports before moving on. Do NOT hand-grep for these — this script is the single owner of that check, and `/assess` runs the same one.
 
 ### Step 6: Write Execution Log
 

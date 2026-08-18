@@ -56,18 +56,13 @@ For every section with blocks:
 - Are there settings defined in schema but never referenced? (orphaned settings)
 - Are there `section.settings.X` references that don't exist in the schema? (broken references)
 
-### 7. Integration (cross-file)
-- `Grep('{section-name}', glob='templates/*.json')` — is the section registered?
-- `Grep('render "{snippet}"', glob='sections/*.liquid')` — are snippets wired?
-- `Glob('assets/{css-file}')` — do referenced CSS/JS files exist?
-
-### 8. Requirements (if requirements document exists)
+### 7. Requirements (if requirements document exists)
 Go through each requirement from the requirements document. For each one:
 - Read the relevant code
 - Determine: **Met** / **Partially met** / **Not implemented**
 - If partially met or not implemented, explain what's missing
 
-### 9. Test Cases (if plan exists)
+### 8. Test Cases (if plan exists)
 Go through each test case from the plan's Test Cases section. For each one:
 - Verify by reading the code
 - Determine: **Pass** / **Fail** with reason
@@ -89,11 +84,6 @@ Go through each test case from the plan's Test Cases section. For each one:
 - Orphaned settings: [list or "none"]
 - Broken references: [list or "none"]
 
-### Integration
-- Template registration: [registered / not registered]
-- Snippet references: [all correct / issues]
-- Asset files: [all exist / missing]
-
 ### Requirements (if requirements document)
 - [Requirement] — Met / Partially met / Not implemented [reason]
 
@@ -110,3 +100,4 @@ Go through each test case from the plan's Test Cases section. For each one:
 - Don't speculate — if you can't determine something from code alone, say so
 - Don't suggest improvements — only report what's missing or broken
 - Don't care about code style — that's the code-reviewer's job
+- Don't check integration — template registration, snippet wiring and asset existence are verified by `verify-integration.mjs` before you are dispatched

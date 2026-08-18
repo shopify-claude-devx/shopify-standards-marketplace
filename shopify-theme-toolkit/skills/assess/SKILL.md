@@ -56,11 +56,25 @@ else { console.log('No schema found'); }
 "
 ```
 
+#### Integration
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/skills/assess/scripts/verify-integration.mjs --feature {feature-name}
+```
+
+Reads the file list out of `execution-log.md` and confirms every section is reachable from a template, every snippet is rendered, every CSS and JS asset is loaded, and every `asset_url` reference resolves. Exits non-zero and names the problem in JSON when something is wrong.
+
+This is the **only** place these checks run. Neither agent below repeats them, and you should not hand-grep for them either.
+
 Report any failures.
 
-### Step 2 — Requirements Assessment
+### Step 2 — Agent Assessment
 
-Dispatch the **output-validator** agent:
+Dispatch **both agents in a single message, as two tool calls**, so they run concurrently. They are independent: one checks whether the feature works, the other whether the code is written well, and neither reads the other's output. Dispatching them in separate turns runs them serially for no reason.
+
+First work out which file types the execution log lists — `.liquid`, section `.liquid`, `.css`, `.js` — and name them in the code-reviewer prompt so it loads only the checklists it needs.
+
+**output-validator:**
 
 ```
 Validate feature: {feature-name}
@@ -78,16 +92,19 @@ Check every file for:
 6. Conditional display works (blank settings hide elements)
 7. Schema settings correctly wired to Liquid output
 
+Integration is already verified by verify-integration.mjs — do NOT check template
+registration, snippet wiring or asset existence.
+
 If requirements exist: verify each requirement — Met / Partially met / Not implemented
 If plan exists: run each test case — Pass / Fail with reason
 ```
 
-### Step 3 — Standards Assessment
-
-Dispatch the **code-reviewer** agent:
+**code-reviewer:**
 
 ```
 Review these files: [list from execution-log]
+
+File types present: [e.g. "section .liquid, .css" — load only these checklists]
 
 Execution log: .buildspace/artifacts/{feature-name}/execution-log.md
 
@@ -95,23 +112,17 @@ For each file, validate against the relevant skill checklist.
 Check standards compliance, readability, maintainability.
 Report issues with severity: Critical / Should Fix / Nice to Have.
 
-Also check cross-file concerns:
-- Unused snippets (created but never rendered)
-- CSS class conflicts with existing files
-- Schema ID collisions across sections
-- Orphaned assets (CSS/JS not loaded anywhere)
+Cross-file concerns that are yours alone:
+- Schema setting ID collisions across sections
+- CSS class conflicts with existing styles
+- Unused snippets created but never rendered
+
+Do NOT check template registration or asset existence — verify-integration.mjs owns those.
 ```
 
-### Step 4 — Integration Assessment
+---
 
-After both agents return, check integration directly with `Grep` and `Glob`:
-
-- **Template registration:** `Grep('{section-name}', glob='templates/*.json')` — is each new section registered?
-- **CSS loading:** `Grep('{css-filename}', glob='sections/*.liquid')` — is each CSS file loaded?
-- **Snippet wiring:** `Grep('render "{snippet-name}"', glob='sections/*.liquid')` — are snippets referenced?
-- **Asset existence:** `Glob('assets/{filename}')` — do all referenced CSS/JS files exist on disk?
-
-### Step 5 — First-Principles Questions
+### Step 3 — First-Principles Questions
 
 Think about the built feature from first principles. Ask yourself context-appropriate questions like:
 
@@ -135,7 +146,8 @@ Read the template from `${CLAUDE_SKILL_DIR}/templates/assessment-report-template
 
 Combine the output-validator's findings into the Requirements Coverage section.
 Combine the code-reviewer's findings into the Standards Compliance section.
-Add your own integration and first-principles findings.
+Take the Integration section straight from `verify-integration.mjs` output — it is already structured, so quote its findings rather than restating them.
+Add your own first-principles findings.
 
 Tell the user:
 - Where the report was saved
@@ -192,3 +204,5 @@ If verdict is **NEEDS WORK**:
 - **Root causes, not symptoms** — in the report, explain WHY something is wrong, not just WHAT
 - **One pass only** — assess once, report, stop. No loops, no retries.
 - **PROJECT standards override generic best practices** — use the skill checklists as authority
+- **Dispatch both agents in one message** — they are independent, and separate turns run them serially
+- **Never hand-grep integration** — `verify-integration.mjs` owns template registration, snippet wiring and asset existence
